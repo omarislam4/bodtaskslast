@@ -1,0 +1,125 @@
+Upgrade the existing dashboard system by extending the current webhook-based notification logic.
+
+IMPORTANT:
+Do NOT rebuild the system. Use the existing architecture:
+
+* members (with shiftEnd, phone)
+* tasks (with status, assignees, deadline)
+* settings (webhook URL + reminder minutes)
+
+---
+
+FEATURE 1: SMART SHIFT-END REMINDER (BASED ON EXISTING SETTINGS)
+
+Use the existing "reminder minutes" setting (s-reminder input).
+
+Implement a background checker:
+
+* Run every 60 seconds using setInterval
+* For each member:
+
+  * Get shiftEnd
+  * Calculate remaining time
+  * If remaining time <= reminder minutes:
+    → Find all tasks assigned to this member
+    → Filter tasks where status = "inprogress"
+    → If tasks exist:
+    → Trigger webhook
+
+Prevent duplicate notifications:
+
+* Add flag: member.shiftReminderSent
+* Do not send again if already sent
+
+---
+
+FEATURE 2: MANUAL "SEND REMINDER" BUTTON (INSIDE TASK ROW)
+
+Inside each task row (actions column):
+
+* Add a button: "Send Reminder"
+* Style using existing .btn-notify class
+
+On click:
+
+* Collect:
+
+  * task name
+  * assignee(s)
+  * phone numbers
+  * deadline
+* Send webhook immediately
+* Show success toast
+* Disable button temporarily (avoid spam)
+
+---
+
+FEATURE 3: USE EXISTING WEBHOOK SETTINGS
+
+DO NOT hardcode webhook URL.
+
+Instead:
+
+* Read from input:
+  document.getElementById("s-webhook").value
+
+If empty:
+
+* Show error toast
+
+---
+
+FEATURE 4: CREATE SHARED FUNCTION
+
+Create:
+
+sendToWebhook(data, type)
+
+Where type:
+
+* "auto-shift"
+* "manual"
+
+Payload:
+
+{
+type: type,
+taskName: data.name,
+deadline: data.deadline,
+phone: data.phone,
+source: "dashboard"
+}
+
+---
+
+FEATURE 5: UX IMPROVEMENTS
+
+* Show toast when reminder sent
+* Show error if webhook missing
+* Add loading state on button
+* Keep UI smooth and responsive
+
+---
+
+FEATURE 6: LOG ACTIVITY (IMPORTANT)
+
+After sending reminder:
+
+* Add entry to task.activityLog:
+
+{
+source: "system",
+text: "Reminder sent via WhatsApp",
+timestamp: new Date()
+}
+
+---
+
+FINAL GOAL:
+
+The system should:
+
+* Automatically notify employees before shift end (based on settings)
+* Allow manual reminder sending per task
+* Integrate seamlessly with existing UI and data
+* Feel like a real SaaS product, not a patch

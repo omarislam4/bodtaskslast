@@ -1,0 +1,72 @@
+You are a senior frontend engineer.
+
+I have a messy project (React + Vite + pnpm workspace + extra backend files).
+I want you to REFACTOR and SIMPLIFY it completely, but WITHOUT changing the UI design or core features.
+
+### Goals:
+
+* Keep EXACT same UI, layout, styling, and user experience
+* Keep all existing features working as-is
+* Remove unnecessary complexity
+* Make the project clean, readable, and easy to maintain
+
+### Required changes:
+
+1. Convert project to a simple React + Vite app (NO monorepo, NO pnpm workspace)
+2. Remove any backend/api-server code (frontend only)
+3. Convert package manager to npm
+4. Clean dependencies (remove unused ones)
+5. Organize folder structure to be minimal and professional:
+
+   * src/
+
+     * components/
+     * pages/
+     * hooks/ (if needed)
+     * utils/
+     * assets/
+6. Reduce number of files as much as possible without harming readability
+7. Rename files and variables to be clear and consistent
+8. Add comments where needed for clarity (but don’t over-comment)
+
+### Code quality:
+
+* Use clean, modern React practices
+* Avoid unnecessary abstractions
+* Make it easy for a mid-level developer to understand and modify
+
+### Internationalization (VERY IMPORTANT):
+
+* Add support for BOTH Arabic and English
+* Use a simple i18n approach (like a translations object or lightweight library)
+* Add language switcher (AR / EN)
+* Ensure RTL support for Arabic (layout flips correctly)
+* Keep design consistent in both languages
+
+### README (IMPORTANT):
+
+Create a professional README.md that includes:
+
+* Project overview
+* How to run the project
+* Folder structure explanation
+* Explanation of main components
+* How to add new pages/components
+* How translations work (Arabic/English)
+* Deployment instructions (Netlify)
+
+### Output:
+
+* Return the full updated project structure
+* Provide updated key files (package.json, main App, etc.)
+* Ensure the project runs with:
+  npm install
+  npm run dev
+
+Do NOT:
+
+* Change the design
+* Remove features
+* Over-engineer the solution
+
+Focus on simplicity, clarity, and maintainability.

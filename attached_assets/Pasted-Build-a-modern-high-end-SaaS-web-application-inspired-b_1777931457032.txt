@@ -1,0 +1,63 @@
+Build a modern, high-end SaaS web application inspired by tools like ClickUp and Notion.
+
+The app should be a full-featured Task & Workspace Management Dashboard with a premium UI/UX and smooth animations.
+
+Core Features:
+
+* Multi-workspace (Spaces) system with nested navigation
+* Task management system:
+
+  * Create, edit, delete tasks
+  * Status (todo, in-progress, review, done, blocked)
+  * Priority levels (low, medium, high)
+  * Assign multiple members
+  * Deadlines, progress tracking, estimated hours
+* Dashboard overview with analytics cards and progress indicators
+* Timeline view for tasks
+* Completed tasks (history)
+* Members management system
+* Senders / sources system (who tasks come from)
+* File & data management (folders + links inside each workspace)
+* Global search with dropdown results
+* Activity log system for each task
+
+UI/UX Requirements:
+
+* Clean, minimal, premium SaaS design
+* Sidebar navigation with collapsible sections
+* Sticky topbar with search, theme toggle, language switch, and profile menu
+* Fully responsive (mobile + desktop)
+* RTL and LTR support (Arabic + English)
+* Dark mode and light mode
+
+Animations & Interactions:
+
+* Use smooth micro-interactions for buttons, cards, and hover states
+* Page transitions and modal animations
+* Loading states (skeleton loaders or progress bar)
+* Toast notifications for actions
+
+Tech Stack:
+
+* Next.js (App Router)
+* Tailwind CSS
+* ShadCN UI components
+* Framer Motion for animations
+* Use modern component-based architecture
+
+Advanced Features:
+
+* Real-time updates (simulate or integrate with Firebase/Firestore)
+* Webhook integration support (for tools like n8n)
+* Modular and scalable folder structure
+* Reusable components (cards, tables, modals, forms)
+
+Design Style:
+
+* Inspired by modern SaaS dashboards
+* Soft shadows, rounded corners, subtle gradients
+* Professional typography
+* Focus on clarity and usability
+
+Goal:
+The final result should feel like a real product, not just a website — smooth, fast, and highly interactive, similar to a production-level SaaS app.

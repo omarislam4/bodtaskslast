@@ -1,0 +1,169 @@
+You are a senior frontend engineer.
+
+I have a task management dashboard project.
+
+I want you to REFACTOR the data logic and activity system ONLY (do not change UI design or layout).
+
+---
+
+## 🎯 MAIN GOAL
+
+Rebuild the Activity system so that:
+
+* All messages, replies, and notifications are saved inside each task
+* Activity ONLY shows communication (NOT system actions)
+* Everything is clean, structured, and easy to extend
+
+---
+
+## 📦 DATA STRUCTURE (VERY IMPORTANT)
+
+Each task MUST have:
+
+```
+task: {
+  id,
+  name,
+  desc,
+  status,
+  assignees[],
+  activityLog: []
+}
+```
+
+---
+
+## 🧠 ACTIVITY LOG STRUCTURE
+
+Each activity item should be:
+
+```
+{
+  type: "message" | "reply" | "notification",
+  source: "whatsapp" | "manual",
+  text: string,
+  timestamp: number,
+  sender?: string
+}
+```
+
+---
+
+## ❌ REMOVE THIS COMPLETELY
+
+Do NOT store or show system actions like:
+
+* "user added member"
+* "status changed"
+* "task updated"
+
+These must NOT appear in activityLog anymore.
+
+---
+
+## ✅ WHAT SHOULD BE SAVED IN ACTIVITY
+
+ONLY:
+
+1. Messages sent (notifications / WhatsApp)
+2. Replies from users
+3. Manual notes/messages
+
+---
+
+## 🔁 DATA FLOW (IMPORTANT)
+
+UI → handler → activityService → task.activityLog
+
+---
+
+## ⚙️ IMPLEMENT SERVICE
+
+Create:
+
+```
+src/services/activityService.js
+```
+
+Include:
+
+* addMessage(taskId, text, sender)
+* addReply(taskId, text, sender)
+* addNotification(taskId, text)
+
+Each function:
+
+* finds task
+* pushes into activityLog
+* updates storage (localStorage or state)
+
+---
+
+## 🧩 INTEGRATION WITH EXISTING CODE
+
+From the current project:
+
+* Take the logic of:
+
+  * sending messages
+  * saving replies
+
+Refactor it to use activityService ONLY.
+
+DO NOT save anything outside task.activityLog.
+
+---
+
+## 👀 UI BEHAVIOR
+
+In task details modal:
+
+* Show ONLY activityLog entries
+* Sort by latest
+* Display:
+
+  * sender
+  * message
+  * timestamp
+
+NO system logs.
+
+---
+
+## 🧹 CLEANUP
+
+* Remove any old logging system
+* Remove duplicated save logic
+* Ensure single source of truth = activityLog
+
+---
+
+## 📘 README UPDATE
+
+Add section:
+
+### Activity System
+
+Explain:
+
+* where data is stored
+* what gets saved
+* what is NOT saved
+* how to extend to backend (Firebase)
+
+---
+
+## ⚠️ RULES
+
+* DO NOT change UI design
+* DO NOT remove features
+* ONLY fix logic and structure
+* Keep code simple and readable
+
+---
+
+## 🎯 FINAL RESULT
+
+* Clean activity system
+* Only messages & replies visible
+* Easy to maintain and extend

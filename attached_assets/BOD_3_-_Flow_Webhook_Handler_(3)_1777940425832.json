@@ -1,0 +1,412 @@
+{
+  "name": "BOD 3 - Flow Webhook Handler",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-flow-response",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "2343d4d3-c552-4973-9ebe-52c99d1abc7b",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1968,
+        512
+      ],
+      "webhookId": "whatsapp-flow-response"
+    },
+    {
+      "parameters": {
+        "jsCode": "// =============================================\n// 📥 Parse الداتا الجاية من Cloudflare Worker\n// =============================================\nconst body = $input.item.json.body || $input.item.json;\n\nconst task_done     = body.task_done     || null;\nconst task_progress = body.task_progress || null;\nconst time_needed   = body.time_needed   || null;\nconst blockers      = body.blockers      || null;\nconst from          = body.from          || null;\nconst flow_token    = body.flow_token    || null;\n\n// استخراج taskId و memberId من الـ flow_token لو موجود\n// الـ flow_token بيبقى بالشكل ده: taskId_memberId\nlet taskIdFromToken = null;\nlet memberIdFromToken = null;\nif (flow_token && flow_token.includes('_')) {\n  const parts = flow_token.split('_');\n  taskIdFromToken = parts[0];\n  memberIdFromToken = parts.slice(1).join('_');\n}\n\nif (!task_done) {\n  return { json: { skip: true, reason: 'missing_task_done' } };\n}\n\n// بناء note واحدة لو مخلصش\nlet note = null;\nif (task_done === 'no') {\n  const parts = [];\n  if (task_progress) parts.push('📍 فين في التاسك: ' + task_progress);\n  if (time_needed)   parts.push('⏳ وقت كمان: ' + time_needed);\n  if (blockers)      parts.push('🚧 Blockers: ' + blockers);\n  note = parts.join(' | ') || 'لم يتم تحديد تفاصيل';\n}\n\nreturn {\n  json: {\n    skip: false,\n    from: from ? from.replace(/\\D/g, '') : null,\n    task_done,\n    task_progress,\n    time_needed,\n    blockers,\n    note,\n    taskIdFromToken,\n    memberIdFromToken,\n    receivedAt: Date.now()\n  }\n};"
+      },
+      "id": "ef2025cd-22a7-41e3-9986-04e65120d13d",
+      "name": "Parse Flow Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1744,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "84105001-845c-4496-91fe-1cc6c699ec95",
+      "name": "Valid Request?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -1520,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://firestore.googleapis.com/v1/projects/birth-21c5c/databases/(default)/documents/members",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "pageSize",
+              "value": "300"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a91e6bf5-1773-4f29-96ce-5c18b3896cbe",
+      "name": "Get Members",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1296,
+        416
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "6iJQARnHPCmOk2tm",
+          "name": "firebase oauth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://firestore.googleapis.com/v1/projects/birth-21c5c/databases/(default)/documents/tasks",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "pageSize",
+              "value": "300"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "47dfa428-8194-4be6-8e6e-833dcfbc6d1b",
+      "name": "Get Tasks",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1296,
+        624
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "6iJQARnHPCmOk2tm",
+          "name": "firebase oauth"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "39e872dc-7f8d-4156-b99b-22174e39ef0a",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -1088,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "function fromFV(v) {\n  if (v == null) return null;\n  if ('stringValue' in v) return v.stringValue;\n  if ('integerValue' in v) return parseInt(v.integerValue);\n  if ('doubleValue' in v) return parseFloat(v.doubleValue);\n  if ('booleanValue' in v) return v.booleanValue;\n  if ('nullValue' in v) return null;\n  if ('timestampValue' in v) return v.timestampValue;\n  if ('arrayValue' in v) return (v.arrayValue.values || []).map(fromFV);\n  if ('mapValue' in v) return fromFF(v.mapValue.fields || {});\n  return null;\n}\nfunction fromFF(fields) {\n  const o = {};\n  for (const k in fields) o[k] = fromFV(fields[k]);\n  return o;\n}\nfunction parseDoc(doc) {\n  const id = doc.name.split('/').pop();\n  return { id, ...fromFF(doc.fields || {}) };\n}\nfunction toFV(v) {\n  if (v === null || v === undefined) return { nullValue: null };\n  if (typeof v === 'string') return { stringValue: v };\n  if (typeof v === 'boolean') return { booleanValue: v };\n  if (typeof v === 'number') {\n    if (Number.isInteger(v)) return { integerValue: String(v) };\n    return { doubleValue: v };\n  }\n  if (Array.isArray(v)) return { arrayValue: { values: v.map(toFV) } };\n  if (typeof v === 'object') {\n    const fields = {};\n    for (const k in v) fields[k] = toFV(v[k]);\n    return { mapValue: { fields } };\n  }\n  return { nullValue: null };\n}\n\nconst parsed = $('Parse Flow Data').first().json;\nconst allItems = $input.all();\n\nlet members = [];\nlet tasks = [];\n\nfor (const item of allItems) {\n  const docs = item.json.documents || [];\n  if (!docs.length) continue;\n  const path = docs[0].name || '';\n  if (path.includes('/members/')) members = docs.map(parseDoc);\n  if (path.includes('/tasks/'))  tasks   = docs.map(parseDoc);\n}\n\n// =============================================\n// 🔍 لاقي العضو\n// أولوية: memberIdFromToken → رقم الموبايل\n// =============================================\nlet matchedMember = null;\n\nif (parsed.memberIdFromToken) {\n  matchedMember = members.find(m => m.id === parsed.memberIdFromToken) || null;\n}\n\nif (!matchedMember && parsed.from) {\n  const fromDigits = parsed.from;\n  for (const m of members) {\n    const mp = (m.phone || '').replace(/\\D/g, '');\n    if (!mp) continue;\n    if (mp === fromDigits || mp.endsWith(fromDigits) || fromDigits.endsWith(mp)) {\n      matchedMember = m;\n      break;\n    }\n  }\n}\n\nif (!matchedMember) {\n  return { json: { found: false, reason: 'member_not_found' } };\n}\n\n// =============================================\n// 🔍 لاقي التاسك\n// أولوية: taskIdFromToken → أحدث inprogress\n// =============================================\nlet targetTask = null;\n\nif (parsed.taskIdFromToken) {\n  targetTask = tasks.find(t => t.id === parsed.taskIdFromToken) || null;\n}\n\nif (!targetTask) {\n  const memberTasks = tasks.filter(t => {\n    if (t.status !== 'inprogress') return false;\n    const assignees = Array.isArray(t.assignees) && t.assignees.length\n      ? t.assignees : (t.assignee ? [t.assignee] : []);\n    return assignees.includes(matchedMember.id);\n  });\n  memberTasks.sort((a, b) => {\n    const aTime = a.deadline ? new Date(a.deadline).getTime() : 0;\n    const bTime = b.deadline ? new Date(b.deadline).getTime() : 0;\n    return aTime - bTime;\n  });\n  targetTask = memberTasks[0] || null;\n}\n\nif (!targetTask) {\n  return { json: { found: false, reason: 'task_not_found' } };\n}\n\n// =============================================\n// 🔥 بناء الـ Update\n// =============================================\nconst currentLog = Array.isArray(targetTask.activityLog) ? targetTask.activityLog : [];\nconst nowMs = Date.now();\n\nlet updatedFields = {};\nlet updateMaskFields = [];\n\nif (parsed.task_done === 'yes') {\n  // ✅ التاسك خلص\n  const newLogEntry = {\n    source: 'whatsapp_flow',\n    type: 'task_completed',\n    text: 'أكد إنه خلص التاسك عن طريق الفلو',\n    timestamp: nowMs,\n    memberId: matchedMember.id,\n    memberName: matchedMember.name\n  };\n  updatedFields = {\n    status: toFV('done'),\n    activityLog: toFV([...currentLog, newLogEntry])\n  };\n  updateMaskFields = ['status', 'activityLog'];\n\n} else {\n  // ❌ لسه مخلصش - note واحدة بكل التفاصيل\n  const newLogEntry = {\n    source: 'whatsapp_flow',\n    type: 'progress_update',\n    text: parsed.note || 'لم يتم تحديد تفاصيل',\n    timestamp: nowMs,\n    memberId: matchedMember.id,\n    memberName: matchedMember.name\n  };\n  updatedFields = {\n    activityLog: toFV([...currentLog, newLogEntry])\n  };\n  updateMaskFields = ['activityLog'];\n}\n\nreturn {\n  json: {\n    found: true,\n    taskId: targetTask.id,\n    taskName: targetTask.name,\n    memberId: matchedMember.id,\n    memberName: matchedMember.name,\n    task_done: parsed.task_done,\n    firestoreBody: { fields: updatedFields },\n    bodyStr: JSON.stringify({ fields: updatedFields }),\n    updateMaskFields\n  }\n};"
+      },
+      "id": "0a86c3cf-e304-4565-9ed8-46aa1a3a9ac4",
+      "name": "Match & Build Update",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -864,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.found }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "91ea8f46-29ae-41a5-a769-0716e1a98bdb",
+      "name": "Found Task?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -640,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://firestore.googleapis.com/v1/projects/birth-21c5c/databases/(default)/documents/tasks/{{ $json.taskId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "updateMask.fieldPaths",
+              "value": "=status"
+            },
+            {
+              "name": "updateMask.fieldPaths",
+              "value": "activityLog"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.bodyStr }}",
+        "options": {}
+      },
+      "id": "5e237b17-9272-4cf4-a810-4657530eb786",
+      "name": "Save to Firestore",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -416,
+        416
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "6iJQARnHPCmOk2tm",
+          "name": "firebase oauth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"status\":\"ok\"}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "701cb143-447b-4e11-9bdb-44d3d9bd2ff0",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -208,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"status\":\"not_found\"}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "bc398251-7afd-45da-acce-292dc256a640",
+      "name": "Respond Not Found",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -416,
+        624
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"status\":\"invalid\"}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "0efbb88c-d29f-46c6-bbec-e0bce9631998",
+      "name": "Respond Invalid",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -1520,
+        720
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Flow Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Flow Data": {
+      "main": [
+        [
+          {
+            "node": "Valid Request?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid Request?": {
+      "main": [
+        [
+          {
+            "node": "Get Members",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Invalid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Members": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Tasks": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Match & Build Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Match & Build Update": {
+      "main": [
+        [
+          {
+            "node": "Found Task?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Found Task?": {
+      "main": [
+        [
+          {
+            "node": "Save to Firestore",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Not Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Firestore": {
+      "main": [
+        [
+          {
+            "node": "Respond OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "timezone": "Africa/Cairo",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "29b9c57a-84ba-4526-8b83-14344ce3aa7b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "66a10ccf1191e26cf11454f1eda8e19c591fe7a3b375a70106819505eb7cf5ce"
+  },
+  "id": "BjVKye5g71Rxr4JP5cXT3",
+  "tags": []
+}

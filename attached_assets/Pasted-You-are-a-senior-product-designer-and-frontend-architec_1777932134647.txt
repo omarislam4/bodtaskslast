@@ -1,0 +1,81 @@
+You are a senior product designer and frontend architect.
+
+Take the existing SaaS dashboard and transform it into a world-class, production-level application that feels like a premium product (similar to Notion, Linear, or ClickUp).
+
+Your goal is NOT to rebuild — but to upgrade, refine, and elevate the experience to the highest level.
+
+FOCUS AREAS:
+
+1. UX & PRODUCT THINKING
+
+* Improve user flow to reduce friction
+* Make interactions intuitive and fast
+* Add smart defaults and inline editing
+* Reduce clicks and unnecessary steps
+* Add keyboard shortcuts for power users
+* Design empty states that guide the user
+
+2. VISUAL DESIGN (PREMIUM FEEL)
+
+* Improve spacing, alignment, and visual hierarchy
+* Use modern typography scale and consistent sizing
+* Add subtle gradients and soft shadows
+* Use glassmorphism or layered surfaces carefully
+* Improve color system for better contrast and accessibility
+
+3. MICRO-INTERACTIONS
+
+* Add hover, focus, and active states everywhere
+* Smooth transitions between pages and states
+* Animate cards, modals, and dropdowns
+* Use motion to guide attention (not distract)
+
+4. PERFORMANCE & FEEL
+
+* Make everything feel instant (no lag)
+* Add skeleton loaders instead of spinners
+* Optimize rendering and state updates
+* Lazy load heavy components
+
+5. APP-LIKE EXPERIENCE
+
+* Make it feel like a native app, not a website
+* Add command palette (like Cmd + K)
+* Add drag & drop for tasks
+* Add inline editing (edit without modal when possible)
+
+6. COMPONENT SYSTEM
+
+* Refactor into reusable components
+* Create a clean design system (buttons, inputs, cards, tables)
+* Ensure consistency across all pages
+
+7. ADVANCED FEATURES
+
+* Add activity timeline with rich interactions
+* Add real-time updates (simulate if needed)
+* Add notifications system (in-app)
+* Improve search with smart filtering
+* Add multi-select actions (bulk edit tasks)
+
+8. POLISH & DETAILS
+
+* Add subtle sound or feedback (optional)
+* Improve scroll behavior (smooth, inertia-like)
+* Add focus states for accessibility
+* Make mobile experience feel like a real app
+
+TECH STACK:
+
+* Next.js + Tailwind + ShadCN UI
+* Framer Motion for animations
+
+IMPORTANT:
+
+* Do NOT over-design or clutter the UI
+* Keep it minimal, fast, and elegant
+* Every animation must have a purpose
+* Prioritize usability over visual noise
+
+FINAL GOAL:
+Make the product feel like something users would pay for — fast, smooth, intuitive, and visually premium.

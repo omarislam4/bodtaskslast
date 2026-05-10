@@ -1,0 +1,2597 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="light" data-lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Birth Of Dream</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="favicon.png">
+<meta name="theme-color" content="#0f1623">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Birth Of Dream">
+<link rel="manifest" href="manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════
+   THEMES
+══════════════════════════════════ */
+[data-theme="light"]{
+  --bg:#f4f5f7; --surface:#ffffff; --surface2:#f0f2f5; --surface3:#e8ebf0;
+  --border:#e1e4eb; --border2:#c8cdd9;
+  --accent:#1a6ef5; --accent2:#1558d4; --accent-glow:rgba(26,110,245,.1);
+  --success:#0b8a4e; --warn:#c47a15; --danger:#d42020;
+  --text:#0e1117; --text2:#5a6478; --text3:#9198aa;
+  --sidebar-bg:#0f1623; --sidebar-text:rgba(255,255,255,.6);
+  --sidebar-active:rgba(26,110,245,.18); --sidebar-hover:rgba(255,255,255,.06);
+  --sidebar-border:rgba(255,255,255,.07);
+  --topbar-bg:#ffffff; --topbar-border:#e1e4eb;
+  --shadow:0 1px 3px rgba(0,0,0,.07),0 4px 14px rgba(0,0,0,.05);
+  --shadow-md:0 4px 12px rgba(0,0,0,.09);
+}
+[data-theme="dark"]{
+  --bg:#0c0e14; --surface:#141820; --surface2:#1a1f2c; --surface3:#202535;
+  --border:#252c3d; --border2:#2e3750;
+  --accent:#3d8ef0; --accent2:#2563eb; --accent-glow:rgba(61,142,240,.13);
+  --success:#0ea55e; --warn:#e09520; --danger:#e63535;
+  --text:#e4e8f0; --text2:#7e8ca6; --text3:#424e65;
+  --sidebar-bg:#08090f; --sidebar-text:rgba(255,255,255,.52);
+  --sidebar-active:rgba(61,142,240,.2); --sidebar-hover:rgba(255,255,255,.045);
+  --sidebar-border:rgba(255,255,255,.055);
+  --topbar-bg:#141820; --topbar-border:#252c3d;
+  --shadow:0 2px 8px rgba(0,0,0,.45);
+  --shadow-md:0 4px 18px rgba(0,0,0,.55);
+}
+
+/* ══════════════════════════════════
+   BASE
+══════════════════════════════════ */
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --font-en:'Inter',sans-serif;
+  --font-ar:'IBM Plex Sans Arabic',sans-serif;
+  --mono:'JetBrains Mono',monospace;
+  --sidebar-w:248px; --topbar-h:54px; --r:8px;
+}
+html{scroll-behavior:smooth;}
+body{
+  font-family:var(--font-ar);
+  background:var(--bg); color:var(--text);
+  min-height:100vh; overflow-x:hidden;
+  transition:background .2s,color .2s;
+  font-size:14px; line-height:1.6;
+}
+[data-lang="en"] body,[data-lang="en"] input,[data-lang="en"] button,
+[data-lang="en"] select,[data-lang="en"] textarea{font-family:var(--font-en);}
+a{text-decoration:none;color:inherit;}
+
+/* ══════════════════════════════════
+   SIDEBAR
+══════════════════════════════════ */
+.sidebar{
+  position:fixed; top:0; bottom:0; width:var(--sidebar-w);
+  background:var(--sidebar-bg);
+  display:flex; flex-direction:column;
+  z-index:300; transition:transform .28s cubic-bezier(.4,0,.2,1);
+  overflow:hidden;
+  box-shadow:2px 0 12px rgba(0,0,0,.18);
+}
+/* RTL: sidebar right, LTR: sidebar left */
+[dir="rtl"] .sidebar{right:0; left:auto; border-left:none; border-right:1px solid var(--sidebar-border);}
+[dir="ltr"] .sidebar{left:0; right:auto; border-right:1px solid var(--sidebar-border);}
+
+.sidebar-logo{
+  display:flex; align-items:center; gap:10px;
+  padding:14px 16px; height:var(--topbar-h);
+  border-bottom:1px solid var(--sidebar-border); flex-shrink:0;
+}
+.logo-icon{
+  width:30px; height:30px; border-radius:8px;
+  background:linear-gradient(135deg,#1a6ef5,#0f4bc4);
+  display:flex; align-items:center; justify-content:center;
+  font-size:15px; font-weight:800; color:#fff; flex-shrink:0;
+}
+.logo-text{font-size:14px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.logo-sub{font-size:10px;color:var(--sidebar-text);font-weight:500;}
+
+.sidebar-nav{flex:1;overflow-y:auto;padding:8px;scrollbar-width:none;}
+.sidebar-nav::-webkit-scrollbar{display:none;}
+
+/* spaces list */
+.spaces-label{
+  font-size:10px; font-weight:700; color:rgba(255,255,255,.3);
+  letter-spacing:1px; text-transform:uppercase;
+  padding:12px 10px 4px;
+}
+.space-item{
+  display:flex; align-items:center; gap:8px;
+  padding:7px 10px; border-radius:6px; cursor:pointer;
+  color:var(--sidebar-text); font-size:13px; font-weight:600;
+  transition:all .12s; margin-bottom:1px; user-select:none;
+  position:relative;
+}
+.space-item:hover{background:var(--sidebar-hover);color:#fff;}
+.space-item.active{background:var(--sidebar-active);color:#fff;}
+.space-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.space-name{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.space-count{
+  font-size:10px;font-family:var(--mono);
+  background:rgba(255,255,255,.1);color:rgba(255,255,255,.5);
+  padding:1px 6px;border-radius:99px;flex-shrink:0;
+}
+.space-expand{font-size:10px;color:rgba(255,255,255,.3);transition:transform .15s;flex-shrink:0;}
+.space-item.open .space-expand{transform:rotate(90deg);}
+
+/* sub-nav inside space */
+.space-subnav{display:none;padding:0 0 4px;}
+.space-item.open + .space-subnav{display:block;}
+.nav-item{
+  display:flex; align-items:center; gap:8px;
+  padding:6px 10px 6px 26px; border-radius:6px;
+  cursor:pointer; color:var(--sidebar-text);
+  font-size:12px; font-weight:500; transition:all .12s;
+  margin-bottom:1px;
+}
+[dir="ltr"] .nav-item{padding:6px 10px 6px 26px;}
+[dir="rtl"] .nav-item{padding:6px 26px 6px 10px;}
+.nav-item:hover{background:var(--sidebar-hover);color:#fff;}
+.nav-item.active{background:var(--sidebar-active);color:#fff;}
+.nav-icon{font-size:13px;width:16px;text-align:center;flex-shrink:0;}
+.nav-item .count{
+  margin-inline-start:auto;
+  background:rgba(255,255,255,.1);color:rgba(255,255,255,.45);
+  font-size:10px;font-family:var(--mono);padding:1px 5px;border-radius:99px;
+}
+.nav-item.active .count{background:rgba(139,92,246,.3);color:#c4b5fd;}
+
+/* global nav (no space) */
+.nav-section-global{padding:8px 0;}
+.nav-global-item{
+  display:flex; align-items:center; gap:8px;
+  padding:7px 10px; border-radius:6px; cursor:pointer;
+  color:var(--sidebar-text); font-size:12px; font-weight:500;
+  transition:all .12s; margin-bottom:1px;
+}
+.nav-global-item:hover{background:var(--sidebar-hover);color:#fff;}
+.nav-global-item.active{background:var(--sidebar-active);color:#fff;}
+.nav-global-item .count{margin-inline-start:auto;background:rgba(255,255,255,.1);color:rgba(255,255,255,.45);font-size:10px;font-family:var(--mono);padding:1px 5px;border-radius:99px;}
+
+.sidebar-footer{
+  padding:12px 8px; border-top:1px solid var(--sidebar-border); flex-shrink:0;
+}
+.sidebar-stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;}
+.s-stat{background:rgba(255,255,255,.05);border-radius:6px;padding:8px;text-align:center;}
+.s-stat .sn{font-family:var(--mono);font-size:18px;font-weight:600;color:#fff;}
+.s-stat .sl{font-size:9px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.5px;margin-top:1px;}
+
+.add-space-btn{
+  width:100%; padding:8px; border-radius:6px;
+  border:1px dashed rgba(255,255,255,.15);
+  background:transparent; color:rgba(255,255,255,.4);
+  font-size:12px; cursor:pointer; transition:all .15s;
+  font-family:inherit; display:flex; align-items:center; justify-content:center; gap:6px;
+}
+.add-space-btn:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.3);}
+
+/* ══════════════════════════════════
+   OVERLAY
+══════════════════════════════════ */
+.sidebar-overlay{
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,.55); z-index:200; backdrop-filter:blur(2px);
+}
+.sidebar-overlay.open{display:block;}
+
+/* ══════════════════════════════════
+   MAIN
+══════════════════════════════════ */
+[dir="rtl"] .main{margin-right:var(--sidebar-w);margin-left:0;}
+[dir="ltr"] .main{margin-left:var(--sidebar-w);margin-right:0;}
+.main{min-height:100vh;display:flex;flex-direction:column;transition:margin .28s;}
+
+/* ══════════════════════════════════
+   TOPBAR
+══════════════════════════════════ */
+.topbar{
+  position:sticky; top:0; z-index:100;
+  height:var(--topbar-h);
+  background:var(--topbar-bg); border-bottom:1px solid var(--topbar-border);
+  display:flex; align-items:center; padding:0 18px; gap:10px;
+  transition:background .2s,border-color .2s; flex-shrink:0;
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+}
+.topbar-hamburger{
+  width:32px;height:32px;border-radius:6px;border:1px solid var(--border);
+  background:transparent;color:var(--text2);cursor:pointer;
+  display:none;align-items:center;justify-content:center;font-size:16px;
+  flex-shrink:0;transition:all .12s;
+}
+.topbar-hamburger:hover{background:var(--surface2);color:var(--text);}
+.topbar-title{font-size:15px;font-weight:700;color:var(--text);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.topbar-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+
+/* search */
+.search-wrap{position:relative;}
+.search-box{
+  display:flex;align-items:center;gap:7px;
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:6px;padding:6px 11px;width:190px;transition:all .2s;
+}
+.search-box:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);width:240px;}
+.search-box input{background:none;border:none;outline:none;color:var(--text);font-size:13px;font-family:inherit;width:100%;}
+.search-box input::placeholder{color:var(--text3);}
+.search-icon{color:var(--text3);font-size:13px;flex-shrink:0;}
+.search-dd{
+  display:none;position:absolute;top:calc(100% + 5px);
+  background:var(--surface);border:1px solid var(--border2);
+  border-radius:10px;box-shadow:var(--shadow-md);z-index:200;
+  max-height:280px;overflow-y:auto;width:280px;
+}
+[dir="rtl"] .search-dd{right:0;}
+[dir="ltr"] .search-dd{left:0;}
+.search-dd.show{display:block;}
+.search-ri{padding:9px 13px;cursor:pointer;display:flex;align-items:center;gap:9px;border-bottom:1px solid var(--border);transition:background .1s;}
+.search-ri:last-child{border-bottom:none;}
+.search-ri:hover{background:var(--surface2);}
+.sri-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.sri-name{font-size:13px;font-weight:600;color:var(--text);}
+.sri-meta{font-size:11px;color:var(--text3);margin-top:1px;}
+.search-empty{padding:16px;text-align:center;color:var(--text3);font-size:13px;}
+
+/* icon btn */
+.icon-btn{
+  width:32px;height:32px;border-radius:6px;border:1px solid var(--border);
+  background:transparent;color:var(--text2);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;transition:all .12s;flex-shrink:0;
+}
+.icon-btn:hover{background:var(--surface2);color:var(--text);}
+
+/* lang toggle */
+.lang-btn{
+  padding:5px 11px;border-radius:6px;border:1px solid var(--border);
+  background:var(--surface2);color:var(--text2);
+  font-size:12px;font-weight:700;cursor:pointer;transition:all .12s;
+  font-family:inherit;
+}
+.lang-btn:hover{border-color:var(--accent);color:var(--accent);}
+
+/* profile */
+.profile-wrap{position:relative;}
+.profile-circle{
+  width:32px;height:32px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;color:#fff;
+  cursor:pointer;flex-shrink:0;border:2px solid rgba(255,255,255,.2);
+  transition:transform .15s;text-transform:uppercase;
+}
+.profile-circle:hover{transform:scale(1.06);}
+.profile-dd{
+  position:absolute;top:calc(100% + 8px);
+  background:var(--surface);border:1px solid var(--border2);
+  border-radius:10px;box-shadow:var(--shadow-md);z-index:300;
+  min-width:210px;overflow:hidden;display:none;
+}
+[dir="rtl"] .profile-dd{left:0;}
+[dir="ltr"] .profile-dd{right:0;}
+.profile-dd.open{display:block;}
+.profile-dd-header{padding:13px 15px;border-bottom:1px solid var(--border);}
+.profile-dd-name{font-size:13px;font-weight:700;color:var(--text);}
+.profile-dd-email{font-size:11px;color:var(--text3);margin-top:2px;font-family:var(--mono);}
+.profile-dd-item{
+  display:flex;align-items:center;gap:9px;padding:10px 15px;
+  font-size:13px;font-weight:500;color:var(--text2);
+  cursor:pointer;transition:background .1s;border:none;background:none;
+  width:100%;font-family:inherit;text-align:inherit;
+}
+.profile-dd-item:hover{background:var(--surface2);color:var(--text);}
+.profile-dd-item.danger{color:var(--danger);}
+.profile-dd-item.danger:hover{background:rgba(220,38,38,.06);}
+
+/* ══════════════════════════════════
+   BUTTONS
+══════════════════════════════════ */
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 14px;border-radius:6px;border:none;
+  cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;
+  transition:all .12s;white-space:nowrap;
+}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{background:var(--accent2);transform:translateY(-1px);box-shadow:0 4px 12px rgba(26,110,245,.3);}
+.btn-ghost{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
+.btn-ghost:hover{background:var(--surface3);color:var(--text);border-color:var(--border2);}
+.btn-danger{background:rgba(220,38,38,.08);color:var(--danger);border:1px solid rgba(220,38,38,.2);}
+.btn-danger:hover{background:rgba(220,38,38,.15);}
+.btn-success{background:rgba(5,150,105,.08);color:var(--success);border:1px solid rgba(5,150,105,.2);}
+.btn-notify{background:linear-gradient(135deg,#059669,#047857);color:#fff;font-size:12px;padding:5px 10px;}
+.btn-notify:hover{opacity:.9;transform:translateY(-1px);}
+.btn-sm{padding:5px 10px;font-size:12px;}
+.btn-xs{padding:3px 8px;font-size:11px;}
+.btn-icon{padding:5px;width:28px;height:28px;justify-content:center;}
+
+/* ══════════════════════════════════
+   PAGES
+══════════════════════════════════ */
+.page{display:none;padding:20px 24px;flex:1;animation:pgIn .18s ease;}
+.page.active{display:block;}
+@keyframes pgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
+.page-header h2{font-size:18px;font-weight:700;color:var(--text);}
+.page-header-sub{font-size:12px;color:var(--text3);margin-top:2px;}
+.page-hdr-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+
+/* ══════════════════════════════════
+   OVERVIEW CARDS
+══════════════════════════════════ */
+.ov-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px;}
+.ov-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:16px;position:relative;overflow:hidden;
+  transition:transform .15s,border-color .15s;
+}
+.ov-card:hover{transform:translateY(-2px);border-color:var(--border2);}
+.ov-card-bar{position:absolute;bottom:0;left:0;right:0;height:3px;}
+.ov-icon{font-size:18px;margin-bottom:10px;display:block;}
+.ov-val{font-family:var(--mono);font-size:28px;font-weight:700;color:var(--text);line-height:1;}
+.ov-label{font-size:11px;color:var(--text3);font-weight:600;margin-top:4px;}
+.ov-progress{height:3px;background:var(--border);border-radius:99px;overflow:hidden;margin-top:8px;}
+.ov-progress-fill{height:100%;border-radius:99px;transition:width .5s;}
+
+/* ══════════════════════════════════
+   QUICK PILLS
+══════════════════════════════════ */
+.quick-pills{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px;}
+.qpill{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:99px;padding:4px 12px;
+  font-size:12px;font-weight:600;color:var(--text2);
+  display:flex;align-items:center;gap:5px;
+}
+.qpill .dot{width:6px;height:6px;border-radius:50%;}
+
+/* ══════════════════════════════════
+   SECTION TITLE
+══════════════════════════════════ */
+.sec-title{
+  font-size:10px;font-weight:700;color:var(--text3);
+  letter-spacing:1.5px;text-transform:uppercase;
+  margin-bottom:12px;display:flex;align-items:center;gap:10px;
+}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* ══════════════════════════════════
+   FILTER BAR
+══════════════════════════════════ */
+.filter-bar{display:flex;gap:6px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
+.fchip{
+  padding:5px 12px;border-radius:99px;border:1px solid var(--border);
+  background:var(--surface);color:var(--text2);font-size:12px;
+  font-weight:600;cursor:pointer;transition:all .12s;
+}
+.fchip:hover{border-color:var(--accent);color:var(--accent);}
+.fchip.active{background:var(--accent-glow);border-color:var(--accent);color:var(--accent);}
+
+/* ══════════════════════════════════
+   TASKS TABLE
+══════════════════════════════════ */
+.tasks-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.tasks-head{
+  display:grid;padding:10px 16px;
+  background:var(--surface2);border-bottom:1px solid var(--border);
+  font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase;
+  gap:10px;
+}
+.task-row{
+  display:grid;padding:11px 16px;border-bottom:1px solid var(--border);
+  align-items:center;transition:background .1s;cursor:pointer;gap:10px;
+}
+/* Column layouts */
+.tasks-head,.task-row{grid-template-columns:2fr 1fr 90px 90px 100px 80px;}
+.task-row:last-child{border-bottom:none;}
+.task-row:hover{background:var(--surface2);}
+.task-title-cell{display:flex;align-items:center;gap:8px;min-width:0;}
+.task-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.task-name{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.task-src{font-size:11px;color:var(--text3);margin-top:1px;}
+.actions-cell{display:flex;gap:4px;justify-content:flex-end;align-items:center;}
+
+/* badges */
+.badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:99px;font-size:11px;font-weight:700;white-space:nowrap;}
+.badge-todo{background:rgba(107,114,128,.12);color:var(--text2);}
+.badge-inprogress{background:rgba(59,130,246,.12);color:#3b82f6;}
+.badge-review{background:rgba(217,119,6,.12);color:var(--warn);}
+.badge-done{background:rgba(5,150,105,.12);color:var(--success);}
+.badge-blocked{background:rgba(220,38,38,.12);color:var(--danger);}
+.badge-low{background:rgba(5,150,105,.1);color:var(--success);}
+.badge-med{background:rgba(217,119,6,.1);color:var(--warn);}
+.badge-high{background:rgba(220,38,38,.1);color:var(--danger);}
+
+.deadline-cell{font-family:var(--mono);font-size:11px;color:var(--text2);}
+.deadline-cell.overdue{color:var(--danger);font-weight:700;}
+.deadline-cell.soon{color:var(--warn);font-weight:700;}
+.avatar{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;flex-shrink:0;}
+.assignee-pill{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--text2);}
+
+/* ══════════════════════════════════
+   EMPTY STATE
+══════════════════════════════════ */
+.empty-state{text-align:center;padding:48px 20px;color:var(--text3);}
+.empty-state .es-icon{font-size:32px;margin-bottom:10px;opacity:.4;}
+.empty-state p{font-size:13px;font-weight:600;}
+
+/* ══════════════════════════════════
+   HISTORY
+══════════════════════════════════ */
+.hist-stats{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+.hist-stat{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 18px;}
+.hist-stat .hn{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--success);}
+.hist-stat .hl{font-size:11px;color:var(--text3);font-weight:600;}
+
+/* ══════════════════════════════════
+   TIMELINE
+══════════════════════════════════ */
+.tl-container{display:flex;flex-direction:column;max-width:820px;}
+.tl-group{margin-bottom:24px;}
+.tl-month{font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:10px;}
+.tl-month::after{content:'';flex:1;height:1px;background:var(--border);}
+.tl-item{display:grid;grid-template-columns:84px 1px 1fr;gap:0 16px;padding-bottom:12px;}
+.tl-date{font-family:var(--mono);font-size:10px;color:var(--text3);padding-top:16px;text-align:end;}
+.tl-line{display:flex;flex-direction:column;align-items:center;}
+.tl-dot{width:9px;height:9px;border-radius:50%;border:2px solid;background:var(--bg);flex-shrink:0;margin-top:17px;z-index:1;}
+.tl-connector{width:1px;flex:1;background:var(--border);margin-top:4px;min-height:12px;}
+.tl-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;cursor:pointer;transition:all .12s;}
+.tl-card:hover{border-color:var(--border2);box-shadow:var(--shadow);}
+.tl-card-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;}
+.tl-card-title{font-size:13px;font-weight:600;color:var(--text);line-height:1.4;}
+.tl-card-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.tl-progress{height:2px;background:var(--border);border-radius:99px;overflow:hidden;margin-top:7px;}
+.tl-progress-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent2));}
+
+/* ══════════════════════════════════
+   MEMBERS
+══════════════════════════════════ */
+.members-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;}
+.member-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;transition:all .15s;overflow:hidden;position:relative;}
+.member-card:hover{border-color:var(--border2);transform:translateY(-2px);}
+.member-color-bar{height:3px;margin:-18px -18px 16px;border-radius:10px 10px 0 0;}
+.member-hdr{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+.member-av{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0;}
+.member-name{font-size:14px;font-weight:700;color:var(--text);}
+.member-role{font-size:11px;color:var(--text3);font-weight:500;margin-top:1px;}
+.member-info{padding:8px 0;border-top:1px solid var(--border);margin-bottom:10px;}
+.member-info-row{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;}
+.member-info-label{color:var(--text3);font-weight:600;}
+.member-info-val{color:var(--text2);font-family:var(--mono);font-size:11px;}
+.member-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:12px;}
+.member-stat{background:var(--surface2);border-radius:6px;padding:8px;text-align:center;}
+.member-stat .v{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--text);}
+.member-stat .k{font-size:9px;color:var(--text3);margin-top:1px;font-weight:600;text-transform:uppercase;}
+.member-actions{display:flex;gap:6px;}
+
+/* ══════════════════════════════════
+   DATA PANEL
+══════════════════════════════════ */
+.data-topbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+.data-bc{display:flex;align-items:center;gap:5px;font-size:13px;flex:1;}
+.data-bc-item{color:var(--text2);cursor:pointer;font-weight:500;transition:color .12s;}
+.data-bc-item:hover{color:var(--text);}
+.data-bc-item.current{color:var(--text);font-weight:700;}
+.data-bc-sep{color:var(--text3);}
+.data-actions{display:flex;gap:7px;}
+.data-search-box{
+  display:flex;align-items:center;gap:7px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:6px;padding:7px 12px;margin-bottom:14px;width:100%;max-width:360px;
+}
+.data-search-box input{background:none;border:none;outline:none;color:var(--text);font-size:13px;font-family:inherit;width:100%;}
+.data-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;}
+.folder-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;cursor:pointer;transition:all .15s;position:relative;}
+.folder-card:hover{border-color:var(--accent);transform:translateY(-1px);box-shadow:var(--shadow);}
+.folder-icon{font-size:26px;margin-bottom:8px;}
+.folder-name{font-size:13px;font-weight:700;color:var(--text);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.folder-meta{font-size:11px;color:var(--text3);}
+.folder-actions{position:absolute;top:8px;inset-inline-end:8px;display:none;gap:4px;}
+.folder-card:hover .folder-actions{display:flex;}
+.fa-btn{width:22px;height:22px;border-radius:4px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .1s;}
+.fa-btn:hover{background:var(--surface3);color:var(--text);}
+.fa-btn.del:hover{background:rgba(220,38,38,.1);border-color:rgba(220,38,38,.3);color:var(--danger);}
+.work-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;transition:all .15s;position:relative;}
+.work-card:hover{border-color:var(--border2);box-shadow:var(--shadow);}
+.work-card-name{font-size:13px;font-weight:700;color:var(--text);margin-bottom:9px;}
+.work-links{display:flex;flex-direction:column;gap:5px;}
+.work-link-row{display:flex;align-items:center;gap:6px;font-size:11px;}
+.work-link-label{color:var(--text3);font-weight:700;min-width:52px;text-transform:uppercase;letter-spacing:.5px;font-size:10px;}
+.work-link-val{color:var(--accent);text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;}
+.work-link-val:hover{text-decoration:underline;}
+.work-link-empty{color:var(--text3);font-size:11px;}
+.work-notes{margin-top:8px;font-size:11px;color:var(--text3);line-height:1.5;border-top:1px solid var(--border);padding-top:6px;}
+.work-card-actions{position:absolute;top:8px;inset-inline-end:8px;display:none;gap:4px;}
+.work-card:hover .work-card-actions{display:flex;}
+
+/* ══════════════════════════════════
+   SENDERS
+══════════════════════════════════ */
+.senders-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;}
+.sender-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;transition:all .15s;}
+.sender-card:hover{border-color:var(--border2);transform:translateY(-1px);}
+.sender-card-hdr{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.sender-av{width:36px;height:36px;border-radius:8px;background:var(--accent-glow);border:1px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--accent);flex-shrink:0;}
+.sender-name{font-size:13px;font-weight:700;color:var(--text);}
+.sender-role{font-size:11px;color:var(--text3);}
+.sender-del-btn{width:100%;padding:6px;border-radius:6px;background:rgba(220,38,38,.06);border:1px solid rgba(220,38,38,.15);color:var(--danger);font-size:12px;font-family:inherit;font-weight:600;cursor:pointer;transition:all .12s;}
+.sender-del-btn:hover{background:rgba(220,38,38,.14);}
+
+/* ══════════════════════════════════
+   SETTINGS
+══════════════════════════════════ */
+.settings-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:14px;}
+.settings-card-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:7px;}
+.settings-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 0;border-bottom:1px solid var(--border);}
+.settings-row:last-child{border-bottom:none;padding-bottom:0;}
+.schema-block{background:var(--surface2);border-radius:8px;padding:12px 14px;font-family:var(--mono);font-size:11px;color:var(--text2);line-height:1.9;overflow-x:auto;}
+.schema-cmt{color:var(--accent);}
+
+/* ══════════════════════════════════
+   MODAL
+══════════════════════════════════ */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(5px);z-index:500;align-items:center;justify-content:center;padding:16px;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:12px;width:min(580px,100%);max-height:calc(100vh - 48px);overflow-y:auto;box-shadow:var(--shadow-md);animation:modalIn .17s ease;}
+@keyframes modalIn{from{opacity:0;transform:scale(.96) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.modal-sm{width:min(420px,100%);}
+.modal-hdr{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:1;}
+.modal-title{font-size:15px;font-weight:700;color:var(--text);}
+.modal-close{width:28px;height:28px;border-radius:6px;border:none;background:var(--surface2);color:var(--text2);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;transition:all .12s;}
+.modal-close:hover{background:rgba(220,38,38,.1);color:var(--danger);}
+.modal-body{padding:20px;}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;padding:14px 20px;border-top:1px solid var(--border);position:sticky;bottom:0;background:var(--surface);}
+
+/* form */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.form-group{display:flex;flex-direction:column;gap:5px;}
+.form-group.full{grid-column:1/-1;}
+.form-label{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;}
+.form-input,.form-select,.form-textarea{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:6px;padding:8px 11px;color:var(--text);
+  font-family:inherit;font-size:13px;outline:none;transition:all .15s;width:100%;
+}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);}
+.form-textarea{resize:vertical;min-height:80px;line-height:1.6;}
+.form-textarea.rtl-text{direction:rtl;text-align:right;}
+[dir="rtl"] .form-textarea.rtl-text{direction:rtl;}
+[dir="ltr"] .form-textarea.rtl-text{direction:rtl;}
+input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(.4);cursor:pointer;}
+
+/* progress */
+.prog-section{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px;}
+.prog-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--text2);font-family:var(--mono);margin-bottom:7px;}
+.prog-bar{height:6px;background:var(--border);border-radius:99px;overflow:hidden;}
+.prog-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .2s;}
+input[type=range]{width:100%;accent-color:var(--accent);margin-top:8px;cursor:pointer;}
+
+/* assignee dropdown */
+.asgn-wrap{position:relative;}
+.asgn-chips{
+  min-height:40px;background:var(--surface2);border:1px solid var(--border);
+  border-radius:6px;padding:5px 9px;display:flex;flex-wrap:wrap;gap:5px;
+  align-items:center;cursor:pointer;transition:border-color .15s;
+}
+.asgn-chips:hover{border-color:var(--accent);}
+.asgn-placeholder{font-size:13px;color:var(--text3);}
+.asgn-chip{
+  display:inline-flex;align-items:center;gap:4px;
+  background:var(--accent-glow);border:1px solid var(--accent);
+  color:var(--accent);border-radius:99px;padding:2px 7px 2px 4px;
+  font-size:12px;font-weight:600;
+}
+.chip-av{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;}
+.chip-rm{cursor:pointer;font-size:13px;line-height:1;margin-inline-start:2px;opacity:.7;}
+.chip-rm:hover{opacity:1;}
+.asgn-dd{
+  display:none;position:absolute;inset-inline-start:0;inset-inline-end:0;top:calc(100% + 4px);z-index:200;
+  background:var(--surface);border:1px solid var(--border2);
+  border-radius:8px;box-shadow:var(--shadow-md);max-height:200px;overflow-y:auto;
+}
+.asgn-dd.open{display:block;}
+.asgn-di{display:flex;align-items:center;gap:9px;padding:9px 12px;cursor:pointer;transition:background .1s;font-size:13px;font-weight:600;color:var(--text);}
+.asgn-di:hover{background:var(--surface2);}
+.asgn-di.selected{background:var(--accent-glow);color:var(--accent);}
+.asgn-di .di-av{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;flex-shrink:0;}
+.asgn-di .di-chk{margin-inline-start:auto;font-size:13px;opacity:0;}
+.asgn-di.selected .di-chk{opacity:1;}
+
+/* source select */
+.src-box{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 9px;display:flex;flex-wrap:wrap;gap:5px;min-height:38px;}
+.ss-opt{display:inline-flex;align-items:center;padding:4px 10px;border-radius:99px;border:1px solid var(--border);background:var(--surface);cursor:pointer;transition:all .12s;font-size:12px;font-weight:600;color:var(--text2);}
+.ss-opt:hover{border-color:var(--accent);color:var(--accent);}
+.ss-opt.selected{background:var(--accent-glow);border-color:var(--accent);color:var(--accent);}
+.ms-empty{color:var(--text3);font-size:12px;}
+
+/* view modal */
+.view-section{padding:14px 20px;border-bottom:1px solid var(--border);}
+.view-section:last-child{border-bottom:none;}
+.view-field{display:flex;gap:10px;align-items:flex-start;margin-bottom:9px;}
+.view-field:last-child{margin-bottom:0;}
+.vf-label{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase;min-width:70px;padding-top:2px;flex-shrink:0;}
+.vf-val{font-size:13px;color:var(--text);font-weight:500;flex:1;}
+.view-desc{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-size:13px;color:var(--text2);line-height:1.6;direction:rtl;text-align:right;}
+.activity-entry{padding:9px 11px;background:var(--surface2);border-radius:6px;margin-bottom:7px;border-inline-start:3px solid;}
+
+/* confirm */
+.confirm-content{text-align:center;padding:28px 20px;}
+.confirm-icon{font-size:34px;margin-bottom:12px;}
+.confirm-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px;}
+.confirm-msg{font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.5;}
+.confirm-name{font-weight:700;color:var(--text);}
+.confirm-btns{display:flex;gap:9px;justify-content:center;}
+
+/* space modal */
+.space-color-grid{display:flex;gap:8px;flex-wrap:wrap;}
+.space-color-swatch{width:28px;height:28px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:all .12s;}
+.space-color-swatch.active{border-color:var(--text);}
+
+/* ══════════════════════════════════
+   LOADING + TOAST
+══════════════════════════════════ */
+#loading-bar{position:fixed;top:0;left:0;right:0;height:2px;background:var(--accent);z-index:9999;transform:scaleX(0);transform-origin:left;transition:transform .3s;opacity:0;}
+#loading-bar.show{opacity:1;animation:lp 1.2s infinite;}
+#loading-bar.done{transform:scaleX(1);opacity:0;}
+@keyframes lp{0%{transform:scaleX(0)}50%{transform:scaleX(.7)}100%{transform:scaleX(.9)}}
+.toast-wrap{position:fixed;bottom:20px;inset-inline-end:20px;z-index:9999;display:flex;flex-direction:column;gap:7px;}
+.toast{background:var(--surface);border:1px solid var(--border2);border-radius:8px;padding:10px 15px;font-size:13px;font-weight:600;color:var(--text);box-shadow:var(--shadow-md);display:flex;align-items:center;gap:8px;animation:toastIn .2s ease;max-width:300px;}
+@keyframes toastIn{from{transform:translateX(16px);opacity:0}to{transform:translateX(0);opacity:1}}
+.toast.success{border-inline-start:3px solid var(--success);}
+.toast.error{border-inline-start:3px solid var(--danger);}
+
+/* ══════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════ */
+@media(max-width:900px){
+  [dir="rtl"] .sidebar{transform:translateX(100%);right:0;}
+  [dir="ltr"] .sidebar{transform:translateX(-100%);left:0;}
+  .sidebar.open{transform:translateX(0)!important;}
+  [dir="rtl"] .main,[dir="ltr"] .main{margin:0!important;}
+  .topbar-hamburger{display:flex;}
+  .search-box{width:140px;}
+  .search-box:focus-within{width:180px;}
+  .tasks-head,.task-row{grid-template-columns:2fr 80px 80px 60px;}
+  .tasks-head>*:nth-child(2),.task-row>*:nth-child(2),
+  .tasks-head>*:nth-child(5),.task-row>*:nth-child(5){display:none;}
+  .ov-cards{grid-template-columns:repeat(2,1fr);}
+  .form-grid{grid-template-columns:1fr;}
+  .form-group.full{grid-column:1;}
+  .members-grid{grid-template-columns:1fr;}
+  .page{padding:14px 14px;}
+  .data-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));}
+}
+@media(max-width:520px){
+  .ov-cards{grid-template-columns:repeat(2,1fr);}
+  .ov-val{font-size:24px;}
+  .tasks-head,.task-row{grid-template-columns:1fr 80px 60px;}
+  .tasks-head>*:nth-child(3),.task-row>*:nth-child(3){display:none;}
+  .tl-item{grid-template-columns:58px 1px 1fr;gap:0 10px;}
+  .data-grid{grid-template-columns:1fr 1fr;}
+  .modal{border-radius:12px;}
+  .confirm-btns{flex-direction:column;}
+  .topbar-right .btn-ghost{display:none;}
+}
+</style>
+</head>
+<body>
+<div id="loading-bar"></div>
+<div class="toast-wrap" id="toast-wrap"></div>
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<!-- ════ SIDEBAR ════ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">B</div>
+    <div>
+      <div class="logo-text">Birth Of Dream</div>
+      <div class="logo-sub" id="logo-sub">مساحة العمل</div>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav" id="sidebar-nav">
+    <!-- spaces injected by JS -->
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="sidebar-stats-grid">
+      <div class="s-stat"><div class="sn" id="stat-total">0</div><div class="sl" id="lbl-tasks">مهام</div></div>
+      <div class="s-stat"><div class="sn" id="stat-done">0</div><div class="sl" id="lbl-done">منجز</div></div>
+      <div class="s-stat"><div class="sn" id="stat-inprog">0</div><div class="sl" id="lbl-active">نشط</div></div>
+      <div class="s-stat"><div class="sn" id="stat-members">0</div><div class="sl" id="lbl-members">أعضاء</div></div>
+    </div>
+    <button class="add-space-btn" onclick="openSpaceModal()" id="add-space-btn">
+      <span>+</span> <span id="lbl-add-space">إضافة Space</span>
+    </button>
+  </div>
+</aside>
+
+<!-- ════ MAIN ════ -->
+<main class="main">
+  <div class="topbar">
+    <button class="topbar-hamburger" id="mob-hamburger" onclick="toggleSidebar()">☰</button>
+    <div class="topbar-title" id="page-title">الرئيسية</div>
+    <div class="topbar-right">
+      <button class="lang-btn" id="lang-btn" onclick="toggleLang()">English</button>
+      <button class="icon-btn" id="theme-btn" onclick="toggleTheme()" title="Theme">☾</button>
+      <div class="search-wrap">
+        <div class="search-box">
+          <span class="search-icon">⌕</span>
+          <input type="text" id="search-input" placeholder="ابحث..." oninput="handleSearch()" onfocus="showSearchDd()" onblur="hideSearchDd()">
+        </div>
+        <div class="search-dd" id="search-dd"></div>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="btn-add-member-top" onclick="openMemberModal()">+ <span id="lbl-member">عضو</span></button>
+      <button class="btn btn-primary btn-sm" id="btn-add-task-top" onclick="openTaskModal()">+ <span id="lbl-task">مهمة</span></button>
+      <div class="profile-wrap">
+        <div class="profile-circle" id="profile-circle" onclick="toggleProfileDd()" style="background:#1a6ef5">?</div>
+        <div class="profile-dd" id="profile-dd">
+          <div class="profile-dd-header">
+            <div class="profile-dd-name" id="p-name">—</div>
+            <div class="profile-dd-email" id="p-email">—</div>
+          </div>
+          <button class="profile-dd-item" onclick="openMyProfile()">✏ <span id="lbl-edit-profile">تعديل ملفي</span></button>
+          <button class="profile-dd-item danger" onclick="doLogout()">⏻ <span id="lbl-logout">تسجيل الخروج</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═ DASHBOARD ═ -->
+  <div class="page active" id="page-dashboard">
+    <div class="page-header">
+      <div>
+        <h2 id="ph-dashboard">الرئيسية</h2>
+        <div class="page-header-sub" id="ph-dashboard-sub">نظرة عامة على المهام ونشاط الفريق</div>
+      </div>
+      <div class="page-hdr-right">
+        <button class="btn btn-primary btn-sm" onclick="openTaskModal()">+ <span id="lbl-task2">مهمة</span></button>
+      </div>
+    </div>
+    <div class="ov-cards" id="ov-cards"></div>
+    <div class="quick-pills" id="quick-pills"></div>
+    <!-- All-spaces task tabs (admin only) -->
+    <div id="all-spaces-tabs-wrap" style="display:none">
+      <div class="filter-bar" id="all-spaces-filter-bar" style="margin-bottom:12px">
+        <span class="fchip active" onclick="filterAllSpaces('all',this)" id="as-chip-all">الكل</span>
+        <span class="fchip" onclick="filterAllSpaces('todo',this)" id="as-chip-todo">للبدء</span>
+        <span class="fchip" onclick="filterAllSpaces('inprogress',this)" id="as-chip-inp">قيد التنفيذ</span>
+        <span class="fchip" onclick="filterAllSpaces('review',this)" id="as-chip-rev">مراجعة</span>
+        <span class="fchip" onclick="filterAllSpaces('done',this)" id="as-chip-done">مكتمل</span>
+        <span class="fchip" onclick="filterAllSpaces('blocked',this)" id="as-chip-blk">محجوب</span>
+      </div>
+      <div class="tasks-wrap">
+        <div class="tasks-head">
+          <div id="col-task">المهمة</div>
+          <div id="col-assignee">المكلف</div>
+          <div id="col-status">الحالة</div>
+          <div id="col-priority">الأولوية</div>
+          <div id="col-deadline">الموعد</div>
+          <div></div>
+        </div>
+        <div id="all-spaces-tasks"></div>
+      </div>
+    </div>
+    <!-- Regular in-progress section (when a space is selected or non-admin) -->
+    <div id="dashboard-inprogress-wrap">
+      <div class="sec-title" id="sec-inprogress">قيد التنفيذ</div>
+      <div class="tasks-wrap">
+        <div class="tasks-head">
+          <div>المهمة</div>
+          <div>المكلف</div>
+          <div>الحالة</div>
+          <div>الأولوية</div>
+          <div>الموعد</div>
+          <div></div>
+        </div>
+        <div id="recent-tasks"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═ TASKS ═ -->
+  <div class="page" id="page-tasks">
+    <div class="page-header">
+      <h2 id="ph-tasks">المهام</h2>
+      <button class="btn btn-primary btn-sm" onclick="openTaskModal()">+ <span id="lbl-task3">مهمة</span></button>
+    </div>
+    <div class="filter-bar" id="tasks-filter-bar">
+      <span class="fchip active" onclick="filterTasks('all',this)" id="fchip-all">الكل</span>
+      <span class="fchip" onclick="filterTasks('todo',this)" id="fchip-todo">للبدء</span>
+      <span class="fchip" onclick="filterTasks('inprogress',this)" id="fchip-inp">قيد التنفيذ</span>
+      <span class="fchip" onclick="filterTasks('review',this)" id="fchip-rev">مراجعة</span>
+      <span class="fchip" onclick="filterTasks('blocked',this)" id="fchip-blk">محجوب</span>
+    </div>
+    <div class="tasks-wrap">
+      <div class="tasks-head">
+        <div id="col-task2">المهمة</div>
+        <div id="col-assignee2">المكلف</div>
+        <div id="col-status2">الحالة</div>
+        <div id="col-priority2">الأولوية</div>
+        <div id="col-deadline2">الموعد</div>
+        <div></div>
+      </div>
+      <div id="all-tasks"></div>
+    </div>
+  </div>
+
+  <!-- ═ TIMELINE ═ -->
+  <div class="page" id="page-timeline">
+    <div class="page-header"><h2 id="ph-timeline">الجدول الزمني</h2></div>
+    <div class="filter-bar" id="tl-filter-bar">
+      <span class="fchip active" onclick="filterTl('all',this)" id="tl-all">الكل</span>
+      <span class="fchip" onclick="filterTl('inprogress',this)" id="tl-inp">قيد التنفيذ</span>
+      <span class="fchip" onclick="filterTl('todo',this)" id="tl-todo">للبدء</span>
+      <span class="fchip" onclick="filterTl('review',this)" id="tl-rev">مراجعة</span>
+    </div>
+    <div class="tl-container" id="tl-list"></div>
+  </div>
+
+  <!-- ═ HISTORY ═ -->
+  <div class="page" id="page-history">
+    <div class="page-header"><h2 id="ph-history">المهام المكتملة</h2></div>
+    <div class="hist-stats">
+      <div class="hist-stat"><div class="hn" id="hist-count">0</div><div class="hl" id="hist-lbl">مكتملة</div></div>
+    </div>
+    <div class="tasks-wrap">
+      <div class="tasks-head">
+        <div id="col-task3">المهمة</div><div id="col-asgn3">المكلف</div>
+        <div id="col-st3">الحالة</div><div id="col-pr3">الأولوية</div>
+        <div id="col-comp">اكتمل في</div><div></div>
+      </div>
+      <div id="history-tasks"></div>
+    </div>
+  </div>
+
+  <!-- ═ DATA ═ -->
+  <div class="page" id="page-data">
+    <div class="data-topbar">
+      <div class="data-bc" id="data-bc">
+        <span class="data-bc-item current" onclick="dataGoRoot()" id="data-bc-root">ملفات وروابط</span>
+      </div>
+      <div class="data-actions" id="data-actions">
+        <button class="btn btn-ghost btn-sm" onclick="openFolderModal()" id="btn-folder">+ مجلد</button>
+        <button class="btn btn-primary btn-sm" id="btn-work" onclick="openWorkModal()" style="display:none">+ عمل</button>
+      </div>
+    </div>
+    <div id="data-search-wrap" style="display:none">
+      <div class="data-search-box">
+        <span class="search-icon">⌕</span>
+        <input type="text" id="data-search-input" placeholder="ابحث في المجلد..." oninput="renderDataGrid()" autocomplete="off">
+      </div>
+    </div>
+    <div class="data-grid" id="data-grid"></div>
+  </div>
+
+  <!-- ═ SENDERS ═ -->
+  <div class="page" id="page-senders">
+    <div class="page-header">
+      <h2 id="ph-senders">المرسلون</h2>
+      <button class="btn btn-primary btn-sm" id="btn-add-sender" onclick="openSenderModal()">+ <span id="lbl-sender">مرسل</span></button>
+    </div>
+    <div class="senders-grid" id="senders-grid"></div>
+  </div>
+
+  <!-- ═ MEMBERS ═ -->
+  <div class="page" id="page-members">
+    <div class="page-header">
+      <h2 id="ph-members">الأعضاء</h2>
+      <div class="page-hdr-right">
+        <button class="btn btn-ghost btn-sm" onclick="openMyProfile()">✏ <span id="lbl-myprofile">ملفي</span></button>
+        <button class="btn btn-primary btn-sm" id="btn-add-member-page" onclick="openMemberModal()">+ <span id="lbl-member2">عضو</span></button>
+      </div>
+    </div>
+    <div class="members-grid" id="members-grid"></div>
+  </div>
+
+  <!-- ═ SPACE DATA (per-space folders/works) ═ -->
+  <div class="page" id="page-space-data">
+    <div class="data-topbar">
+      <div class="data-bc" id="sp-data-bc">
+        <span class="data-bc-item current" onclick="spDataGoRoot()" id="sp-data-bc-root">ملفات الـ Space</span>
+      </div>
+      <div class="data-actions" id="sp-data-actions">
+        <button class="btn btn-ghost btn-sm" onclick="openSpFolderModal()" id="btn-sp-folder">+ مجلد</button>
+        <button class="btn btn-primary btn-sm" id="btn-sp-work" onclick="openSpWorkModal()" style="display:none">+ عمل</button>
+      </div>
+    </div>
+    <div id="sp-data-search-wrap" style="display:none">
+      <div class="data-search-box">
+        <span class="search-icon">⌕</span>
+        <input type="text" id="sp-data-search-input" placeholder="ابحث في المجلد..." oninput="renderSpDataGrid()" autocomplete="off">
+      </div>
+    </div>
+    <div class="data-grid" id="sp-data-grid"></div>
+  </div>
+
+  <!-- ═ SETTINGS (admin only) ═ -->
+  <div class="page" id="page-settings">
+    <div class="page-header"><h2 id="ph-settings">الإعدادات</h2></div>
+    <div style="max-width:720px">
+      <div class="settings-card">
+        <div class="settings-card-title">🔔 <span id="set-wh-title">تكامل n8n Webhook</span></div>
+        <p style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:16px" id="set-wh-desc">
+          اربط الموقع بـ n8n لإرسال تذكيرات واتساب. الـ Workflow يقرأ المهام والأعضاء مباشرة من Firestore.
+        </p>
+        <div class="form-grid">
+          <div class="form-group full">
+            <label class="form-label" id="lbl-webhook-url">رابط Webhook</label>
+            <input class="form-input" id="s-webhook" placeholder="https://n8n.athar-riyada.com/webhook/...">
+          </div>
+          <div class="form-group">
+            <label class="form-label" id="lbl-reminder-min">دقائق التذكير قبل نهاية الوردية</label>
+            <input class="form-input" id="s-reminder" type="number" min="5" max="240" placeholder="30">
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
+          <button class="btn btn-ghost btn-sm" onclick="testWebhook()" id="btn-test-wh">اختبار</button>
+          <button class="btn btn-primary btn-sm" onclick="saveSettings()" id="btn-save-set">حفظ</button>
+        </div>
+      </div>
+      <div class="settings-card">
+        <div class="settings-card-title">⚙ <span id="set-how-title">كيف يعمل</span></div>
+        <div style="display:flex;flex-direction:column;gap:10px;font-size:13px;color:var(--text2);line-height:1.7">
+          <div><strong style="color:var(--accent)">1.</strong> <span id="set-step1">n8n يفحص المهام النشطة في Firestore كل 5 دقائق.</span></div>
+          <div><strong style="color:var(--accent)">2.</strong> <span id="set-step2">يفحص الموعد النهائي ووقت نهاية وردية العضو المكلف.</span></div>
+          <div><strong style="color:var(--accent)">3.</strong> <span id="set-step3">إذا كان الموعد قريباً والوردية على وشك الانتهاء والمهمة غير مكتملة → يرسل واتساب.</span></div>
+          <div><strong style="color:var(--accent)">4.</strong> <span id="set-step4">العضو يرد؛ n8n يكتب الرد في activityLog المهمة.</span></div>
+          <div><strong style="color:var(--accent)">5.</strong> <span id="set-step5">الموقع يستمع لـ Firestore في الوقت الفعلي.</span></div>
+        </div>
+      </div>
+      <div class="settings-card">
+        <div class="settings-card-title">📋 <span id="set-schema-title">مخطط البيانات</span></div>
+        <div class="schema-block">
+          <div class="schema-cmt">// members collection</div>
+          <div>{"{ name, role, phone, shiftStart, shiftEnd, color, joinedAt }"}</div>
+          <div class="schema-cmt" style="margin-top:10px">// tasks collection</div>
+          <div>{"{ name, desc, assignees[], deadline, status, activityLog[], spaceId }"}</div>
+          <div class="schema-cmt" style="margin-top:10px">// activityLog entry</div>
+          <div>{"{ source: 'whatsapp'|'manual'|'system', text, timestamp }"}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ════ MODALS ════ -->
+
+<!-- TASK MODAL -->
+<div class="modal-overlay" id="task-modal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <span class="modal-title" id="task-modal-title">مهمة جديدة</span>
+      <button class="modal-close" onclick="closeModal('task-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label class="form-label" id="lbl-task-name">اسم المهمة *</label>
+          <input class="form-input" id="t-name" placeholder="اسم المهمة...">
+        </div>
+        <div class="form-group full">
+          <label class="form-label" id="lbl-task-desc">الوصف</label>
+          <textarea class="form-textarea rtl-text" id="t-desc" placeholder="تفاصيل المهمة..."></textarea>
+        </div>
+        <div class="form-group full">
+          <label class="form-label" id="lbl-task-from">استلمت من</label>
+          <div class="src-box" id="t-senders-box"></div>
+        </div>
+        <div class="form-group full">
+          <label class="form-label" id="lbl-task-assignees">المكلفون</label>
+          <div class="asgn-wrap" id="asgn-wrap">
+            <div class="asgn-chips" id="asgn-chips" onclick="toggleAsgnDd()">
+              <span class="asgn-placeholder" id="asgn-placeholder">اختر...</span>
+            </div>
+            <div class="asgn-dd" id="asgn-dd"></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" id="lbl-priority">الأولوية</label>
+          <select class="form-select" id="t-priority">
+            <option value="low" id="opt-low">منخفض</option>
+            <option value="med" selected id="opt-med">متوسط</option>
+            <option value="high" id="opt-high">عالي</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" id="lbl-status">الحالة</label>
+          <select class="form-select" id="t-status">
+            <option value="todo" id="opt-todo">للبدء</option>
+            <option value="inprogress" id="opt-inp">قيد التنفيذ</option>
+            <option value="review" id="opt-rev">مراجعة</option>
+            <option value="done" id="opt-done">مكتمل</option>
+            <option value="blocked" id="opt-blk">محجوب</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" id="lbl-start">تاريخ البدء</label>
+          <input class="form-input" id="t-start" type="date">
+        </div>
+        <div class="form-group">
+          <label class="form-label" id="lbl-deadline">الموعد النهائي</label>
+          <input class="form-input" id="t-deadline" type="datetime-local">
+        </div>
+        <div class="form-group">
+          <label class="form-label" id="lbl-hours">ساعات مقدرة</label>
+          <input class="form-input" id="t-hours" type="number" placeholder="8" min="0">
+        </div>
+        <div class="form-group full">
+          <label class="form-label" id="lbl-progress">التقدم</label>
+          <div class="prog-section">
+            <div class="prog-labels"><span>0%</span><span id="prog-display">0%</span><span>100%</span></div>
+            <div class="prog-bar"><div class="prog-fill" id="prog-preview" style="width:0%"></div></div>
+            <input type="range" id="t-progress" min="0" max="100" value="0"
+              oninput="document.getElementById('prog-display').textContent=this.value+'%';document.getElementById('prog-preview').style.width=this.value+'%'">
+          </div>
+        </div>
+        <div class="form-group full">
+          <label class="form-label" id="lbl-notes">ملاحظات</label>
+          <textarea class="form-textarea rtl-text" id="t-notes" placeholder="ملاحظات..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cancelTaskModal()" id="btn-cancel-task">إلغاء</button>
+      <button class="btn btn-primary" onclick="saveTask()" id="btn-save-task">حفظ المهمة</button>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW TASK MODAL -->
+<div class="modal-overlay" id="view-modal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <span class="modal-title" id="view-task-title">تفاصيل المهمة</span>
+      <button class="modal-close" onclick="closeModal('view-modal')">✕</button>
+    </div>
+    <div id="view-task-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" id="view-delete-btn" id="btn-delete">حذف</button>
+      <button class="btn btn-ghost" onclick="closeModal('view-modal')" id="btn-close">إغلاق</button>
+      <button class="btn btn-primary btn-sm" id="view-edit-btn">تعديل</button>
+    </div>
+  </div>
+</div>
+
+<!-- MEMBER MODAL -->
+<div class="modal-overlay" id="member-modal">
+  <div class="modal modal-sm">
+    <div class="modal-hdr">
+      <span class="modal-title" id="member-modal-title">إضافة عضو</span>
+      <button class="modal-close" onclick="closeModal('member-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full"><label class="form-label" id="lbl-mname">الاسم الكامل *</label><input class="form-input" id="m-name" placeholder="اسم العضو"></div>
+        <div class="form-group full">
+          <label class="form-label" id="lbl-memail">البريد الإلكتروني *</label>
+          <input class="form-input" id="m-email" type="email" placeholder="example@email.com" style="direction:ltr;text-align:left">
+          <div style="font-size:11px;color:var(--text3);margin-top:4px" id="lbl-memail-hint">⚠ لازم يطابق الإيميل اللي العضو بيستخدمه عشان يشوف الـ Space بتاعته</div>
+        </div>
+        <div class="form-group full"><label class="form-label" id="lbl-mrole">المسمى الوظيفي</label><input class="form-input" id="m-role" placeholder="مثال: مطور"></div>
+        <div class="form-group full"><label class="form-label">WhatsApp</label><input class="form-input" id="m-phone" placeholder="+201234567890"></div>
+        <div class="form-group"><label class="form-label" id="lbl-shift-s">بداية الوردية</label><input class="form-input" id="m-shift-start" type="time"></div>
+        <div class="form-group"><label class="form-label" id="lbl-shift-e">نهاية الوردية</label><input class="form-input" id="m-shift-end" type="time"></div>
+        <div class="form-group full"><label class="form-label" id="lbl-mcolor">لون الصورة</label>
+          <select class="form-select" id="m-color">
+            <option value="#1a6ef5">أزرق</option><option value="#2563eb">أزرق غامق</option>
+            <option value="#059669">أخضر</option><option value="#d97706">برتقالي</option>
+            <option value="#dc2626">أحمر</option><option value="#db2777">وردي</option>
+            <option value="#0891b2">سيان</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('member-modal')" id="btn-cancel-m">إلغاء</button>
+      <button class="btn btn-primary" onclick="saveMember()" id="member-save-btn">إضافة عضو</button>
+    </div>
+  </div>
+</div>
+
+<!-- ACTIVITY MODAL -->
+<div class="modal-overlay" id="activity-modal">
+  <div class="modal modal-sm">
+    <div class="modal-hdr">
+      <span class="modal-title" id="lbl-add-note">إضافة ملاحظة</span>
+      <button class="modal-close" onclick="closeModal('activity-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label" id="lbl-what-hap">ماذا حدث؟</label>
+        <textarea class="form-textarea rtl-text" id="activity-text" style="min-height:100px" placeholder="مثال: وصلت 40%، محتاج ساعتين..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('activity-modal')" id="btn-cancel-act">إلغاء</button>
+      <button class="btn btn-primary" onclick="saveActivity()" id="btn-save-note">حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- FOLDER MODAL -->
+<div class="modal-overlay" id="folder-modal">
+  <div class="modal modal-sm">
+    <div class="modal-hdr">
+      <span class="modal-title" id="folder-modal-title">مجلد جديد</span>
+      <button class="modal-close" onclick="closeModal('folder-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label" id="lbl-folder-name">اسم المجلد *</label><input class="form-input" id="f-name" placeholder="مثال: تسويق"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('folder-modal')" id="btn-cancel-f">إلغاء</button>
+      <button class="btn btn-primary" onclick="saveFolder()" id="btn-save-folder">حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- WORK MODAL -->
+<div class="modal-overlay" id="work-modal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <span class="modal-title" id="work-modal-title">إضافة عمل</span>
+      <button class="modal-close" onclick="closeModal('work-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full"><label class="form-label" id="lbl-work-name">اسم العمل *</label><input class="form-input" id="w-name" placeholder="عنوان العمل..."></div>
+        <div class="form-group full"><label class="form-label">رابط Workflow</label><input class="form-input" id="w-workflow" placeholder="https://..."></div>
+        <div class="form-group full"><label class="form-label">Google Sheet</label><input class="form-input" id="w-sheet" placeholder="https://docs.google.com/..."></div>
+        <div class="form-group full"><label class="form-label">موقع إلكتروني</label><input class="form-input" id="w-website" placeholder="https://..."></div>
+        <div class="form-group full"><label class="form-label" id="lbl-work-notes">ملاحظات</label><textarea class="form-textarea rtl-text" id="w-notes" placeholder="ملاحظات..."></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('work-modal')" id="btn-cancel-w">إلغاء</button>
+      <button class="btn btn-primary" onclick="saveWork()" id="btn-save-work">حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- RENAME MODAL -->
+<div class="modal-overlay" id="rename-modal">
+  <div class="modal modal-sm">
+    <div class="modal-hdr">
+      <span class="modal-title" id="rename-modal-title">إعادة تسمية</span>
+      <button class="modal-close" onclick="closeModal('rename-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label" id="lbl-new-name">الاسم الجديد *</label><input class="form-input" id="rename-input" placeholder="الاسم..."></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('rename-modal')" id="btn-cancel-rn">إلغاء</button>
+      <button class="btn btn-primary" onclick="doRename()" id="btn-rename">إعادة تسمية</button>
+    </div>
+  </div>
+</div>
+
+<!-- SENDER MODAL -->
+<div class="modal-overlay" id="sender-modal">
+  <div class="modal modal-sm">
+    <div class="modal-hdr">
+      <span class="modal-title" id="sender-modal-title">إضافة مرسل</span>
+      <button class="modal-close" onclick="closeModal('sender-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full"><label class="form-label" id="lbl-sn-name">الاسم *</label><input class="form-input" id="sn-name" placeholder="اسم المرسل"></div>
+        <div class="form-group full"><label class="form-label" id="lbl-sn-role">المسمى</label><input class="form-input" id="sn-role" placeholder="مثال: مدير"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('sender-modal')" id="btn-cancel-sn">إلغاء</button>
+      <button class="btn btn-primary" onclick="saveSender()" id="btn-save-sender">إضافة</button>
+    </div>
+  </div>
+</div>
+
+<!-- SPACE MODAL -->
+<div class="modal-overlay" id="space-modal">
+  <div class="modal modal-sm">
+    <div class="modal-hdr">
+      <span class="modal-title" id="space-modal-title">Space جديد</span>
+      <button class="modal-close" onclick="closeModal('space-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full"><label class="form-label" id="lbl-space-name">اسم الـ Space *</label><input class="form-input" id="sp-name" placeholder="مثال: التطوير، التسويق..."></div>
+        <div class="form-group full">
+          <label class="form-label" id="lbl-space-color">اللون</label>
+          <div class="space-color-grid" id="space-color-grid">
+            <div class="space-color-swatch active" style="background:#1a6ef5" data-color="#1a6ef5" onclick="selectSpaceColor(this)"></div>
+            <div class="space-color-swatch" style="background:#2563eb" data-color="#2563eb" onclick="selectSpaceColor(this)"></div>
+            <div class="space-color-swatch" style="background:#059669" data-color="#059669" onclick="selectSpaceColor(this)"></div>
+            <div class="space-color-swatch" style="background:#d97706" data-color="#d97706" onclick="selectSpaceColor(this)"></div>
+            <div class="space-color-swatch" style="background:#dc2626" data-color="#dc2626" onclick="selectSpaceColor(this)"></div>
+            <div class="space-color-swatch" style="background:#db2777" data-color="#db2777" onclick="selectSpaceColor(this)"></div>
+            <div class="space-color-swatch" style="background:#0891b2" data-color="#0891b2" onclick="selectSpaceColor(this)"></div>
+            <div class="space-color-swatch" style="background:#64748b" data-color="#64748b" onclick="selectSpaceColor(this)"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('space-modal')" id="btn-cancel-sp">إلغاء</button>
+      <button class="btn btn-primary" onclick="saveSpace()" id="btn-save-space">إنشاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- ASSIGN MEMBER TO SPACE MODAL -->
+<div class="modal-overlay" id="assign-member-modal">
+  <div class="modal modal-sm">
+    <div class="modal-hdr">
+      <span class="modal-title" id="assign-member-title">إضافة عضو للـ Space</span>
+      <button class="modal-close" onclick="closeModal('assign-member-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text2);margin-bottom:14px" id="assign-member-space-name"></p>
+      <div id="assign-member-list" style="display:flex;flex-direction:column;gap:6px;max-height:320px;overflow-y:auto"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('assign-member-modal')" id="btn-cancel-am">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<!-- SPACE FOLDER MODAL -->
+<div class="modal-overlay" id="sp-folder-modal">
+  <div class="modal modal-sm">
+    <div class="modal-hdr">
+      <span class="modal-title" id="sp-folder-modal-title">مجلد جديد</span>
+      <button class="modal-close" onclick="closeModal('sp-folder-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">اسم المجلد *</label><input class="form-input" id="sp-f-name" placeholder="مثال: تسويق"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('sp-folder-modal')">إلغاء</button>
+      <button class="btn btn-primary" onclick="saveSpFolder()">حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- SPACE WORK MODAL -->
+<div class="modal-overlay" id="sp-work-modal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <span class="modal-title" id="sp-work-modal-title">إضافة عمل</span>
+      <button class="modal-close" onclick="closeModal('sp-work-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full"><label class="form-label">اسم العمل *</label><input class="form-input" id="sp-w-name" placeholder="عنوان العمل..."></div>
+        <div class="form-group full"><label class="form-label">رابط Workflow</label><input class="form-input" id="sp-w-workflow" placeholder="https://..."></div>
+        <div class="form-group full"><label class="form-label">Google Sheet</label><input class="form-input" id="sp-w-sheet" placeholder="https://docs.google.com/..."></div>
+        <div class="form-group full"><label class="form-label">موقع إلكتروني</label><input class="form-input" id="sp-w-website" placeholder="https://..."></div>
+        <div class="form-group full"><label class="form-label">ملاحظات</label><textarea class="form-textarea rtl-text" id="sp-w-notes" placeholder="ملاحظات..."></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('sp-work-modal')">إلغاء</button>
+      <button class="btn btn-primary" onclick="saveSpWork()">حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- SPACE RENAME MODAL -->
+<div class="modal-overlay" id="sp-rename-modal">
+  <div class="modal modal-sm">
+    <div class="modal-hdr">
+      <span class="modal-title" id="sp-rename-modal-title">إعادة تسمية</span>
+      <button class="modal-close" onclick="closeModal('sp-rename-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">الاسم الجديد *</label><input class="form-input" id="sp-rename-input" placeholder="الاسم..."></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('sp-rename-modal')">إلغاء</button>
+      <button class="btn btn-primary" onclick="doSpRename()">إعادة تسمية</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal modal-sm">
+    <div class="confirm-content">
+      <div class="confirm-icon">⚠️</div>
+      <div class="confirm-title" id="confirm-title">حذف؟</div>
+      <div class="confirm-msg" id="confirm-msg">هل أنت متأكد؟</div>
+      <div class="confirm-btns">
+        <button class="btn btn-ghost" onclick="closeModal('confirm-modal')" style="flex:1" id="btn-cancel-c">إلغاء</button>
+        <button class="btn btn-danger" id="confirm-ok-btn" style="flex:1">حذف</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ SCRIPT ════ -->
+<script type="module">
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import{getFirestore,collection,addDoc,onSnapshot,query,orderBy,doc,deleteDoc,updateDoc,setDoc,getDocs}
+  from"https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import{getAuth,onAuthStateChanged,signOut}
+  from"https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+const FB={
+  apiKey:"AIzaSyDnyNmiFFdvJHWJydZ4K61z0FKEPfj-Fpc",
+  authDomain:"birth-21c5c.firebaseapp.com",
+  projectId:"birth-21c5c",
+  storageBucket:"birth-21c5c.firebasestorage.app",
+  messagingSenderId:"444980894945",
+  appId:"1:444980894945:web:f936d483a89632d665aba0"
+};
+const app=initializeApp(FB);
+const db=getFirestore(app);
+const auth=getAuth(app);
+const ADMIN='admin.bod@gmail.com';
+
+/* ══ STATE ══ */
+let currentUser=null,isAdmin=false;
+let tasks=[],members=[],folders=[],works=[],senders=[],spaces=[];
+let spFolders=[],spWorks=[];
+let selectedAssignees=[],selectedSenders=[];
+let editingTaskId=null,currentFilter='all',tlFilter='all';
+let currentFolderId=null,editingFolderId=null,editingWorkId=null,renameTarget=null;
+let spCurrentFolderId=null,editingSpFolderId=null,editingSpWorkId=null,spRenameTarget=null;
+let currentSpaceId=null,editingSpaceId=null,selectedSpaceColor='#7c3aed';
+let appSettings={webhookUrl:'',reminderMinutes:30},webhookUrl='';
+let mySpaceIds=[],assigningSpaceId=null,currentPage='dashboard';
+
+/* ══ i18n ══ */
+const LANG={
+  ar:{
+    logo_sub:'مساحة العمل',lang_btn:'English',
+    search_ph:'ابحث...',
+    lbl_tasks:'مهام',lbl_done:'منجز',lbl_active:'نشط',lbl_members:'أعضاء',
+    lbl_add_space:'إضافة Space',
+    ph_dashboard:'الرئيسية',ph_dashboard_sub:'نظرة عامة على المهام ونشاط الفريق',
+    ph_tasks:'المهام',ph_timeline:'الجدول الزمني',ph_history:'المهام المكتملة',
+    ph_data:'ملفات وروابط',ph_senders:'المرسلون',ph_members:'الأعضاء',ph_settings:'الإعدادات',
+    lbl_member:'عضو',lbl_task:'مهمة',lbl_sender:'مرسل',lbl_myprofile:'ملفي',
+    lbl_member2:'عضو',lbl_task2:'مهمة',lbl_task3:'مهمة',
+    lbl_edit_profile:'تعديل ملفي',lbl_logout:'تسجيل الخروج',
+    col_task:'المهمة',col_assignee:'المكلف',col_status:'الحالة',col_priority:'الأولوية',col_deadline:'الموعد',
+    sec_inprogress:'قيد التنفيذ',
+    fchip_all:'الكل',fchip_todo:'للبدء',fchip_inp:'قيد التنفيذ',fchip_rev:'مراجعة',fchip_blk:'محجوب',
+    tl_all:'الكل',tl_inp:'قيد التنفيذ',tl_todo:'للبدء',tl_rev:'مراجعة',
+    hist_lbl:'مكتملة',col_comp:'اكتمل في',
+    data_bc_root:'ملفات وروابط',btn_folder:'+ مجلد',btn_work:'+ عمل',
+    btn_add_sender:'+ مرسل',btn_add_member:'+ عضو',
+    task_modal_new:'مهمة جديدة',task_modal_edit:'تعديل المهمة',
+    lbl_task_name:'اسم المهمة *',lbl_task_desc:'الوصف',lbl_task_from:'استلمت من',
+    lbl_task_assignees:'المكلفون',lbl_priority:'الأولوية',lbl_status:'الحالة',
+    lbl_start:'تاريخ البدء',lbl_deadline:'الموعد النهائي',lbl_hours:'ساعات مقدرة',
+    lbl_progress:'التقدم',lbl_notes:'ملاحظات',
+    asgn_placeholder:'اختر...',
+    opt_low:'منخفض',opt_med:'متوسط',opt_high:'عالي',
+    opt_todo:'للبدء',opt_inp:'قيد التنفيذ',opt_rev:'مراجعة',opt_done:'مكتمل',opt_blk:'محجوب',
+    btn_cancel_task:'إلغاء',btn_save_task:'حفظ المهمة',
+    btn_delete:'حذف',btn_close:'إغلاق',
+    lbl_mname:'الاسم الكامل *',lbl_mrole:'المسمى الوظيفي',lbl_shift_s:'بداية الوردية',lbl_shift_e:'نهاية الوردية',lbl_mcolor:'لون الصورة',
+    btn_cancel_m:'إلغاء',member_save_add:'إضافة عضو',member_save_edit:'حفظ التعديلات',
+    member_modal_add:'إضافة عضو',member_modal_edit:'تعديل عضو',
+    lbl_add_note:'إضافة ملاحظة',lbl_what_hap:'ماذا حدث؟',btn_cancel_act:'إلغاء',btn_save_note:'حفظ',
+    lbl_folder_name:'اسم المجلد *',folder_modal_new:'مجلد جديد',folder_modal_edit:'تعديل مجلد',
+    btn_cancel_f:'إلغاء',btn_save_folder:'حفظ',
+    lbl_work_name:'اسم العمل *',work_modal_new:'إضافة عمل',work_modal_edit:'تعديل عمل',lbl_work_notes:'ملاحظات',
+    btn_cancel_w:'إلغاء',btn_save_work:'حفظ',
+    rename_folder:'إعادة تسمية مجلد',rename_work:'إعادة تسمية عمل',lbl_new_name:'الاسم الجديد *',btn_cancel_rn:'إلغاء',btn_rename:'إعادة تسمية',
+    lbl_sn_name:'الاسم *',lbl_sn_role:'المسمى',sender_modal_add:'إضافة مرسل',sender_modal_edit:'تعديل مرسل',
+    btn_cancel_sn:'إلغاء',btn_save_sender:'إضافة',
+    space_modal_new:'Space جديد',space_modal_edit:'تعديل Space',lbl_space_name:'اسم الـ Space *',lbl_space_color:'اللون',
+    btn_cancel_sp:'إلغاء',btn_save_space:'إنشاء',
+    btn_cancel_c:'إلغاء',
+    set_wh_title:'تكامل n8n Webhook',
+    set_how_title:'كيف يعمل',set_schema_title:'مخطط البيانات',
+    lbl_webhook_url:'رابط Webhook',lbl_reminder_min:'دقائق التذكير قبل نهاية الوردية',
+    btn_test_wh:'اختبار',btn_save_set:'حفظ',
+    notify_btn:'🔔 تنبيه',
+    st_todo:'للبدء',st_inprogress:'قيد التنفيذ',st_review:'مراجعة',st_done:'مكتمل',st_blocked:'محجوب',
+    pr_low:'منخفض',pr_med:'متوسط',pr_high:'عالي',
+    nav_tasks:'المهام',nav_timeline:'الجدول الزمني',nav_history:'المكتمل',
+    nav_data:'ملفات وروابط',nav_members:'الأعضاء',nav_senders:'المرسلون',nav_settings:'الإعدادات',
+    nav_dashboard:'الرئيسية',
+    all_spaces:'كل الـ Spaces',
+    empty_tasks:'لا توجد مهام',empty_members:'لا يوجد أعضاء',empty_senders:'لا يوجد مرسلون',
+    empty_folders:'لا توجد مجلدات — اضغط + مجلد',empty_folder_content:'مجلد فارغ',
+    overdue:'متأخر',due_soon:'قريب',
+    notify_ok:'✓ تم الإرسال',notify_fail:'تعذر الإرسال — تحقق من الـ Webhook',
+    webhook_not_set:'لم يتم ضبط رابط الـ Webhook — اذهب إلى الإعدادات',
+    activity_src_whatsapp:'📱 واتساب',activity_src_system:'⚙ نظام',activity_src_manual:'✎ يدوي',
+    no_activity:'لا توجد نشاطات بعد',btn_add_note2:'+ ملاحظة',
+    confirm_del_task:'حذف المهمة',confirm_del_member:'حذف عضو',
+    confirm_del_folder:'حذف مجلد',confirm_del_work:'حذف عمل',confirm_del_sender:'حذف مرسل',
+    confirm_del_space:'حذف Space',
+    only_admin:'للمسؤول فقط',enter_name:'أدخل اسماً',
+    page_titles:{dashboard:'الرئيسية',tasks:'المهام',timeline:'الجدول الزمني',history:'المكتمل',data:'ملفات وروابط',senders:'المرسلون',members:'الأعضاء',settings:'الإعدادات'},
+  },
+  en:{
+    logo_sub:'WORKSPACE',lang_btn:'عربي',
+    search_ph:'Search...',
+    lbl_tasks:'Tasks',lbl_done:'Done',lbl_active:'Active',lbl_members:'Members',
+    lbl_add_space:'Add Space',
+    ph_dashboard:'Dashboard',ph_dashboard_sub:'Overview of all tasks and team activity',
+    ph_tasks:'Tasks',ph_timeline:'Timeline',ph_history:'Completed Tasks',
+    ph_data:'Docs & Links',ph_senders:'Senders',ph_members:'Members',ph_settings:'Settings',
+    lbl_member:'Member',lbl_task:'Task',lbl_sender:'Sender',lbl_myprofile:'My Profile',
+    lbl_member2:'Member',lbl_task2:'Task',lbl_task3:'Task',
+    lbl_edit_profile:'Edit Profile',lbl_logout:'Sign Out',
+    col_task:'Task',col_assignee:'Assignee',col_status:'Status',col_priority:'Priority',col_deadline:'Deadline',
+    sec_inprogress:'In Progress',
+    fchip_all:'All',fchip_todo:'To Do',fchip_inp:'In Progress',fchip_rev:'Review',fchip_blk:'Blocked',
+    tl_all:'All',tl_inp:'In Progress',tl_todo:'To Do',tl_rev:'Review',
+    hist_lbl:'Completed',col_comp:'Completed',
+    data_bc_root:'Docs & Links',btn_folder:'+ Folder',btn_work:'+ Work',
+    btn_add_sender:'+ Sender',btn_add_member:'+ Member',
+    task_modal_new:'New Task',task_modal_edit:'Edit Task',
+    lbl_task_name:'Task Name *',lbl_task_desc:'Description',lbl_task_from:'Received From',
+    lbl_task_assignees:'Assignees',lbl_priority:'Priority',lbl_status:'Status',
+    lbl_start:'Start Date',lbl_deadline:'Deadline',lbl_hours:'Estimated Hours',
+    lbl_progress:'Progress',lbl_notes:'Notes',
+    asgn_placeholder:'Select...',
+    opt_low:'Low',opt_med:'Medium',opt_high:'High',
+    opt_todo:'To Do',opt_inp:'In Progress',opt_rev:'Review',opt_done:'Done',opt_blk:'Blocked',
+    btn_cancel_task:'Cancel',btn_save_task:'Save Task',
+    btn_delete:'Delete',btn_close:'Close',
+    lbl_mname:'Full Name *',lbl_mrole:'Role',lbl_shift_s:'Shift Start',lbl_shift_e:'Shift End',lbl_mcolor:'Avatar Color',
+    btn_cancel_m:'Cancel',member_save_add:'Add Member',member_save_edit:'Save Changes',
+    member_modal_add:'Add Team Member',member_modal_edit:'Edit Member',
+    lbl_add_note:'Add Note',lbl_what_hap:'What happened?',btn_cancel_act:'Cancel',btn_save_note:'Save',
+    lbl_folder_name:'Folder Name *',folder_modal_new:'New Folder',folder_modal_edit:'Edit Folder',
+    btn_cancel_f:'Cancel',btn_save_folder:'Save',
+    lbl_work_name:'Work Name *',work_modal_new:'Add Work',work_modal_edit:'Edit Work',lbl_work_notes:'Notes',
+    btn_cancel_w:'Cancel',btn_save_work:'Save',
+    rename_folder:'Rename Folder',rename_work:'Rename Work',lbl_new_name:'New Name *',btn_cancel_rn:'Cancel',btn_rename:'Rename',
+    lbl_sn_name:'Name *',lbl_sn_role:'Role / Title',sender_modal_add:'Add Sender',sender_modal_edit:'Edit Sender',
+    btn_cancel_sn:'Cancel',btn_save_sender:'Add',
+    space_modal_new:'New Space',space_modal_edit:'Edit Space',lbl_space_name:'Space Name *',lbl_space_color:'Color',
+    btn_cancel_sp:'Cancel',btn_save_space:'Create',
+    btn_cancel_c:'Cancel',
+    set_wh_title:'n8n Webhook Integration',
+    set_how_title:'How It Works',set_schema_title:'Data Schema Reference',
+    lbl_webhook_url:'Webhook URL',lbl_reminder_min:'Reminder minutes before shift ends',
+    btn_test_wh:'Test',btn_save_set:'Save',
+    notify_btn:'🔔 Notify',
+    st_todo:'To Do',st_inprogress:'In Progress',st_review:'Review',st_done:'Done',st_blocked:'Blocked',
+    pr_low:'Low',pr_med:'Medium',pr_high:'High',
+    nav_tasks:'Tasks',nav_timeline:'Timeline',nav_history:'Completed',
+    nav_data:'Docs & Links',nav_members:'Members',nav_senders:'Senders',nav_settings:'Settings',
+    nav_dashboard:'Dashboard',
+    all_spaces:'All Spaces',
+    empty_tasks:'No tasks found',empty_members:'No members yet',empty_senders:'No senders yet',
+    empty_folders:'No folders — click + Folder',empty_folder_content:'Empty folder',
+    overdue:'Overdue',due_soon:'Due Soon',
+    notify_ok:'✓ Notification sent',notify_fail:'Could not reach webhook',
+    webhook_not_set:'No webhook URL set — go to Settings',
+    activity_src_whatsapp:'📱 WhatsApp',activity_src_system:'⚙ System',activity_src_manual:'✎ Manual',
+    no_activity:'No activity yet',btn_add_note2:'+ Note',
+    confirm_del_task:'Delete Task',confirm_del_member:'Remove Member',
+    confirm_del_folder:'Delete Folder',confirm_del_work:'Delete Work',confirm_del_sender:'Remove Sender',
+    confirm_del_space:'Delete Space',
+    only_admin:'Admin only',enter_name:'Enter a name',
+    page_titles:{dashboard:'Dashboard',tasks:'Tasks',timeline:'Timeline',history:'Completed',data:'Docs & Links',senders:'Senders',members:'Members',settings:'Settings'},
+  }
+};
+let lang=localStorage.getItem('bod-lang')||'ar';
+function T(k){return (LANG[lang]||LANG.ar)[k]||k;}
+
+function applyLang(){
+  const html=document.documentElement;
+  html.setAttribute('data-lang',lang);
+  if(lang==='ar'){html.setAttribute('dir','rtl');html.setAttribute('lang','ar');}
+  else{html.setAttribute('dir','ltr');html.setAttribute('lang','en');}
+  // update static labels
+  const setTxt=(id,key)=>{const el=document.getElementById(id);if(el)el.textContent=T(key);};
+  const setPh=(id,key)=>{const el=document.getElementById(id);if(el)el.placeholder=T(key);};
+  document.getElementById('logo-sub').textContent=T('logo_sub');
+  document.getElementById('lang-btn').textContent=T('lang_btn');
+  setPh('search-input','search_ph');
+  setTxt('lbl-tasks','lbl_tasks');setTxt('lbl-done','lbl_done');setTxt('lbl-active','lbl_active');setTxt('lbl-members','lbl_members');
+  setTxt('lbl-add-space','lbl_add_space');
+  setTxt('ph-dashboard','ph_dashboard');setTxt('ph-dashboard-sub','ph_dashboard_sub');
+  setTxt('ph-tasks','ph_tasks');setTxt('ph-timeline','ph_timeline');setTxt('ph-history','ph_history');
+  setTxt('ph-data','ph_data');setTxt('ph-senders','ph_senders');setTxt('ph-members','ph_members');setTxt('ph-settings','ph_settings');
+  setTxt('lbl-member','lbl_member');setTxt('lbl-task','lbl_task');setTxt('lbl-member2','lbl_member2');
+  setTxt('lbl-task2','lbl_task2');setTxt('lbl-task3','lbl_task3');
+  setTxt('lbl-edit-profile','lbl_edit_profile');setTxt('lbl-logout','lbl_logout');
+  setTxt('col-task','col_task');setTxt('col-assignee','col_assignee');setTxt('col-status','col_status');setTxt('col-priority','col_priority');setTxt('col-deadline','col_deadline');
+  setTxt('col-task2','col_task');setTxt('col-assignee2','col_assignee');setTxt('col-status2','col_status');setTxt('col-priority2','col_priority');setTxt('col-deadline2','col_deadline');
+  setTxt('col-task3','col_task');setTxt('col-asgn3','col_assignee');setTxt('col-st3','col_status');setTxt('col-pr3','col_priority');setTxt('col-comp','col_comp');
+  setTxt('sec-inprogress','sec_inprogress');
+  setTxt('fchip-all','fchip_all');setTxt('fchip-todo','fchip_todo');setTxt('fchip-inp','fchip_inp');setTxt('fchip-rev','fchip_rev');setTxt('fchip-blk','fchip_blk');
+  setTxt('tl-all','tl_all');setTxt('tl-inp','tl_inp');setTxt('tl-todo','tl_todo');setTxt('tl-rev','tl_rev');
+  setTxt('hist-lbl','hist_lbl');
+  setTxt('data-bc-root','data_bc_root');setTxt('btn-folder','btn_folder');setTxt('btn-work','btn_work');
+  setTxt('btn-add-sender','btn_add_sender');
+  setTxt('lbl-sender','btn_add_sender');
+  setTxt('lbl-myprofile','lbl_myprofile');
+  setTxt('lbl-task-name','lbl_task_name');setTxt('lbl-task-desc','lbl_task_desc');
+  setTxt('lbl-task-from','lbl_task_from');setTxt('lbl-task-assignees','lbl_task_assignees');
+  setTxt('lbl-priority','lbl_priority');setTxt('lbl-status','lbl_status');
+  setTxt('lbl-start','lbl_start');setTxt('lbl-deadline','lbl_deadline');
+  setTxt('lbl-hours','lbl_hours');setTxt('lbl-progress','lbl_progress');setTxt('lbl-notes','lbl_notes');
+  setTxt('asgn-placeholder','asgn_placeholder');
+  setTxt('opt-low','opt_low');setTxt('opt-med','opt_med');setTxt('opt-high','opt_high');
+  setTxt('opt-todo','opt_todo');setTxt('opt-inp','opt_inp');setTxt('opt-rev','opt_rev');setTxt('opt-done','opt_done');setTxt('opt-blk','opt_blk');
+  setTxt('btn-cancel-task','btn_cancel_task');setTxt('btn-save-task','btn_save_task');
+  setTxt('lbl-mname','lbl_mname');setTxt('lbl-mrole','lbl_mrole');setTxt('lbl-shift-s','lbl_shift_s');setTxt('lbl-shift-e','lbl_shift_e');setTxt('lbl-mcolor','lbl_mcolor');
+  setTxt('btn-cancel-m','btn_cancel_m');
+  // email field labels
+  const emailLbl=document.getElementById('lbl-memail');if(emailLbl)emailLbl.textContent=lang==='ar'?'البريد الإلكتروني *':'Email Address *';
+  const emailHint=document.getElementById('lbl-memail-hint');if(emailHint)emailHint.textContent=lang==='ar'?'⚠ لازم يطابق الإيميل اللي العضو بيستخدمه عشان يشوف الـ Space بتاعته':'⚠ Must match the email the member uses to log in';
+  setTxt('lbl-add-note','lbl_add_note');setTxt('lbl-what-hap','lbl_what_hap');setTxt('btn-cancel-act','btn_cancel_act');setTxt('btn-save-note','btn_save_note');
+  setTxt('lbl-folder-name','lbl_folder_name');setTxt('btn-cancel-f','btn_cancel_f');setTxt('btn-save-folder','btn_save_folder');
+  setTxt('lbl-work-name','lbl_work_name');setTxt('lbl-work-notes','lbl_work_notes');setTxt('btn-cancel-w','btn_cancel_w');setTxt('btn-save-work','btn_save_work');
+  setTxt('lbl-new-name','lbl_new_name');setTxt('btn-cancel-rn','btn_cancel_rn');setTxt('btn-rename','btn_rename');
+  setTxt('lbl-sn-name','lbl_sn_name');setTxt('lbl-sn-role','lbl_sn_role');setTxt('btn-cancel-sn','btn_cancel_sn');setTxt('btn-save-sender','btn_save_sender');
+  setTxt('lbl-space-name','lbl_space_name');setTxt('lbl-space-color','lbl_space_color');setTxt('btn-cancel-sp','btn_cancel_sp');setTxt('btn-save-space','btn_save_space');
+  setTxt('btn-cancel-c','btn_cancel_c');
+  setTxt('set-wh-title','set_wh_title');setTxt('set-how-title','set_how_title');setTxt('set-schema-title','set_schema_title');
+  setTxt('lbl-webhook-url','lbl_webhook_url');setTxt('lbl-reminder-min','lbl_reminder_min');
+  setTxt('btn-test-wh','btn_test_wh');setTxt('btn-save-set','btn_save_set');
+  renderSidebar();
+}
+
+window.toggleLang=()=>{
+  lang=lang==='ar'?'en':'ar';
+  localStorage.setItem('bod-lang',lang);
+  applyLang();
+  renderAll();
+};
+
+/* ══ THEME ══ */
+const savedTheme=localStorage.getItem('bod-theme')||'light';
+document.documentElement.setAttribute('data-theme',savedTheme);
+document.getElementById('theme-btn').textContent=savedTheme==='dark'?'☀':'☾';
+window.toggleTheme=()=>{
+  const next=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',next);
+  document.getElementById('theme-btn').textContent=next==='dark'?'☀':'☾';
+  localStorage.setItem('bod-theme',next);
+};
+
+/* ══ AUTH ══ */
+onAuthStateChanged(auth,user=>{
+  if(!user){window.location.href='auth.html';return;}
+  currentUser=user;
+  isAdmin=user.email===ADMIN;
+  const name=user.displayName||user.email.split('@')[0]||'?';
+  const initials=name.trim().split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase()||'?';
+  const colors=['#1a6ef5','#2563eb','#059669','#d97706','#dc2626'];
+  const color=colors[name.charCodeAt(0)%colors.length];
+  const circle=document.getElementById('profile-circle');
+  if(circle){circle.textContent=initials;circle.style.background=color;}
+  document.getElementById('p-name').textContent=name;
+  document.getElementById('p-email').textContent=user.email;
+  // hide add-space and + Member buttons for non-admin
+  const asb=document.getElementById('add-space-btn');
+  if(asb)asb.style.display=isAdmin?'':'none';
+  // + Member button in topbar: hidden by default, shown only when on members page AND admin
+  const amb=document.getElementById('btn-add-member-top');
+  if(amb)amb.style.display='none';
+  const ampb=document.getElementById('btn-add-member-page');
+  if(ampb)ampb.style.display=isAdmin?'':'none';
+  computeMySpaces();
+  applyLang();
+});
+
+window.toggleProfileDd=()=>document.getElementById('profile-dd').classList.toggle('open');
+document.addEventListener('click',e=>{
+  const c=document.getElementById('profile-circle'),d=document.getElementById('profile-dd');
+  if(d&&!d.contains(e.target)&&c&&!c.contains(e.target))d.classList.remove('open');
+});
+window.doLogout=async()=>{await signOut(auth);window.location.href='auth.html';};
+
+/* ══ HELPERS ══ */
+function getMember(id){return members.find(m=>m.id===id);}
+function getInitials(name){return name?name.trim().split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase():'??';}
+function dlClass(d){if(!d)return'';const diff=(new Date(d)-new Date())/86400000;return diff<0?'overdue':diff<3?'soon':'';}
+function fmtDate(d){if(!d)return'—';const dt=new Date(typeof d==='number'?d:d);if(isNaN(dt))return'—';return dt.toLocaleDateString(lang==='ar'?'ar-EG':'en-US',{year:'numeric',month:'short',day:'numeric'});}
+function fmtDateTime(d){if(!d)return'—';const dt=new Date(typeof d==='number'?d:d);if(isNaN(dt))return'—';return dt.toLocaleString(lang==='ar'?'ar-EG':'en-US',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});}
+function hasTime(d){return typeof d==='string'&&d.includes('T');}
+const COLORS={todo:'#6b7280',inprogress:'#3b82f6',review:'#d97706',done:'#059669',blocked:'#dc2626'};
+function stLabel(s){return T('st_'+s)||s;}
+function prLabel(p){return T('pr_'+p)||p;}
+
+function showToast(msg,type='success'){
+  const c=document.getElementById('toast-wrap'),t=document.createElement('div');
+  t.className=`toast ${type}`;
+  t.innerHTML=`<span style="color:${type==='success'?'var(--success)':'var(--danger)'}">
+    ${type==='success'?'✓':'✕'}</span> ${msg}`;
+  c.appendChild(t);setTimeout(()=>t.remove(),3200);
+}
+function showLoading(){const b=document.getElementById('loading-bar');b.classList.remove('done');b.classList.add('show');}
+function hideLoading(){const b=document.getElementById('loading-bar');b.classList.add('done');setTimeout(()=>b.classList.remove('show','done'),400);}
+function confirmDel(title,msg,onOk){
+  document.getElementById('confirm-title').textContent=title;
+  document.getElementById('confirm-msg').innerHTML=msg;
+  document.getElementById('confirm-modal').classList.add('open');
+  document.getElementById('confirm-ok-btn').onclick=async()=>{closeModal('confirm-modal');await onOk();};
+}
+window.closeModal=(id)=>document.getElementById(id).classList.remove('open');
+
+/* ══ FIRESTORE LISTENERS ══ */
+onSnapshot(collection(db,'members'),snap=>{members=snap.docs.map(d=>({id:d.id,...d.data()}));computeMySpaces();renderAll();});
+onSnapshot(collection(db,'senders'),snap=>{senders=snap.docs.map(d=>({id:d.id,...d.data()}));renderAll();renderSendersPage();});
+onSnapshot(query(collection(db,'tasks'),orderBy('createdAt','desc')),snap=>{tasks=snap.docs.map(d=>({id:d.id,...d.data()}));renderAll();});
+onSnapshot(collection(db,'folders'),snap=>{folders=snap.docs.map(d=>({id:d.id,...d.data()}));renderDataGrid();updateDataCount();});
+onSnapshot(collection(db,'works'),snap=>{works=snap.docs.map(d=>({id:d.id,...d.data()}));renderDataGrid();updateDataCount();});
+// space-specific folders and works
+onSnapshot(collection(db,'sp_folders'),snap=>{spFolders=snap.docs.map(d=>({id:d.id,...d.data()}));renderSpDataGrid();});
+onSnapshot(collection(db,'sp_works'),snap=>{spWorks=snap.docs.map(d=>({id:d.id,...d.data()}));renderSpDataGrid();});
+onSnapshot(collection(db,'spaces'),snap=>{spaces=snap.docs.map(d=>({id:d.id,...d.data()}));computeMySpaces();renderSidebar();renderAll();});
+onSnapshot(doc(db,'config','app'),snap=>{
+  if(snap.exists()){
+    appSettings={...appSettings,...snap.data()};
+    webhookUrl=appSettings.webhookUrl||'';
+    const wh=document.getElementById('s-webhook'),rm=document.getElementById('s-reminder');
+    if(wh)wh.value=appSettings.webhookUrl||'';
+    if(rm)rm.value=appSettings.reminderMinutes||30;
+  }
+});
+
+// Compute which spaces the current user belongs to (via their member record)
+async function computeMySpaces(){
+  if(!currentUser||isAdmin){mySpaceIds=[];return;}
+  // find member card by uid first, then email
+  let myMember=members.find(m=>m.uid===currentUser.uid);
+  if(!myMember){
+    // try matching by email (admin added this member before they logged in)
+    myMember=members.find(m=>m.email&&m.email.toLowerCase()===currentUser.email.toLowerCase());
+    if(myMember&&!myMember.uid){
+      // Auto-link: write uid so future lookups are instant
+      try{await updateDoc(doc(db,'members',myMember.id),{uid:currentUser.uid});}catch(e){console.warn('uid link failed',e);}
+    }
+  }
+  if(!myMember){
+    mySpaceIds=[];
+    renderSidebar();
+    // Show a message that they have no space yet
+    const nav=document.getElementById('sidebar-nav');
+    if(nav){
+      const extra=`<div style="padding:16px 10px;font-size:12px;color:rgba(255,255,255,.4);line-height:1.6;text-align:center">
+        ${lang==='ar'?'لم يتم إضافتك لأي Space بعد.<br>تواصل مع المسؤول.':'You haven\'t been added to any Space yet.<br>Contact your admin.'}
+      </div>`;
+      nav.innerHTML+=extra;
+    }
+    return;
+  }
+  // find all spaces that include this member
+  mySpaceIds=spaces.filter(sp=>(sp.memberIds||[]).includes(myMember.id)).map(sp=>sp.id);
+  if(!mySpaceIds.length){
+    renderSidebar();
+    // Show message — member exists but not in any space yet
+    const nav=document.getElementById('sidebar-nav');
+    if(nav){
+      const extra=`<div style="padding:16px 10px;font-size:12px;color:rgba(255,255,255,.4);line-height:1.6;text-align:center">
+        ${lang==='ar'?'لم يتم إضافتك لأي Space بعد.<br>تواصل مع المسؤول.':'You haven\'t been added to any Space yet.<br>Contact your admin.'}
+      </div>`;
+      nav.innerHTML+=extra;
+    }
+    return;
+  }
+  // if user has spaces and is not on the right page yet, auto-navigate to first space
+  if(!currentSpaceId||!mySpaceIds.includes(currentSpaceId)){
+    currentSpaceId=mySpaceIds[0];
+  }
+  renderSidebar();
+  if(currentPage==='dashboard')showPage('tasks',currentSpaceId);
+}
+
+/* ══ SIDEBAR ══ */
+function renderSidebar(){
+  const nav=document.getElementById('sidebar-nav');
+  if(!nav)return;
+
+  // Determine which spaces to show
+  const visibleSpaces=isAdmin?spaces:spaces.filter(sp=>mySpaceIds.includes(sp.id));
+
+  let html='';
+  html+=`<div class="spaces-label">${lang==='ar'?'المساحات':'SPACES'}</div>`;
+
+  // "All spaces" link — admin only
+  if(isAdmin){
+    const allActive=currentSpaceId===null&&currentPage==='dashboard';
+    html+=`<div class="space-item${allActive?' active':''}" onclick="showDashboard()">
+      <div class="space-dot" style="background:#1a6ef5"></div>
+      <span class="space-name">${T('all_spaces')}</span>
+      <span class="space-count">${tasks.filter(t=>t.status!=='done').length}</span>
+    </div>`;
+  }
+
+  visibleSpaces.forEach(sp=>{
+    const spTasks=tasks.filter(t=>t.spaceId===sp.id&&t.status!=='done');
+    const isOpen=currentSpaceId===sp.id;
+    html+=`<div class="space-item${isOpen?' active open':''}" onclick="toggleSpace('${sp.id}')">
+      <div class="space-dot" style="background:${sp.color||'#7c3aed'}"></div>
+      <span class="space-name">${sp.name}</span>
+      <span class="space-count">${spTasks.length}</span>
+      <span class="space-expand">▶</span>
+    </div>
+    <div class="space-subnav"${isOpen?' style="display:block"':''}>
+      <div class="nav-item${currentPage==='tasks'&&isOpen?' active':''}" onclick="showPage('tasks','${sp.id}')">
+        <span class="nav-icon">☑</span>${T('nav_tasks')}<span class="count">${spTasks.length}</span>
+      </div>
+      <div class="nav-item${currentPage==='timeline'&&isOpen?' active':''}" onclick="showPage('timeline','${sp.id}')">
+        <span class="nav-icon">⋯</span>${T('nav_timeline')}
+      </div>
+      <div class="nav-item${currentPage==='history'&&isOpen?' active':''}" onclick="showPage('history','${sp.id}')">
+        <span class="nav-icon">✓</span>${T('nav_history')}<span class="count">${tasks.filter(t=>t.spaceId===sp.id&&t.status==='done').length}</span>
+      </div>
+      <div class="nav-item${currentPage==='members'&&isOpen?' active':''}" onclick="showPage('members','${sp.id}')">
+        <span class="nav-icon">◎</span>${T('nav_members')}<span class="count">${members.filter(m=>(sp.memberIds||[]).includes(m.id)).length}</span>
+      </div>
+      <div class="nav-item${currentPage==='space-data'&&isOpen?' active':''}" onclick="showPage('space-data','${sp.id}')">
+        <span class="nav-icon">📁</span>${lang==='ar'?'ملفات الـ Space':'Space Files'}
+      </div>
+      ${isAdmin?`
+      <div class="nav-item" onclick="openAssignMemberModal('${sp.id}')">
+        <span class="nav-icon">➕</span><span style="font-size:11px">${lang==='ar'?'إدارة الأعضاء':'Manage Members'}</span>
+      </div>
+      <div class="nav-item" onclick="deleteSpace('${sp.id}','${(sp.name||'').replace(/'/g,"\\'")}')">
+        <span class="nav-icon" style="color:var(--danger)">✕</span><span style="color:var(--danger);font-size:11px">${lang==='ar'?'حذف':'Delete'}</span>
+      </div>`:''}
+    </div>`;
+  });
+
+  // Global section
+  html+=`<div class="spaces-label" style="margin-top:12px">${lang==='ar'?'عام':'GENERAL'}</div>`;
+  // Global data only for admin
+  if(isAdmin){
+    html+=`<div class="nav-global-item${currentPage==='data'?' active':''}" onclick="showPage('data',null)">
+      <span class="nav-icon">◱</span>${T('nav_data')}<span class="count" id="nav-count-data">0</span>
+    </div>`;
+    html+=`<div class="nav-global-item${currentPage==='senders'?' active':''}" onclick="showPage('senders',null)">
+      <span class="nav-icon">◈</span>${T('nav_senders')}<span class="count">${senders.length}</span>
+    </div>`;
+    html+=`<div class="nav-global-item${currentPage==='settings'?' active':''}" onclick="showPage('settings',null)">
+      <span class="nav-icon">⚙</span>${T('nav_settings')}
+    </div>`;
+  } else {
+    // non-admin: only senders
+    html+=`<div class="nav-global-item${currentPage==='senders'?' active':''}" onclick="showPage('senders',null)">
+      <span class="nav-icon">◈</span>${T('nav_senders')}<span class="count">${senders.length}</span>
+    </div>`;
+  }
+
+  nav.innerHTML=html;
+  const ncd=document.getElementById('nav-count-data');
+  if(ncd)ncd.textContent=folders.filter(f=>!f.parentId).length;
+
+  // hide add-space button for non-admin
+  const asb=document.getElementById('add-space-btn');
+  if(asb)asb.style.display=isAdmin?'':'none';
+}
+
+
+
+window.showDashboard=()=>{
+  // non-admin users go to their space tasks instead of dashboard
+  if(!isAdmin&&mySpaceIds.length){
+    currentSpaceId=mySpaceIds[0];showPage('tasks',currentSpaceId);return;
+  }
+  currentSpaceId=null;currentPage='dashboard';
+  showPageEl('dashboard');
+  document.getElementById('page-title').textContent=T('nav_dashboard');
+  const tb=document.getElementById('btn-add-task-top');if(tb)tb.style.display='';
+  const mb=document.getElementById('btn-add-member-top');if(mb)mb.style.display='none';
+  closeSidebar();renderSidebar();renderDashboard();
+};
+
+window.toggleSpace=(spId)=>{
+  if(currentSpaceId===spId&&currentPage==='tasks'){currentSpaceId=null;if(isAdmin)showDashboard();return;}
+  currentSpaceId=spId;showPage('tasks',spId);
+};
+
+window.showPage=(pageName,spId)=>{
+  if(spId!==undefined)currentSpaceId=spId;
+  // Security: non-admin can only view their own spaces
+  if(!isAdmin&&currentSpaceId&&!mySpaceIds.includes(currentSpaceId))return;
+  currentPage=pageName;
+  showPageEl(pageName);
+  const sp=spaces.find(s=>s.id===currentSpaceId);
+  const spName=sp?sp.name:'';
+  const pageLabel=T('page_titles')[pageName]||(LANG[lang].page_titles||{})[pageName]||pageName;
+  document.getElementById('page-title').textContent=spName?`${spName} · ${pageLabel}`:pageLabel;
+  const tb=document.getElementById('btn-add-task-top');
+  const hideTaskBtn=['data','settings','space-data','senders','members'];
+  if(tb)tb.style.display=hideTaskBtn.includes(pageName)?'none':'';
+  // hide + Member topbar button except on members page
+  const mb=document.getElementById('btn-add-member-top');
+  if(mb)mb.style.display=(pageName==='members'&&isAdmin)?'':'none';
+  closeSidebar();
+  renderSidebar();
+  if(pageName==='data'){currentFolderId=null;renderDataPage();}
+  else if(pageName==='space-data'){spCurrentFolderId=null;renderSpDataPage();}
+  else renderAll();
+};
+
+function showPageEl(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const pg=document.getElementById('page-'+name);
+  if(pg)pg.classList.add('active');
+}
+
+/* ══ SIDEBAR MOBILE ══ */
+window.toggleSidebar=()=>{
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('open');
+};
+window.closeSidebar=()=>{
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('open');
+};
+function setupMobile(){
+  document.getElementById('mob-hamburger').style.display=window.innerWidth<=900?'flex':'none';
+}
+window.addEventListener('resize',setupMobile);setupMobile();
+
+/* ══ STATS ══ */
+function updateStats(){
+  // Start with all tasks, then filter by visibility
+  let st=tasks;
+  // non-admin: only their spaces
+  if(!isAdmin&&mySpaceIds.length){st=tasks.filter(t=>mySpaceIds.includes(t.spaceId));}
+  // if a specific space is open, further filter
+  if(currentSpaceId){st=st.filter(t=>t.spaceId===currentSpaceId);}
+  document.getElementById('stat-total').textContent=st.length;
+  document.getElementById('stat-done').textContent=st.filter(t=>t.status==='done').length;
+  document.getElementById('stat-inprog').textContent=st.filter(t=>t.status==='inprogress').length;
+  document.getElementById('stat-members').textContent=members.length;
+}
+
+/* ══ RENDER ALL ══ */
+function renderAll(){
+  updateStats();renderDashboard();renderTasksList();renderHistory();renderMembers();renderTimeline();renderSendersPage();renderSpDataPage();
+  const ncd=document.getElementById('nav-count-data');
+  if(ncd)ncd.textContent=folders.filter(f=>!f.parentId).length;
+}
+
+/* ══ TASK ROW ══ */
+function taskRow(t,showDoneDate=false){
+  const dl=dlClass(t.deadline);
+  const dtxt=t.deadline?(hasTime(t.deadline)?fmtDateTime(t.deadline):fmtDate(t.deadline)):'—';
+  const dateCell=showDoneDate
+    ?`<div class="deadline-cell">${fmtDate(t.doneAt||t.createdAt)}</div>`
+    :`<div class="deadline-cell ${dl}">${dtxt}</div>`;
+  const ids=(t.assignees&&t.assignees.length?t.assignees:[t.assignee]).filter(Boolean);
+  const ms=ids.map(id=>getMember(id)).filter(Boolean);
+  const asgn=ms.length?ms.map(m=>`<div class="assignee-pill"><div class="avatar" style="background:${m.color}">${getInitials(m.name)}</div>${m.name}</div>`).join('')
+    :'<span style="color:var(--text3);font-size:11px">—</span>';
+  let src='';
+  if(t.senderIds&&t.senderIds.length){const sn=t.senderIds.map(id=>senders.find(s=>s.id===id)).filter(Boolean).map(s=>s.name);if(sn.length)src=`<div class="task-src">↩ ${sn.join(', ')}</div>`;}
+  else if(t.source)src=`<div class="task-src">↩ ${t.source}</div>`;
+  return`<div class="task-row" onclick="viewTask('${t.id}')">
+    <div class="task-title-cell">
+      <div class="task-dot" style="background:${COLORS[t.status]||'#6b7280'}"></div>
+      <div style="min-width:0"><div class="task-name">${t.name}</div>${src}</div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:3px">${asgn}</div>
+    <div><span class="badge badge-${t.status}">${stLabel(t.status)}</span></div>
+    <div><span class="badge badge-${t.priority||'med'}">${prLabel(t.priority||'med')}</span></div>
+    ${dateCell}
+    <div class="actions-cell" onclick="event.stopPropagation()">
+      ${isAdmin?`<button class="btn btn-notify" onclick="sendNotify('${t.id}')" title="${T('notify_btn')}">${T('notify_btn')}</button>`:''}
+      <button class="btn btn-ghost btn-icon btn-xs" onclick="editTask('${t.id}')" title="${T('btn_save_task')}">✏</button>
+    </div>
+  </div>`;
+}
+
+/* ══ NOTIFY WEBHOOK ══ */
+window.sendNotify=async(taskId)=>{
+  const url=appSettings.webhookUrl||(document.getElementById('s-webhook')||{}).value||'';
+  if(!url){showToast(T('webhook_not_set'),'error');return;}
+  const task=tasks.find(x=>x.id===taskId);if(!task)return;
+  const ids=(task.assignees&&task.assignees.length?task.assignees:[task.assignee]).filter(Boolean);
+  const ms=ids.map(id=>getMember(id)).filter(Boolean);
+  const payload={
+    event:'manual_notify',timestamp:Date.now(),source:'birth-of-dream',
+    task:{id:task.id,name:task.name,desc:task.desc||'',status:task.status,priority:task.priority||'med',deadline:task.deadline||null,progress:task.progress||0},
+    assignees:ms.map(m=>m.name),phones:ms.map(m=>m.phone).filter(Boolean),memberIds:ids,
+  };
+  showLoading();
+  try{
+    const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(res.ok)showToast(T('notify_ok'));else showToast(T('notify_fail'),'error');
+  }catch(e){showToast(T('notify_fail'),'error');}
+  finally{hideLoading();}
+};
+
+/* ══ DASHBOARD ══ */
+let allSpacesFilter='all';
+window.filterAllSpaces=(status,el)=>{
+  allSpacesFilter=status;
+  document.querySelectorAll('#all-spaces-filter-bar .fchip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  renderAllSpacesTasks();
+};
+function renderAllSpacesTasks(){
+  let ts=tasks;
+  if(allSpacesFilter!=='all')ts=ts.filter(t=>t.status===allSpacesFilter);
+  const el=document.getElementById('all-spaces-tasks');
+  if(!el)return;
+  el.innerHTML=ts.length?ts.map(t=>taskRow(t,t.status==='done')).join(''):`<div class="empty-state"><div class="es-icon">☑</div><p>${T('empty_tasks')}</p></div>`;
+}
+function renderDashboard(){
+  if(currentPage!=='dashboard')return;
+  // non-admin: only see tasks from their own spaces
+  let visibleTasks=tasks;
+  if(!isAdmin&&mySpaceIds.length){
+    visibleTasks=tasks.filter(t=>mySpaceIds.includes(t.spaceId));
+  }
+  const all=visibleTasks;
+  const done=visibleTasks.filter(t=>t.status==='done');
+  const active=visibleTasks.filter(t=>t.status!=='done');
+  const pct=all.length>0?Math.round(done.length/all.length*100):0;
+  // sidebar space count shown to members = only their spaces
+  const visibleSpaces=isAdmin?spaces:spaces.filter(sp=>mySpaceIds.includes(sp.id));
+  document.getElementById('ov-cards').innerHTML=`
+    <div class="ov-card"><div class="ov-card-bar" style="background:#3b82f6"></div>
+      <span class="ov-icon">☑</span><div class="ov-val">${active.length}</div><div class="ov-label">${T('lbl_active')} ${T('lbl_tasks')}</div>
+    </div>
+    <div class="ov-card"><div class="ov-card-bar" style="background:#059669"></div>
+      <span class="ov-icon">✓</span><div class="ov-val">${done.length}</div><div class="ov-label">${T('lbl_done')}</div>
+      <div class="ov-progress"><div class="ov-progress-fill" style="width:${pct}%;background:#059669"></div></div>
+    </div>
+    <div class="ov-card"><div class="ov-card-bar" style="background:#3b82f6"></div>
+      <span class="ov-icon">◷</span><div class="ov-val">${active.filter(t=>t.status==='inprogress').length}</div><div class="ov-label">${T('st_inprogress')}</div>
+    </div>
+    <div class="ov-card"><div class="ov-card-bar" style="background:#d97706"></div>
+      <span class="ov-icon">⏳</span><div class="ov-val">${active.filter(t=>t.status==='todo').length}</div><div class="ov-label">${T('st_todo')}</div>
+    </div>
+    <div class="ov-card"><div class="ov-card-bar" style="background:#dc2626"></div>
+      <span class="ov-icon">⊗</span><div class="ov-val">${active.filter(t=>t.status==='blocked').length}</div><div class="ov-label">${T('st_blocked')}</div>
+    </div>
+    <div class="ov-card"><div class="ov-card-bar" style="background:var(--accent)"></div>
+      <span class="ov-icon">◎</span><div class="ov-val">${members.length}</div><div class="ov-label">${T('lbl_members')}</div>
+    </div>`;
+  const overdue=active.filter(t=>t.deadline&&dlClass(t.deadline)==='overdue').length;
+  const soon=active.filter(t=>t.deadline&&dlClass(t.deadline)==='soon').length;
+  document.getElementById('quick-pills').innerHTML=`
+    ${overdue>0?`<div class="qpill"><span class="dot" style="background:var(--danger)"></span>${overdue} ${T('overdue')}</div>`:''}
+    ${soon>0?`<div class="qpill"><span class="dot" style="background:var(--warn)"></span>${soon} ${T('due_soon')}</div>`:''}
+    ${isAdmin?`<div class="qpill"><span class="dot" style="background:var(--accent)"></span>${spaces.length} Spaces</div>`:''}`;
+
+  // Admin "all spaces" view: show tabbed all tasks
+  const tabsWrap=document.getElementById('all-spaces-tabs-wrap');
+  const inprogWrap=document.getElementById('dashboard-inprogress-wrap');
+  if(isAdmin&&!currentSpaceId){
+    if(tabsWrap)tabsWrap.style.display='';
+    if(inprogWrap)inprogWrap.style.display='none';
+    renderAllSpacesTasks();
+  }else{
+    if(tabsWrap)tabsWrap.style.display='none';
+    if(inprogWrap)inprogWrap.style.display='';
+    const ip=active.filter(t=>t.status==='inprogress');
+    document.getElementById('recent-tasks').innerHTML=ip.length?ip.map(t=>taskRow(t)).join(''):`<div class="empty-state"><div class="es-icon">◌</div><p>${T('empty_tasks')}</p></div>`;
+  }
+}
+
+/* ══ TASKS ══ */
+function getSpaceTasks(){
+  let ts=tasks.filter(t=>t.status!=='done');
+  // non-admin: only see tasks from their spaces
+  if(!isAdmin&&mySpaceIds.length){ts=ts.filter(t=>mySpaceIds.includes(t.spaceId));}
+  if(currentSpaceId)ts=ts.filter(t=>t.spaceId===currentSpaceId);
+  const q=(document.getElementById('search-input').value||'').trim().toLowerCase();
+  if(q)ts=ts.filter(t=>t.name.toLowerCase().includes(q)||(t.desc||'').toLowerCase().includes(q));
+  if(currentFilter!=='all')ts=ts.filter(t=>t.status===currentFilter);
+  return ts;
+}
+function renderTasksList(){
+  if(currentPage!=='tasks')return;
+  const list=getSpaceTasks();
+  document.getElementById('all-tasks').innerHTML=list.length?list.map(t=>taskRow(t)).join(''):`<div class="empty-state"><div class="es-icon">☑</div><p>${T('empty_tasks')}</p></div>`;
+}
+window.filterTasks=(s,el)=>{currentFilter=s;document.querySelectorAll('#tasks-filter-bar .fchip').forEach(c=>c.classList.remove('active'));el.classList.add('active');renderTasksList();};
+
+/* ══ HISTORY ══ */
+function renderHistory(){
+  if(currentPage!=='history')return;
+  let done=tasks.filter(t=>t.status==='done');
+  if(!isAdmin&&mySpaceIds.length)done=done.filter(t=>mySpaceIds.includes(t.spaceId));
+  if(currentSpaceId)done=done.filter(t=>t.spaceId===currentSpaceId);
+  document.getElementById('hist-count').textContent=done.length;
+  document.getElementById('history-tasks').innerHTML=done.length?done.map(t=>taskRow(t,true)).join(''):`<div class="empty-state"><div class="es-icon">✓</div><p>${T('empty_tasks')}</p></div>`;
+}
+
+/* ══ TIMELINE ══ */
+function renderTimeline(){
+  if(currentPage!=='timeline')return;
+  let ts=tasks.filter(t=>t.status!=='done');
+  if(!isAdmin&&mySpaceIds.length)ts=ts.filter(t=>mySpaceIds.includes(t.spaceId));
+  if(currentSpaceId)ts=ts.filter(t=>t.spaceId===currentSpaceId);
+  if(tlFilter!=='all')ts=ts.filter(t=>t.status===tlFilter);
+  const list=document.getElementById('tl-list');
+  if(!ts.length){list.innerHTML=`<div class="empty-state"><div class="es-icon">⋯</div><p>${T('empty_tasks')}</p></div>`;return;}
+  const sorted=[...ts].sort((a,b)=>{if(a.deadline&&b.deadline)return new Date(a.deadline)-new Date(b.deadline);if(a.deadline)return-1;if(b.deadline)return 1;return b.createdAt-a.createdAt;});
+  const groups={};
+  sorted.forEach(tk=>{const d=tk.deadline?new Date(tk.deadline):new Date(tk.createdAt);const key=isNaN(d)?'—':d.toLocaleDateString(lang==='ar'?'ar-EG':'en-US',{year:'numeric',month:'long'});(groups[key]=groups[key]||[]).push(tk);});
+  list.innerHTML=Object.entries(groups).map(([month,grp])=>`<div class="tl-group"><div class="tl-month">${month}</div>
+    ${grp.map((tk,i)=>{const dl=dlClass(tk.deadline);const ids=(tk.assignees&&tk.assignees.length?tk.assignees:[tk.assignee]).filter(Boolean);const ms=ids.map(id=>getMember(id)).filter(Boolean);
+    return`<div class="tl-item">
+      <div class="tl-date">${tk.deadline?fmtDate(tk.deadline):'—'}</div>
+      <div class="tl-line"><div class="tl-dot" style="border-color:${COLORS[tk.status]||'#6b7280'}"></div>${i<grp.length-1?'<div class="tl-connector"></div>':''}</div>
+      <div class="tl-card" onclick="viewTask('${tk.id}')">
+        <div class="tl-card-hdr"><div class="tl-card-title">${tk.name}</div><span class="badge badge-${tk.status}">${stLabel(tk.status)}</span></div>
+        <div class="tl-card-meta">
+          ${ms.map(m=>`<div class="assignee-pill"><div class="avatar" style="background:${m.color};width:18px;height:18px;font-size:8px">${getInitials(m.name)}</div>${m.name}</div>`).join('')}
+          <span class="badge badge-${tk.priority||'med'}" style="font-size:10px">${prLabel(tk.priority||'med')}</span>
+          ${tk.deadline?`<span class="badge badge-${dl==='overdue'?'blocked':dl==='soon'?'review':'todo'}" style="font-size:10px">📅 ${fmtDate(tk.deadline)}</span>`:''}
+        </div>
+        ${tk.progress>0?`<div class="tl-progress"><div class="tl-progress-fill" style="width:${tk.progress}%"></div></div>`:''}
+      </div>
+    </div>`;}).join('')}
+  </div>`).join('');
+}
+window.filterTl=(f,el)=>{tlFilter=f;document.querySelectorAll('#tl-filter-bar .fchip').forEach(c=>c.classList.remove('active'));el.classList.add('active');renderTimeline();};
+
+/* ══ MEMBERS ══ */
+function renderMembers(){
+  if(currentPage!=='members')return;
+  const grid=document.getElementById('members-grid');
+  const sp=currentSpaceId?spaces.find(s=>s.id===currentSpaceId):null;
+  // Filter members to only those assigned to this space
+  const spMemberIds=sp?(sp.memberIds||[]):[];
+  const visibleMembers=sp?members.filter(m=>spMemberIds.includes(m.id)):members;
+  if(!visibleMembers.length){
+    grid.innerHTML=`<div class="empty-state"><div class="es-icon">◎</div><p>${T('empty_members')}</p>${isAdmin&&sp?`<button class="btn btn-primary btn-sm" style="margin-top:12px" onclick="openAssignMemberModal('${sp.id}')">${lang==='ar'?'إضافة أعضاء':'Add Members'}</button>`:''}</div>`;
+    return;
+  }
+  grid.innerHTML=visibleMembers.map(m=>{
+    const mt=tasks.filter(t=>(t.assignee===m.id||(t.assignees&&t.assignees.includes(m.id)))&&(currentSpaceId?t.spaceId===currentSpaceId:true));
+    const shift=(m.shiftStart&&m.shiftEnd)?`${m.shiftStart} → ${m.shiftEnd}`:'—';
+    const isMyCard=currentUser&&(m.email===currentUser.email||m.uid===currentUser.uid);
+    const canEdit=isAdmin||isMyCard;
+    return`<div class="member-card">
+      <div class="member-color-bar" style="background:${m.color||'#7c3aed'}"></div>
+      <div class="member-hdr">
+        <div class="member-av" style="background:${m.color||'#7c3aed'}">${getInitials(m.name)}</div>
+        <div><div class="member-name">${m.name}</div><div class="member-role">${m.role||'—'}</div></div>
+      </div>
+      <div class="member-info">
+        <div class="member-info-row"><span class="member-info-label">WhatsApp</span><span class="member-info-val">${m.phone||'—'}</span></div>
+        <div class="member-info-row"><span class="member-info-label">${T('lbl_shift_s')}/${T('lbl_shift_e')}</span><span class="member-info-val">${shift}</span></div>
+      </div>
+      <div class="member-stats">
+        <div class="member-stat"><div class="v">${mt.length}</div><div class="k">${T('lbl_tasks')}</div></div>
+        <div class="member-stat"><div class="v" style="color:var(--success)">${mt.filter(t=>t.status==='done').length}</div><div class="k">${T('lbl_done')}</div></div>
+        <div class="member-stat"><div class="v" style="color:#3b82f6">${mt.filter(t=>t.status==='inprogress').length}</div><div class="k">${T('lbl_active')}</div></div>
+      </div>
+      <div class="member-actions">
+        ${canEdit?`<button class="btn btn-ghost btn-sm" style="flex:1" onclick="editMember('${m.id}')">✏</button>`:''}
+        ${isAdmin?`<button class="btn btn-danger btn-sm" style="flex:1" onclick="askDelMember('${m.id}','${m.name.replace(/'/g,"\\'")}')">✕</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ══ SENDERS ══ */
+function renderSendersPage(){
+  const grid=document.getElementById('senders-grid');if(!grid)return;
+  const btn=document.getElementById('btn-add-sender');if(btn)btn.style.display=isAdmin?'':'none';
+  if(!senders.length){grid.innerHTML=`<div class="empty-state"><div class="es-icon">◈</div><p>${T('empty_senders')}</p></div>`;return;}
+  grid.innerHTML=senders.map(s=>`<div class="sender-card">
+    <div class="sender-card-hdr"><div class="sender-av">${(s.name||'?')[0].toUpperCase()}</div>
+    <div><div class="sender-name">${s.name}</div><div class="sender-role">${s.role||'—'}</div></div></div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:10px">${tasks.filter(t=>t.senderIds&&t.senderIds.includes(s.id)).length} ${T('lbl_tasks')}</div>
+    ${isAdmin?`<button class="sender-del-btn" onclick="askDelSender('${s.id}','${s.name.replace(/'/g,"\\'")}')">✕ ${lang==='ar'?'حذف':'Remove'}</button>`:''}
+  </div>`).join('');
+}
+
+/* ══ SEARCH ══ */
+let srchTimer;
+window.handleSearch=()=>{renderTasksList();showSearchDd();}
+window.showSearchDd=()=>{
+  clearTimeout(srchTimer);
+  const q=(document.getElementById('search-input').value||'').trim().toLowerCase();
+  const dd=document.getElementById('search-dd');
+  if(!q){dd.classList.remove('show');return;}
+  // filter tasks by visible spaces for non-admin
+  let visibleTasks=tasks;
+  if(!isAdmin&&mySpaceIds.length)visibleTasks=tasks.filter(t=>mySpaceIds.includes(t.spaceId));
+  const res=visibleTasks.filter(t=>t.name.toLowerCase().includes(q)||(t.desc||'').toLowerCase().includes(q)).slice(0,7);
+  dd.innerHTML=res.length?res.map(t=>`<div class="search-ri" onmousedown="viewTask('${t.id}')">
+    <div class="sri-dot" style="background:${COLORS[t.status]||'#6b7280'}"></div>
+    <div><div class="sri-name">${t.name}</div><div class="sri-meta">${stLabel(t.status)}${t.deadline?' · '+fmtDate(t.deadline):''}</div></div>
+  </div>`).join(''):`<div class="search-empty">${T('empty_tasks')}</div>`;
+  dd.classList.add('show');
+};
+window.hideSearchDd=()=>{srchTimer=setTimeout(()=>document.getElementById('search-dd').classList.remove('show'),200);}
+
+/* ══ DATA ══ */
+function updateDataCount(){const ncd=document.getElementById('nav-count-data');if(ncd)ncd.textContent=folders.filter(f=>!f.parentId).length;}
+function renderDataPage(){
+  const bc=document.getElementById('data-bc'),awb=document.getElementById('btn-work'),sw=document.getElementById('data-search-wrap');
+  if(currentFolderId){
+    const f=folders.find(x=>x.id===currentFolderId);
+    bc.innerHTML=`<span class="data-bc-item" onclick="dataGoRoot()">${T('data_bc_root')}</span><span class="data-bc-sep">›</span><span class="data-bc-item current">${f?f.name:'...'}</span>`;
+    awb.style.display='';sw.style.display='';
+  }else{
+    bc.innerHTML=`<span class="data-bc-item current">${T('data_bc_root')}</span>`;
+    awb.style.display='none';sw.style.display='none';
+    const inp=document.getElementById('data-search-input');if(inp)inp.value='';
+  }
+  renderDataGrid();
+}
+function renderDataGrid(){
+  const grid=document.getElementById('data-grid');if(!grid)return;
+  const q=(document.getElementById('data-search-input')||{}).value||'';const ql=q.trim().toLowerCase();
+  if(!currentFolderId){
+    const rf=folders.filter(f=>!f.parentId);
+    if(!rf.length){grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><div class="es-icon">📁</div><p>${T('empty_folders')}</p></div>`;return;}
+    grid.innerHTML=rf.map(f=>`<div class="folder-card" onclick="dataOpenFolder('${f.id}')">
+      <div class="folder-actions"><button class="fa-btn" onclick="openRenameModal('folder','${f.id}','${f.name.replace(/'/g,"\\'")}')">✏</button>
+      <button class="fa-btn del" onclick="askDelFolder('${f.id}','${f.name.replace(/'/g,"\\'")}')">✕</button></div>
+      <div class="folder-icon">📁</div><div class="folder-name">${f.name}</div>
+      <div class="folder-meta">${folders.filter(sf=>sf.parentId===f.id).length} ${lang==='ar'?'مجلدات':'folders'} · ${works.filter(w=>w.folderId===f.id).length} ${lang==='ar'?'أعمال':'works'}</div>
+    </div>`).join('');
+  }else{
+    const sf=folders.filter(f=>f.parentId===currentFolderId);
+    let fw=works.filter(w=>w.folderId===currentFolderId);
+    if(ql)fw=fw.filter(w=>w.name.toLowerCase().includes(ql)||(w.notes||'').toLowerCase().includes(ql)||(w.workflow||'').toLowerCase().includes(ql)||(w.sheet||'').toLowerCase().includes(ql)||(w.website||'').toLowerCase().includes(ql));
+    const cards=[
+      ...sf.map(f=>`<div class="folder-card" onclick="dataOpenFolder('${f.id}')">
+        <div class="folder-actions"><button class="fa-btn" onclick="openRenameModal('folder','${f.id}','${f.name.replace(/'/g,"\\'")}')">✏</button>
+        <button class="fa-btn del" onclick="askDelFolder('${f.id}','${f.name.replace(/'/g,"\\'")}')">✕</button></div>
+        <div class="folder-icon">📁</div><div class="folder-name">${f.name}</div>
+        <div class="folder-meta">${works.filter(w=>w.folderId===f.id).length} ${lang==='ar'?'أعمال':'works'}</div>
+      </div>`),
+      ...fw.map(w=>`<div class="work-card">
+        <div class="work-card-actions"><button class="fa-btn" onclick="openEditWork('${w.id}')">✏</button>
+        <button class="fa-btn del" onclick="askDelWork('${w.id}','${(w.name||'').replace(/'/g,"\\'")}')">✕</button></div>
+        <div class="work-card-name">${w.name}</div>
+        <div class="work-links">
+          ${w.workflow?`<div class="work-link-row"><span class="work-link-label">Workflow</span><a class="work-link-val" href="${w.workflow}" target="_blank" onclick="event.stopPropagation()">${w.workflow}</a></div>`:''}
+          ${w.sheet?`<div class="work-link-row"><span class="work-link-label">Sheet</span><a class="work-link-val" href="${w.sheet}" target="_blank" onclick="event.stopPropagation()">${w.sheet}</a></div>`:''}
+          ${w.website?`<div class="work-link-row"><span class="work-link-label">Web</span><a class="work-link-val" href="${w.website}" target="_blank" onclick="event.stopPropagation()">${w.website}</a></div>`:''}
+          ${!w.workflow&&!w.sheet&&!w.website?`<span class="work-link-empty">—</span>`:''}
+        </div>
+        ${w.notes?`<div class="work-notes">${w.notes}</div>`:''}
+      </div>`)
+    ];
+    grid.innerHTML=cards.length?cards.join(''):`<div class="empty-state" style="grid-column:1/-1"><div class="es-icon">📁</div><p>${T('empty_folder_content')}</p></div>`;
+  }
+}
+window.renderDataGrid=renderDataGrid;
+window.dataGoRoot=()=>{currentFolderId=null;renderDataPage();}
+window.dataOpenFolder=(id)=>{currentFolderId=id;renderDataPage();}
+
+/* ══ VIEW TASK ══ */
+window.viewTask=(id)=>{
+  const t=tasks.find(x=>x.id===id);if(!t)return;
+  const dl=dlClass(t.deadline);
+  document.getElementById('view-task-title').textContent=t.name;
+  const dtxt=t.deadline?(hasTime(t.deadline)?fmtDateTime(t.deadline):fmtDate(t.deadline)):'';
+  const log=Array.isArray(t.activityLog)?[...t.activityLog].sort((a,b)=>(b.timestamp||0)-(a.timestamp||0)):[];
+  const actHTML=log.length?log.map(e=>{
+    const when=e.timestamp?new Date(e.timestamp).toLocaleString(lang==='ar'?'ar-EG':'en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+    const srcLabel=e.source==='whatsapp'?T('activity_src_whatsapp'):e.source==='system'?T('activity_src_system'):T('activity_src_manual');
+    const srcColor=e.source==='whatsapp'?'var(--success)':e.source==='system'?'var(--warn)':'var(--accent)';
+    return`<div class="activity-entry" style="border-color:${srcColor}">
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px">
+        <span style="color:${srcColor};font-weight:700">${srcLabel}</span>
+        <span style="color:var(--text3);font-family:var(--mono)">${when}</span>
+      </div>
+      ${e.memberName?`<div style="font-size:11px;color:var(--text3);margin-bottom:3px">${e.memberName}</div>`:''}
+      <div style="font-size:13px;color:var(--text);white-space:pre-wrap;word-wrap:break-word">${e.text||''}</div>
+      ${e.progress!=null?`<div style="font-size:11px;color:var(--accent);margin-top:4px;font-family:var(--mono)">Progress: ${e.progress}%</div>`:''}
+    </div>`;
+  }).join(''):`<div style="color:var(--text3);font-size:12px;text-align:center;padding:12px">${T('no_activity')}</div>`;
+  const ids=(t.assignees&&t.assignees.length?t.assignees:[t.assignee]).filter(Boolean);
+  const ms=ids.map(id=>getMember(id)).filter(Boolean);
+  let srcHtml='';
+  if(t.senderIds&&t.senderIds.length){const sn=t.senderIds.map(id=>senders.find(s=>s.id===id)).filter(Boolean).map(s=>s.name);if(sn.length)srcHtml=`<div class="view-field"><span class="vf-label">${T('lbl_task_from')}</span><span class="vf-val">${sn.join(', ')}</span></div>`;}
+  else if(t.source)srcHtml=`<div class="view-field"><span class="vf-label">${T('lbl_task_from')}</span><span class="vf-val">${t.source}</span></div>`;
+  document.getElementById('view-task-body').innerHTML=`
+    <div class="view-section">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+        <span class="badge badge-${t.status}">${stLabel(t.status)}</span>
+        <span class="badge badge-${t.priority||'med'}">${prLabel(t.priority||'med')}</span>
+      </div>
+      ${t.desc?`<div class="view-desc">${t.desc}</div>`:''}
+    </div>
+    <div class="view-section">
+      ${srcHtml}
+      <div class="view-field"><span class="vf-label">${T('lbl_task_assignees')}</span><span class="vf-val">
+        ${ms.length?ms.map(m=>`<span class="assignee-pill" style="margin-inline-end:6px"><div class="avatar" style="background:${m.color}">${getInitials(m.name)}</div>${m.name}</span>`).join(''):'—'}</span></div>
+      ${t.deadline?`<div class="view-field"><span class="vf-label">${T('lbl_deadline')}</span><span class="vf-val deadline-cell ${dl}">${dtxt}</span></div>`:''}
+      ${t.start?`<div class="view-field"><span class="vf-label">${T('lbl_start')}</span><span class="vf-val">${fmtDate(t.start)}</span></div>`:''}
+      ${t.hours?`<div class="view-field"><span class="vf-label">${T('lbl_hours')}</span><span class="vf-val">${t.hours}h</span></div>`:''}
+    </div>
+    ${t.progress>0?`<div class="view-section"><div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">${T('lbl_progress')}</span><span style="font-family:var(--mono);font-size:12px;color:var(--accent)">${t.progress}%</span></div><div class="prog-bar"><div class="prog-fill" style="width:${t.progress}%"></div></div></div>`:''}
+    ${t.notes?`<div class="view-section"><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">${T('lbl_notes')}</div><div class="view-desc">${t.notes}</div></div>`:''}
+    <div class="view-section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">Activity</span>
+        <div style="display:flex;gap:6px">
+          ${isAdmin?`<button class="btn btn-notify" onclick="sendNotify('${t.id}')">${T('notify_btn')}</button>`:''}
+          <button class="btn btn-ghost btn-sm" onclick="openActivityModal('${t.id}')">${T('btn_add_note2')}</button>
+        </div>
+      </div>
+      ${actHTML}
+    </div>`;
+  document.getElementById('view-edit-btn').onclick=()=>{closeModal('view-modal');editTask(id);};
+  document.getElementById('view-delete-btn').onclick=()=>{closeModal('view-modal');askDelTask(id,t.name);};
+  document.getElementById('view-modal').classList.add('open');
+};
+
+/* ══ ACTIVITY ══ */
+let actTaskId=null;
+window.openActivityModal=(taskId)=>{actTaskId=taskId;document.getElementById('activity-text').value='';document.getElementById('activity-modal').classList.add('open');};
+window.saveActivity=async()=>{
+  const text=document.getElementById('activity-text').value.trim();if(!text||!actTaskId)return;
+  showLoading();try{
+    const t=tasks.find(x=>x.id===actTaskId);
+    const log=[...(Array.isArray(t&&t.activityLog)?t.activityLog:[])];
+    log.push({source:'manual',text,timestamp:Date.now()});
+    await updateDoc(doc(db,'tasks',actTaskId),{activityLog:log});
+    showToast(T('btn_save_note'));closeModal('activity-modal');
+    setTimeout(()=>viewTask(actTaskId),100);actTaskId=null;
+  }catch(e){showToast('Error','error');}finally{hideLoading();}
+};
+
+/* ══ TASK MODAL ══ */
+window.openTaskModal=(id=null)=>{
+  editingTaskId=id;
+  ['t-name','t-desc','t-notes'].forEach(i=>{const e=document.getElementById(i);if(e)e.value='';});
+  document.getElementById('t-priority').value='med';
+  document.getElementById('t-status').value='todo';
+  ['t-deadline','t-start','t-hours'].forEach(i=>{const e=document.getElementById(i);if(e)e.value='';});
+  document.getElementById('t-progress').value=0;
+  document.getElementById('prog-display').textContent='0%';
+  document.getElementById('prog-preview').style.width='0%';
+
+  function buildAsgnBox(){
+    const chips=document.getElementById('asgn-chips'),ph=document.getElementById('asgn-placeholder');
+    if(!chips)return;
+    chips.querySelectorAll('.asgn-chip').forEach(c=>c.remove());
+    if(!selectedAssignees.length){if(ph)ph.style.display='';}
+    else{if(ph)ph.style.display='none';selectedAssignees.forEach(i2=>{const m=getMember(i2);if(!m)return;const chip=document.createElement('div');chip.className='asgn-chip';chip.innerHTML=`<div class="chip-av" style="background:${m.color}">${getInitials(m.name)}</div>${m.name}<span class="chip-rm" onclick="event.stopPropagation();removeAsgn('${i2}')">×</span>`;chips.insertBefore(chip,ph);});}
+    const dd=document.getElementById('asgn-dd');if(!dd)return;
+    // Only show members who belong to the current space
+    const sp=currentSpaceId?spaces.find(s=>s.id===currentSpaceId):null;
+    const spMemberIds=sp?(sp.memberIds||[]):null;
+    const availableMembers=spMemberIds?members.filter(m=>spMemberIds.includes(m.id)):members;
+    dd.innerHTML=availableMembers.length?availableMembers.map(m=>`<div class="asgn-di${selectedAssignees.includes(m.id)?' selected':''}" onclick="toggleAsgn('${m.id}')"><div class="di-av" style="background:${m.color}">${getInitials(m.name)}</div>${m.name}<span class="di-chk">✓</span></div>`).join(''):`<div style="padding:12px;color:var(--text3);font-size:13px">${lang==='ar'?'لا يوجد أعضاء في هذا الـ Space':'No members in this Space'}</div>`;
+  }
+  window.toggleAsgn=(i2)=>{const i3=selectedAssignees.indexOf(i2);if(i3>-1)selectedAssignees.splice(i3,1);else selectedAssignees.push(i2);buildAsgnBox();};
+  window.removeAsgn=(i2)=>{selectedAssignees=selectedAssignees.filter(x=>x!==i2);buildAsgnBox();};
+  window.toggleAsgnDd=()=>document.getElementById('asgn-dd').classList.toggle('open');
+  if(!window._asgnListener){window._asgnListener=true;document.addEventListener('click',e=>{const w=document.getElementById('asgn-wrap'),d=document.getElementById('asgn-dd');if(w&&d&&!w.contains(e.target))d.classList.remove('open');});}
+
+  function buildSrcBox(){
+    const box=document.getElementById('t-senders-box');if(!box)return;
+    if(!senders.length){box.innerHTML=`<span class="ms-empty">${T('empty_senders')}</span>`;return;}
+    box.innerHTML=senders.map(s=>`<div class="ss-opt${selectedSenders.includes(s.id)?' selected':''}" onclick="toggleSrc('${s.id}')">${s.name}</div>`).join('');
+  }
+  window.toggleSrc=(i2)=>{const i3=selectedSenders.indexOf(i2);if(i3>-1)selectedSenders.splice(i3,1);else selectedSenders.push(i2);buildSrcBox();}
+
+  if(id){
+    document.getElementById('task-modal-title').textContent=T('task_modal_edit');
+    const t=tasks.find(x=>x.id===id);
+    if(t){
+      document.getElementById('t-name').value=t.name||'';
+      document.getElementById('t-desc').value=t.desc||'';
+      document.getElementById('t-notes').value=t.notes||'';
+      document.getElementById('t-priority').value=t.priority||'med';
+      document.getElementById('t-status').value=t.status||'todo';
+      document.getElementById('t-deadline').value=t.deadline||'';
+      document.getElementById('t-start').value=t.start||'';
+      document.getElementById('t-hours').value=t.hours||'';
+      const p=t.progress||0;document.getElementById('t-progress').value=p;document.getElementById('prog-display').textContent=p+'%';document.getElementById('prog-preview').style.width=p+'%';
+      selectedAssignees=t.assignees&&t.assignees.length?[...t.assignees]:(t.assignee?[t.assignee]:[]);
+      selectedSenders=t.senderIds&&t.senderIds.length?[...t.senderIds]:[];
+    }
+  }else{document.getElementById('task-modal-title').textContent=T('task_modal_new');selectedAssignees=[];selectedSenders=[];}
+  buildAsgnBox();buildSrcBox();
+  document.getElementById('task-modal').classList.add('open');
+};
+window.cancelTaskModal=()=>{editingTaskId=null;selectedAssignees=[];selectedSenders=[];closeModal('task-modal');};
+window.editTask=(id)=>openTaskModal(id);
+
+/* ══ SAVE TASK ══ */
+window.saveTask=async()=>{
+  const name=document.getElementById('t-name').value.trim();
+  if(!name)return showToast(T('enter_name'),'error');
+  const newStatus=document.getElementById('t-status').value;
+  const data={
+    name,desc:document.getElementById('t-desc').value.trim(),
+    assignees:selectedAssignees,assignee:selectedAssignees[0]||'',
+    senderIds:selectedSenders,
+    source:selectedSenders.map(id=>senders.find(s=>s.id===id)).filter(Boolean).map(s=>s.name).join(', '),
+    priority:document.getElementById('t-priority').value,
+    status:newStatus,
+    deadline:document.getElementById('t-deadline').value,
+    start:document.getElementById('t-start').value,
+    hours:document.getElementById('t-hours').value,
+    notes:document.getElementById('t-notes').value.trim(),
+    progress:parseInt(document.getElementById('t-progress').value)||0,
+    spaceId:currentSpaceId||null,
+  };
+  if(newStatus==='done'){const old=editingTaskId?tasks.find(t=>t.id===editingTaskId):null;if(!old||old.status!=='done')data.doneAt=Date.now();}
+  showLoading();
+  try{
+    if(editingTaskId){await updateDoc(doc(db,'tasks',editingTaskId),data);}
+    else{data.createdAt=Date.now();await addDoc(collection(db,'tasks'),data);}
+    editingTaskId=null;selectedAssignees=[];selectedSenders=[];closeModal('task-modal');
+    showToast(editingTaskId?T('task_modal_edit'):T('task_modal_new'));
+  }catch(e){console.error(e);showToast('Error','error');}finally{hideLoading();}
+};
+
+/* ══ DELETE TASK ══ */
+window.askDelTask=(id,name)=>{confirmDel(T('confirm_del_task'),`<span class="confirm-name">"${name}"</span>`,async()=>{showLoading();try{await deleteDoc(doc(db,'tasks',id));showToast(T('btn_delete'));}catch(e){showToast('Error','error');}finally{hideLoading();}});};
+
+/* ══ MEMBER MODAL ══ */
+let editingMemberId=null;
+window.openMemberModal=(id=null)=>{
+  editingMemberId=id;
+  ['m-name','m-email','m-role','m-phone','m-shift-start','m-shift-end'].forEach(i=>{const e=document.getElementById(i);if(e)e.value='';});
+  document.getElementById('m-color').value='#7c3aed';
+  // show/hide email hint — admin sees it, member doesn't (they can't change their linked email)
+  const emailGroup=document.getElementById('m-email')?.closest('.form-group');
+  const emailHint=document.getElementById('lbl-memail-hint');
+  if(emailGroup)emailGroup.style.display=isAdmin?'':'none';
+  const title=document.getElementById('member-modal-title'),btn=document.getElementById('member-save-btn');
+  if(id){
+    const m=members.find(x=>x.id===id);
+    if(m){
+      document.getElementById('m-name').value=m.name||'';
+      document.getElementById('m-role').value=m.role||'';
+      document.getElementById('m-phone').value=m.phone||'';
+      document.getElementById('m-shift-start').value=m.shiftStart||'';
+      document.getElementById('m-shift-end').value=m.shiftEnd||'';
+      document.getElementById('m-color').value=m.color||'#7c3aed';
+      const emailEl=document.getElementById('m-email');
+      if(emailEl)emailEl.value=m.email||'';
+    }
+    if(title)title.textContent=T('member_modal_edit');if(btn)btn.textContent=T('member_save_edit');
+  }else{if(title)title.textContent=T('member_modal_add');if(btn)btn.textContent=T('member_save_add');}
+  document.getElementById('member-modal').classList.add('open');
+};
+window.editMember=(id)=>openMemberModal(id);
+window.openMyProfile=()=>{
+  if(!currentUser)return;
+  const myCard=members.find(m=>m.uid===currentUser.uid||m.email===currentUser.email);
+  openMemberModal(myCard?myCard.id:null);
+};
+window.saveMember=async()=>{
+  const name=document.getElementById('m-name').value.trim();
+  if(!name)return showToast(T('enter_name'),'error');
+  const phone=document.getElementById('m-phone').value.trim();
+  if(phone&&!/^\+\d{8,15}$/.test(phone.replace(/\s/g,'')))return showToast(lang==='ar'?'رقم الهاتف غير صحيح — يبدأ بـ +':'Invalid phone — must start with +','error');
+  const emailVal=(document.getElementById('m-email')?.value||'').trim().toLowerCase();
+  // Admin must enter email for the member to be linked when they log in
+  if(isAdmin&&!editingMemberId&&!emailVal)return showToast(lang==='ar'?'أدخل الإيميل بتاع العضو':'Enter member email','error');
+  const data={
+    name,
+    role:document.getElementById('m-role').value.trim(),
+    phone:phone.replace(/\s/g,''),
+    shiftStart:document.getElementById('m-shift-start').value,
+    shiftEnd:document.getElementById('m-shift-end').value,
+    color:document.getElementById('m-color').value,
+  };
+  // Always store email so the member can be linked when they log in
+  if(emailVal)data.email=emailVal;
+  showLoading();
+  try{
+    if(editingMemberId){
+      await updateDoc(doc(db,'members',editingMemberId),data);
+    } else {
+      data.joinedAt=Date.now();
+      // If it's a non-admin adding themselves, link their own uid
+      if(currentUser&&!isAdmin){
+        data.uid=currentUser.uid;
+        data.email=currentUser.email;
+      }
+      await addDoc(collection(db,'members'),data);
+    }
+    editingMemberId=null;
+    closeModal('member-modal');
+    showToast(lang==='ar'?'تم حفظ العضو':'Member saved');
+  }catch(e){console.error(e);showToast('Error','error');}
+  finally{hideLoading();}
+};
+window.askDelMember=(id,name)=>{if(!isAdmin)return showToast(T('only_admin'),'error');confirmDel(T('confirm_del_member'),`${name}`,async()=>{showLoading();try{await deleteDoc(doc(db,'members',id));}catch(e){}finally{hideLoading();}});};
+
+/* ══ FOLDER ══ */
+window.openFolderModal=()=>{editingFolderId=null;document.getElementById('f-name').value='';document.getElementById('folder-modal-title').textContent=T('folder_modal_new');document.getElementById('folder-modal').classList.add('open');};
+window.saveFolder=async()=>{const name=document.getElementById('f-name').value.trim();if(!name)return showToast(T('enter_name'),'error');showLoading();try{if(editingFolderId){await updateDoc(doc(db,'folders',editingFolderId),{name});}else{await addDoc(collection(db,'folders'),{name,parentId:currentFolderId||null,createdAt:Date.now()});}editingFolderId=null;closeModal('folder-modal');}catch(e){showToast('Error','error');}finally{hideLoading();}};
+window.askDelFolder=(id,name)=>{confirmDel(T('confirm_del_folder'),`"${name}"`,async()=>{showLoading();try{const toDelete=[id];const findSubs=(fid)=>folders.filter(f=>f.parentId===fid).forEach(f=>{toDelete.push(f.id);findSubs(f.id);});findSubs(id);for(const fid of toDelete){for(const w of works.filter(w=>w.folderId===fid))await deleteDoc(doc(db,'works',w.id));await deleteDoc(doc(db,'folders',fid));}if(currentFolderId===id)currentFolderId=null;}catch(e){}finally{hideLoading();}});};
+
+/* ══ WORK ══ */
+window.openWorkModal=()=>{editingWorkId=null;['w-name','w-workflow','w-sheet','w-website','w-notes'].forEach(i=>document.getElementById(i).value='');document.getElementById('work-modal-title').textContent=T('work_modal_new');document.getElementById('work-modal').classList.add('open');};
+window.openEditWork=(id)=>{editingWorkId=id;const w=works.find(x=>x.id===id);if(!w)return;document.getElementById('w-name').value=w.name||'';document.getElementById('w-workflow').value=w.workflow||'';document.getElementById('w-sheet').value=w.sheet||'';document.getElementById('w-website').value=w.website||'';document.getElementById('w-notes').value=w.notes||'';document.getElementById('work-modal-title').textContent=T('work_modal_edit');document.getElementById('work-modal').classList.add('open');};
+window.saveWork=async()=>{const name=document.getElementById('w-name').value.trim();if(!name)return showToast(T('enter_name'),'error');const data={name,workflow:document.getElementById('w-workflow').value.trim(),sheet:document.getElementById('w-sheet').value.trim(),website:document.getElementById('w-website').value.trim(),notes:document.getElementById('w-notes').value.trim(),folderId:currentFolderId};showLoading();try{if(editingWorkId){await updateDoc(doc(db,'works',editingWorkId),data);}else{data.createdAt=Date.now();await addDoc(collection(db,'works'),data);}editingWorkId=null;closeModal('work-modal');}catch(e){showToast('Error','error');}finally{hideLoading();}};
+window.askDelWork=(id,name)=>{confirmDel(T('confirm_del_work'),`"${name}"`,async()=>{showLoading();try{await deleteDoc(doc(db,'works',id));}catch(e){}finally{hideLoading();}});};
+
+/* ══ RENAME ══ */
+window.openRenameModal=(type,id,currentName)=>{renameTarget={type,id};document.getElementById('rename-modal-title').textContent=type==='folder'?T('rename_folder'):T('rename_work');document.getElementById('rename-input').value=currentName;document.getElementById('rename-modal').classList.add('open');};
+window.doRename=async()=>{const name=document.getElementById('rename-input').value.trim();if(!name||!renameTarget)return;showLoading();try{await updateDoc(doc(db,renameTarget.type==='folder'?'folders':'works',renameTarget.id),{name});closeModal('rename-modal');renameTarget=null;}catch(e){showToast('Error','error');}finally{hideLoading();}};
+
+/* ══ SENDER ══ */
+let editingSenderId=null;
+window.openSenderModal=()=>{if(!isAdmin)return showToast(T('only_admin'),'error');editingSenderId=null;document.getElementById('sn-name').value='';document.getElementById('sn-role').value='';document.getElementById('sender-modal-title').textContent=T('sender_modal_add');document.getElementById('sender-modal').classList.add('open');};
+window.saveSender=async()=>{const name=document.getElementById('sn-name').value.trim();if(!name)return showToast(T('enter_name'),'error');showLoading();try{if(editingSenderId){await updateDoc(doc(db,'senders',editingSenderId),{name,role:document.getElementById('sn-role').value.trim()});}else{await addDoc(collection(db,'senders'),{name,role:document.getElementById('sn-role').value.trim(),createdAt:Date.now()});}editingSenderId=null;closeModal('sender-modal');}catch(e){showToast('Error','error');}finally{hideLoading();}};
+window.askDelSender=(id,name)=>{if(!isAdmin)return;confirmDel(T('confirm_del_sender'),name,async()=>{showLoading();try{await deleteDoc(doc(db,'senders',id));}catch(e){}finally{hideLoading();}});};
+
+/* ══ ASSIGN MEMBER TO SPACE ══ */
+
+window.openAssignMemberModal=(spId)=>{
+  if(!isAdmin)return;
+  assigningSpaceId=spId;
+  const sp=spaces.find(s=>s.id===spId);
+  document.getElementById('assign-member-title').textContent=lang==='ar'?'إدارة أعضاء الـ Space':'Manage Space Members';
+  document.getElementById('assign-member-space-name').textContent=sp?sp.name:'';
+  const spMemberIds=(sp&&sp.memberIds)||[];
+  const list=document.getElementById('assign-member-list');
+  if(!members.length){
+    list.innerHTML=`<div class="empty-state"><div class="es-icon">◎</div><p>${T('empty_members')}</p></div>`;
+  } else {
+    list.innerHTML=members.map(m=>{
+      const isIn=spMemberIds.includes(m.id);
+      return`<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--surface2);border-radius:6px;border:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:9px">
+          <div class="avatar" style="background:${m.color||'#7c3aed'};width:30px;height:30px;font-size:12px">${getInitials(m.name)}</div>
+          <div><div style="font-size:13px;font-weight:600;color:var(--text)">${m.name}</div><div style="font-size:11px;color:var(--text3)">${m.role||'—'}</div></div>
+        </div>
+        <button class="btn btn-sm ${isIn?'btn-danger':'btn-success'}" onclick="toggleMemberInSpace('${m.id}','${spId}',${isIn})">
+          ${isIn?(lang==='ar'?'إزالة':'Remove'):(lang==='ar'?'إضافة':'Add')}
+        </button>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('assign-member-modal').classList.add('open');
+};
+window.toggleMemberInSpace=async(memberId,spId,isCurrentlyIn)=>{
+  const sp=spaces.find(s=>s.id===spId);if(!sp)return;
+  const ids=[...(sp.memberIds||[])];
+  if(isCurrentlyIn){const i=ids.indexOf(memberId);if(i>-1)ids.splice(i,1);}
+  else{if(!ids.includes(memberId))ids.push(memberId);}
+  showLoading();
+  try{
+    await updateDoc(doc(db,'spaces',spId),{memberIds:ids});
+    // re-render the modal
+    openAssignMemberModal(spId);
+  }catch(e){showToast('Error','error');}finally{hideLoading();}
+};
+
+/* ══ SPACE DATA (sp_folders / sp_works) ══ */
+function renderSpDataPage(){
+  if(currentPage!=='space-data')return;
+  const bc=document.getElementById('sp-data-bc');
+  const awb=document.getElementById('btn-sp-work');
+  const sw=document.getElementById('sp-data-search-wrap');
+  if(!bc||!awb||!sw)return;
+  if(spCurrentFolderId){
+    const f=spFolders.find(x=>x.id===spCurrentFolderId);
+    bc.innerHTML=`<span class="data-bc-item" onclick="spDataGoRoot()">${lang==='ar'?'ملفات الـ Space':'Space Files'}</span><span class="data-bc-sep">›</span><span class="data-bc-item current">${f?f.name:'...'}</span>`;
+    awb.style.display='';sw.style.display='';
+  }else{
+    bc.innerHTML=`<span class="data-bc-item current">${lang==='ar'?'ملفات الـ Space':'Space Files'}</span>`;
+    awb.style.display='none';sw.style.display='none';
+    const inp=document.getElementById('sp-data-search-input');if(inp)inp.value='';
+  }
+  renderSpDataGrid();
+}
+function renderSpDataGrid(){
+  if(currentPage!=='space-data')return;
+  const grid=document.getElementById('sp-data-grid');if(!grid)return;
+  const ql=((document.getElementById('sp-data-search-input')||{}).value||'').trim().toLowerCase();
+  const spaceFolders=spFolders.filter(f=>f.spaceId===currentSpaceId);
+  const spaceWorks=spWorks.filter(w=>w.spaceId===currentSpaceId);
+  if(!spCurrentFolderId){
+    const rf=spaceFolders.filter(f=>!f.parentId);
+    if(!rf.length){grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><div class="es-icon">📁</div><p>${T('empty_folders')}</p></div>`;return;}
+    grid.innerHTML=rf.map(f=>`<div class="folder-card" onclick="spDataOpenFolder('${f.id}')">
+      <div class="folder-actions"><button class="fa-btn" onclick="openSpRenameModal('folder','${f.id}','${f.name.replace(/'/g,"\\'")}')">✏</button>
+      <button class="fa-btn del" onclick="askDelSpFolder('${f.id}','${f.name.replace(/'/g,"\\'")}')">✕</button></div>
+      <div class="folder-icon">📁</div><div class="folder-name">${f.name}</div>
+      <div class="folder-meta">${spaceFolders.filter(sf=>sf.parentId===f.id).length} ${lang==='ar'?'مجلدات':'folders'} · ${spaceWorks.filter(w=>w.folderId===f.id).length} ${lang==='ar'?'أعمال':'works'}</div>
+    </div>`).join('');
+  }else{
+    const sf=spaceFolders.filter(f=>f.parentId===spCurrentFolderId);
+    let fw=spaceWorks.filter(w=>w.folderId===spCurrentFolderId);
+    if(ql)fw=fw.filter(w=>w.name.toLowerCase().includes(ql)||(w.notes||'').toLowerCase().includes(ql)||(w.workflow||'').toLowerCase().includes(ql)||(w.sheet||'').toLowerCase().includes(ql)||(w.website||'').toLowerCase().includes(ql));
+    const cards=[
+      ...sf.map(f=>`<div class="folder-card" onclick="spDataOpenFolder('${f.id}')">
+        <div class="folder-actions"><button class="fa-btn" onclick="openSpRenameModal('folder','${f.id}','${f.name.replace(/'/g,"\\'")}')">✏</button>
+        <button class="fa-btn del" onclick="askDelSpFolder('${f.id}','${f.name.replace(/'/g,"\\'")}')">✕</button></div>
+        <div class="folder-icon">📁</div><div class="folder-name">${f.name}</div>
+        <div class="folder-meta">${spaceWorks.filter(w=>w.folderId===f.id).length} ${lang==='ar'?'أعمال':'works'}</div>
+      </div>`),
+      ...fw.map(w=>`<div class="work-card">
+        <div class="work-card-actions"><button class="fa-btn" onclick="openEditSpWork('${w.id}')">✏</button>
+        <button class="fa-btn del" onclick="askDelSpWork('${w.id}','${(w.name||'').replace(/'/g,"\\'")}')">✕</button></div>
+        <div class="work-card-name">${w.name}</div>
+        <div class="work-links">
+          ${w.workflow?`<div class="work-link-row"><span class="work-link-label">Workflow</span><a class="work-link-val" href="${w.workflow}" target="_blank" onclick="event.stopPropagation()">${w.workflow}</a></div>`:''}
+          ${w.sheet?`<div class="work-link-row"><span class="work-link-label">Sheet</span><a class="work-link-val" href="${w.sheet}" target="_blank" onclick="event.stopPropagation()">${w.sheet}</a></div>`:''}
+          ${w.website?`<div class="work-link-row"><span class="work-link-label">Web</span><a class="work-link-val" href="${w.website}" target="_blank" onclick="event.stopPropagation()">${w.website}</a></div>`:''}
+          ${!w.workflow&&!w.sheet&&!w.website?`<span class="work-link-empty">—</span>`:''}
+        </div>
+        ${w.notes?`<div class="work-notes">${w.notes}</div>`:''}
+      </div>`)
+    ];
+    grid.innerHTML=cards.length?cards.join(''):`<div class="empty-state" style="grid-column:1/-1"><div class="es-icon">📁</div><p>${T('empty_folder_content')}</p></div>`;
+  }
+}
+window.spDataGoRoot=()=>{spCurrentFolderId=null;renderSpDataPage();}
+window.spDataOpenFolder=(id)=>{spCurrentFolderId=id;renderSpDataPage();}
+
+// Sp Folder CRUD
+window.openSpFolderModal=()=>{editingSpFolderId=null;document.getElementById('sp-f-name').value='';document.getElementById('sp-folder-modal-title').textContent=lang==='ar'?'مجلد جديد':'New Folder';document.getElementById('sp-folder-modal').classList.add('open');};
+window.saveSpFolder=async()=>{
+  const name=document.getElementById('sp-f-name').value.trim();if(!name)return showToast(T('enter_name'),'error');
+  showLoading();try{
+    if(editingSpFolderId){await updateDoc(doc(db,'sp_folders',editingSpFolderId),{name});}
+    else{await addDoc(collection(db,'sp_folders'),{name,spaceId:currentSpaceId,parentId:spCurrentFolderId||null,createdAt:Date.now()});}
+    editingSpFolderId=null;closeModal('sp-folder-modal');
+  }catch(e){showToast('Error','error');}finally{hideLoading();}
+};
+window.askDelSpFolder=(id,name)=>{confirmDel(T('confirm_del_folder'),`"${name}"`,async()=>{showLoading();try{
+  const toDelete=[id];const findSubs=(fid)=>spFolders.filter(f=>f.parentId===fid).forEach(f=>{toDelete.push(f.id);findSubs(f.id);});findSubs(id);
+  for(const fid of toDelete){for(const w of spWorks.filter(w=>w.folderId===fid))await deleteDoc(doc(db,'sp_works',w.id));await deleteDoc(doc(db,'sp_folders',fid));}
+  if(spCurrentFolderId===id)spCurrentFolderId=null;
+}catch(e){}finally{hideLoading();}});};
+
+// Sp Work CRUD
+window.openSpWorkModal=()=>{editingSpWorkId=null;['sp-w-name','sp-w-workflow','sp-w-sheet','sp-w-website','sp-w-notes'].forEach(i=>document.getElementById(i).value='');document.getElementById('sp-work-modal-title').textContent=lang==='ar'?'إضافة عمل':'Add Work';document.getElementById('sp-work-modal').classList.add('open');};
+window.openEditSpWork=(id)=>{editingSpWorkId=id;const w=spWorks.find(x=>x.id===id);if(!w)return;document.getElementById('sp-w-name').value=w.name||'';document.getElementById('sp-w-workflow').value=w.workflow||'';document.getElementById('sp-w-sheet').value=w.sheet||'';document.getElementById('sp-w-website').value=w.website||'';document.getElementById('sp-w-notes').value=w.notes||'';document.getElementById('sp-work-modal-title').textContent=lang==='ar'?'تعديل عمل':'Edit Work';document.getElementById('sp-work-modal').classList.add('open');};
+window.saveSpWork=async()=>{
+  const name=document.getElementById('sp-w-name').value.trim();if(!name)return showToast(T('enter_name'),'error');
+  const data={name,workflow:document.getElementById('sp-w-workflow').value.trim(),sheet:document.getElementById('sp-w-sheet').value.trim(),website:document.getElementById('sp-w-website').value.trim(),notes:document.getElementById('sp-w-notes').value.trim(),folderId:spCurrentFolderId,spaceId:currentSpaceId};
+  showLoading();try{
+    if(editingSpWorkId){await updateDoc(doc(db,'sp_works',editingSpWorkId),data);}
+    else{data.createdAt=Date.now();await addDoc(collection(db,'sp_works'),data);}
+    editingSpWorkId=null;closeModal('sp-work-modal');
+  }catch(e){showToast('Error','error');}finally{hideLoading();}
+};
+window.askDelSpWork=(id,name)=>{confirmDel(T('confirm_del_work'),`"${name}"`,async()=>{showLoading();try{await deleteDoc(doc(db,'sp_works',id));}catch(e){}finally{hideLoading();}});};
+
+// Sp Rename
+window.openSpRenameModal=(type,id,currentName)=>{spRenameTarget={type,id};document.getElementById('sp-rename-modal-title').textContent=type==='folder'?(lang==='ar'?'إعادة تسمية مجلد':'Rename Folder'):(lang==='ar'?'إعادة تسمية عمل':'Rename Work');document.getElementById('sp-rename-input').value=currentName;document.getElementById('sp-rename-modal').classList.add('open');};
+window.doSpRename=async()=>{const name=document.getElementById('sp-rename-input').value.trim();if(!name||!spRenameTarget)return;showLoading();try{await updateDoc(doc(db,spRenameTarget.type==='folder'?'sp_folders':'sp_works',spRenameTarget.id),{name});closeModal('sp-rename-modal');spRenameTarget=null;}catch(e){showToast('Error','error');}finally{hideLoading();}};
+
+/* ══ SPACES ══ */
+window.openSpaceModal=()=>{editingSpaceId=null;document.getElementById('sp-name').value='';selectedSpaceColor='#1a6ef5';document.querySelectorAll('.space-color-swatch').forEach(s=>s.classList.remove('active'));document.querySelector('.space-color-swatch').classList.add('active');document.getElementById('space-modal-title').textContent=T('space_modal_new');document.getElementById('space-modal').classList.add('open');};
+window.selectSpaceColor=(el)=>{selectedSpaceColor=el.getAttribute('data-color');document.querySelectorAll('.space-color-swatch').forEach(s=>s.classList.remove('active'));el.classList.add('active');};
+window.saveSpace=async()=>{const name=document.getElementById('sp-name').value.trim();if(!name)return showToast(T('enter_name'),'error');showLoading();try{if(editingSpaceId){await updateDoc(doc(db,'spaces',editingSpaceId),{name,color:selectedSpaceColor});}else{await addDoc(collection(db,'spaces'),{name,color:selectedSpaceColor,createdAt:Date.now()});}editingSpaceId=null;closeModal('space-modal');}catch(e){showToast('Error','error');}finally{hideLoading();}};
+window.deleteSpace=(id,name)=>{if(!isAdmin)return showToast(T('only_admin'),'error');confirmDel(T('confirm_del_space'),name,async()=>{showLoading();try{await deleteDoc(doc(db,'spaces',id));if(currentSpaceId===id){currentSpaceId=null;showDashboard();}}catch(e){}finally{hideLoading();}});};
+
+/* ══ SETTINGS ══ */
+window.saveSettings=async()=>{
+  const url=document.getElementById('s-webhook').value.trim();
+  const rm=parseInt(document.getElementById('s-reminder').value)||30;
+  if(url&&!/^https?:\/\//.test(url))return showToast('URL must start with http://','error');
+  showLoading();try{await setDoc(doc(db,'config','app'),{webhookUrl:url,reminderMinutes:rm,updatedAt:Date.now()},{merge:true});showToast(T('btn_save_set'));}catch(e){showToast('Error','error');}finally{hideLoading();}
+};
+window.testWebhook=async()=>{
+  const url=document.getElementById('s-webhook').value.trim();if(!url)return showToast(T('webhook_not_set'),'error');
+  showLoading();try{const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event:'test',timestamp:Date.now()})});if(res.ok)showToast('OK '+res.status);else showToast('Error '+res.status,'error');}catch(e){showToast(T('notify_fail'),'error');}finally{hideLoading();}
+};
+
+/* ══ CLOSE MODALS ══ */
+document.querySelectorAll('.modal-overlay').forEach(o=>{
+  o.addEventListener('click',e=>{if(e.target!==o)return;if(o.id==='task-modal')cancelTaskModal();else o.classList.remove('open');});
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open'));editingTaskId=null;}});
+
+/* ══ INIT ══ */
+applyLang();
+renderSidebar();
+renderAll();
+renderSendersPage();
+</script>
+</body>
+</html>

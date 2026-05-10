@@ -1,0 +1,387 @@
+{
+  "name": "BOD - Task Reminder + Reply Handler",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "b8fae90b-8b83-4e2f-aa1e-b6aefd79f94e",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -320,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://firestore.googleapis.com/v1/projects/birth-21c5c/databases/(default)/documents/config/app",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "options": {}
+      },
+      "id": "e2ef0703-4d51-443f-8083-656eb2a1bcdf",
+      "name": "Get Config",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        0
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "6iJQARnHPCmOk2tm",
+          "name": "firebase oauth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://firestore.googleapis.com/v1/projects/birth-21c5c/databases/(default)/documents/members",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "pageSize",
+              "value": "300"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ed048725-b6b4-4b0b-811a-f14f6bd8df1a",
+      "name": "Get Members",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        176
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "6iJQARnHPCmOk2tm",
+          "name": "firebase oauth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://firestore.googleapis.com/v1/projects/birth-21c5c/databases/(default)/documents/tasks",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "pageSize",
+              "value": "300"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4553fa41-b28d-4625-a319-916e79bec7c1",
+      "name": "Get Tasks",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        320
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "6iJQARnHPCmOk2tm",
+          "name": "firebase oauth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "id": "4c9f7b30-07c1-4006-a52f-9ab73e9a9de5",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        256,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "function fromFV(v) {\n  if (v == null) return null;\n  if ('stringValue' in v) return v.stringValue;\n  if ('integerValue' in v) return parseInt(v.integerValue);\n  if ('doubleValue' in v) return parseFloat(v.doubleValue);\n  if ('booleanValue' in v) return v.booleanValue;\n  if ('nullValue' in v) return null;\n  if ('timestampValue' in v) return v.timestampValue;\n  if ('arrayValue' in v) return (v.arrayValue.values || []).map(fromFV);\n  if ('mapValue' in v) return fromFF(v.mapValue.fields || {});\n  return null;\n}\n\nfunction fromFF(fields) {\n  const o = {};\n  for (const k in fields) o[k] = fromFV(fields[k]);\n  return o;\n}\n\nfunction parseDoc(doc) {\n  const id = doc.name.split('/').pop();\n  return { id, ...fromFF(doc.fields || {}) };\n}\n\nfunction parseTime(str) {\n  if (!str) return null;\n  str = str.trim();\n  const ampm = str.match(/^(\\d{1,2}):(\\d{2})\\s*(AM|PM)$/i);\n  if (ampm) {\n    let h = parseInt(ampm[1]);\n    const m = parseInt(ampm[2]);\n    const period = ampm[3].toUpperCase();\n    if (period === 'AM' && h === 12) h = 0;\n    if (period === 'PM' && h !== 12) h += 12;\n    return { h, m };\n  }\n  const plain = str.match(/^(\\d{1,2}):(\\d{2})$/);\n  if (plain) return { h: parseInt(plain[1]), m: parseInt(plain[2]) };\n  return null;\n}\n\nfunction getCairoTimeNow() {\n  const now = new Date();\n  const fmt = new Intl.DateTimeFormat('en-GB', {\n    timeZone: 'Africa/Cairo',\n    hour: '2-digit',\n    minute: '2-digit',\n    hour12: false\n  });\n  const parts = fmt.formatToParts(now);\n  const h = parseInt(parts.find(p => p.type === 'hour').value);\n  const m = parseInt(parts.find(p => p.type === 'minute').value);\n  return { h, m, totalMinutes: h * 60 + m };\n}\n\nconst allItems = $input.all();\nlet members = {};\nlet tasks = [];\n\nfor (const item of allItems) {\n  const docs = item.json.documents || [];\n  if (!docs.length) continue;\n  const path = docs[0].name || '';\n  if (path.includes('/members/')) {\n    for (const doc of docs) {\n      const m = parseDoc(doc);\n      members[m.id] = m;\n    }\n  }\n  if (path.includes('/tasks/')) {\n    tasks = docs.map(parseDoc);\n  }\n}\n\nconst cairoNow = getCairoTimeNow();\nconst reminderMinutes = 30;\nconst dedupeWindowMinutes = 1440;\nconst nowMs = Date.now();\n\nconst results = [];\n\nfor (const t of tasks) {\n  if (t.status !== 'inprogress') continue;\n\n  const assignees = (Array.isArray(t.assignees) && t.assignees.length)\n    ? t.assignees\n    : (t.assignee ? [t.assignee] : []);\n\n  for (const aid of assignees) {\n    const member = members[aid];\n    if (!member || !member.phone || !member.shiftEnd) continue;\n\n    const endTime = parseTime(member.shiftEnd);\n    if (!endTime) continue;\n\n    const shiftEndTotalMinutes = endTime.h * 60 + endTime.m;\n    const minsToEnd = shiftEndTotalMinutes - cairoNow.totalMinutes;\n\n    if (minsToEnd < 0 || minsToEnd > reminderMinutes) continue;\n\n    const log = Array.isArray(t.activityLog) ? t.activityLog : [];\n    const recentReminder = log.find(e => {\n      if (!e || e.type !== 'reminder_sent') return false;\n      if (e.memberId !== aid) return false;\n      const ts = typeof e.timestamp === 'number' ? e.timestamp : 0;\n      return (nowMs - ts) < (dedupeWindowMinutes * 60 * 1000);\n    });\n    if (recentReminder) continue;\n\n    const deadline = (t.deadline && t.deadline !== '') ? new Date(t.deadline) : null;\n    const deadlineStr = deadline && !isNaN(deadline)\n      ? deadline.toLocaleString('en-GB', {\n          day: '2-digit', month: 'short',\n          hour: '2-digit', minute: '2-digit',\n          hour12: false, timeZone: 'Africa/Cairo'\n        })\n      : 'غير محدد';\n\n    const cleanPhone = member.phone.replace(/\\D/g, '');\n    const firstName = member.name.split(' ')[0];\n    const progress = String(t.progress || 0);\n\n    results.push({\n      json: {\n        taskId: t.id,\n        memberId: aid,\n        memberName: member.name,\n        memberPhone: cleanPhone,\n        firstName,\n        taskName: t.name,\n        deadlineStr,\n        progress,\n        currentActivityLog: t.activityLog || []\n      }\n    });\n  }\n}\n\nreturn results;"
+      },
+      "id": "fbfa1d51-86c8-499f-915e-a894b2483025",
+      "name": "Decide Who To Notify",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        512,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/1128399547015187/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer EAARNGpUxlBIBRTEaBbYrS9PomVxY0JMN7aG4SjjQcmPpgX2Me0NGhqHY3TAiCZCUaIW8pv5umuA49UWNZCdZB3Fgz714wWq0A7FM1xUhUzAvKGX3qvOX0wI72RY2GPgBvgzP25uojKGzXomoSwyA1wdfJtyLt15bV0tZCW5cgJI4g9J48zGgmyO7dOocriLR9AZDZD"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  messaging_product: 'whatsapp',\n  to: $json.memberPhone,\n  type: 'template',\n  template: {\n    name: 'wahtsapp_n8n_',\n    language: { code: 'ar_EG' },\n    components: [\n      {\n        type: 'body',\n        parameters: [\n          { type: 'text', text: $json.firstName },\n          { type: 'text', text: $json.taskName },\n          { type: 'text', text: $json.deadlineStr },\n          { type: 'text', text: $json.progress }\n        ]\n      },\n      {\n        type: 'button',\n        sub_type: 'flow',\n        index: '0',\n        parameters: [\n          { type: 'action', action: { flow_token: $json.taskId + '_' + $json.memberId } }\n        ]\n      }\n    ]\n  }\n}) }}",
+        "options": {}
+      },
+      "id": "611ec7ce-c7f1-4c18-bfb1-0e38e248b2de",
+      "name": "Send WhatsApp Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        784,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "function toFV(v) {\n  if (v === null || v === undefined) return { nullValue: null };\n  if (typeof v === 'string') return { stringValue: v };\n  if (typeof v === 'boolean') return { booleanValue: v };\n  if (typeof v === 'number') {\n    if (Number.isInteger(v)) return { integerValue: String(v) };\n    return { doubleValue: v };\n  }\n  if (Array.isArray(v)) return { arrayValue: { values: v.map(toFV) } };\n  if (typeof v === 'object') {\n    const fields = {};\n    for (const k in v) fields[k] = toFV(v[k]);\n    return { mapValue: { fields } };\n  }\n  return { nullValue: null };\n}\n\nconst decideItems = $('Decide Who To Notify').all();\nconst waItems = $input.all();\n\nconst entriesByTask = {};\n\nfor (let i = 0; i < decideItems.length; i++) {\n  const decision = decideItems[i].json;\n  const waRes = waItems[i]?.json;\n\n  if (!waRes || !waRes.messages || !waRes.contacts) continue;\n\n  const phone = waRes.contacts[0]?.wa_id;\n  const msgId = waRes.messages[0]?.id;\n\n  if (!phone || !msgId) continue;\n\n  const newEntry = {\n    source: 'system',\n    type: 'reminder_sent',\n    text: `Template reminder sent to ${decision.memberName} (+${phone})`,\n    memberId: decision.memberId,\n    memberName: decision.memberName,\n    sentMessageId: msgId,\n    timestamp: Date.now()\n  };\n\n  const tId = decision.taskId;\n  if (!entriesByTask[tId]) entriesByTask[tId] = [];\n  entriesByTask[tId].push(newEntry);\n}\n\nconst output = [];\nfor (const taskId in entriesByTask) {\n  output.push({\n    json: {\n      taskId,\n      newEntries: entriesByTask[taskId]\n    }\n  });\n}\n\nreturn output;"
+      },
+      "id": "37c6fb55-4970-4629-83bc-b1f121b5dfa6",
+      "name": "Build Log Entry",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://firestore.googleapis.com/v1/projects/birth-21c5c/databases/(default)/documents/tasks/{{$json.taskId}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "options": {}
+      },
+      "id": "63a57c1f-6e2a-4b2c-94d5-20ec7cfb7282",
+      "name": "Get Current Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1408,
+        176
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "6iJQARnHPCmOk2tm",
+          "name": "firebase oauth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "function fromFV(v) {\n  if (v == null) return null;\n  if ('stringValue' in v) return v.stringValue;\n  if ('integerValue' in v) return parseInt(v.integerValue);\n  if ('doubleValue' in v) return parseFloat(v.doubleValue);\n  if ('booleanValue' in v) return v.booleanValue;\n  if ('nullValue' in v) return null;\n  if ('timestampValue' in v) return v.timestampValue;\n  if ('arrayValue' in v) return (v.arrayValue.values || []).map(fromFV);\n  if ('mapValue' in v) return fromFF(v.mapValue.fields || {});\n  return null;\n}\nfunction fromFF(fields) {\n  const o = {};\n  for (const k in fields) o[k] = fromFV(fields[k]);\n  return o;\n}\nfunction toFV(v) {\n  if (v === null || v === undefined) return { nullValue: null };\n  if (typeof v === 'string') return { stringValue: v };\n  if (typeof v === 'boolean') return { booleanValue: v };\n  if (typeof v === 'number') {\n    if (Number.isInteger(v)) return { integerValue: String(v) };\n    return { doubleValue: v };\n  }\n  if (Array.isArray(v)) return { arrayValue: { values: v.map(toFV) } };\n  if (typeof v === 'object') {\n    const fields = {};\n    for (const k in v) fields[k] = toFV(v[k]);\n    return { mapValue: { fields } };\n  }\n  return { nullValue: null };\n}\n\nconst buildItems = $('Build Log Entry').all();\nconst entryMap = {};\nfor (const item of buildItems) {\n  const tId = item.json.taskId;\n  const entries = item.json.newEntries || [];\n  if (!entryMap[tId]) entryMap[tId] = [];\n  entryMap[tId].push(...entries);\n}\n\nconst tasks = $input.all();\nconst output = [];\n\nfor (const taskItem of tasks) {\n  const taskDoc = taskItem.json;\n  const taskId = taskDoc.name.split('/').pop();\n\n  const newEntries = entryMap[taskId];\n  if (!newEntries || newEntries.length === 0) continue;\n\n  const currentLogFV = taskDoc.fields?.activityLog;\n  const currentLog = currentLogFV\n    ? (currentLogFV.arrayValue?.values || []).map(fromFV)\n    : [];\n\n  let updatedLog = [...currentLog];\n  for (const newEntry of newEntries) {\n    const exists = updatedLog.some(e =>\n      e && e.sentMessageId === newEntry.sentMessageId && e.memberId === newEntry.memberId\n    );\n    if (!exists) updatedLog.push(newEntry);\n  }\n\n  output.push({\n    json: {\n      taskId,\n      firestoreBody: { fields: { activityLog: toFV(updatedLog) } }\n    }\n  });\n}\n\nreturn output;"
+      },
+      "id": "f156a8e3-da1b-4fa9-8f5b-c47f11a64b5a",
+      "name": "Append Log Entry",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://firestore.googleapis.com/v1/projects/birth-21c5c/databases/(default)/documents/tasks/{{ $json.taskId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "updateMask.fieldPaths",
+              "value": "activityLog"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.firestoreBody) }}",
+        "options": {}
+      },
+      "id": "5015ec36-c9c6-4496-8882-f4341a5cd779",
+      "name": "Save Reminder Log",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2016,
+        176
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "6iJQARnHPCmOk2tm",
+          "name": "firebase oauth"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Every 5 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Get Config",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Members",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Config": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Members": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Get Tasks": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Decide Who To Notify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decide Who To Notify": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send WhatsApp Message": {
+      "main": [
+        [
+          {
+            "node": "Build Log Entry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Log Entry": {
+      "main": [
+        [
+          {
+            "node": "Get Current Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Current Task": {
+      "main": [
+        [
+          {
+            "node": "Append Log Entry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append Log Entry": {
+      "main": [
+        [
+          {
+            "node": "Save Reminder Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "timezone": "Africa/Cairo",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "85481254-f62c-432a-a1f8-3d5f3363c29b",
+  "meta": {
+    "instanceId": "66a10ccf1191e26cf11454f1eda8e19c591fe7a3b375a70106819505eb7cf5ce"
+  },
+  "id": "-SbVIiP1YqJthnZyy-vxj",
+  "tags": []
+}

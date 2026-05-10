@@ -1,0 +1,323 @@
+{
+  "name": "BOD - Task Reminder button website",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/1128399547015187/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer EAARNGpUxlBIBRTEaBbYrS9PomVxY0JMN7aG4SjjQcmPpgX2Me0NGhqHY3TAiCZCUaIW8pv5umuA49UWNZCdZB3Fgz714wWq0A7FM1xUhUzAvKGX3qvOX0wI72RY2GPgBvgzP25uojKGzXomoSwyA1wdfJtyLt15bV0tZCW5cgJI4g9J48zGgmyO7dOocriLR9AZDZD"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  messaging_product: 'whatsapp',\n  to: $json.memberPhone,\n  type: 'template',\n  template: {\n    name: 'wahtsapp_n8n_',\n    language: { code: 'ar_EG' },\n    components: [\n      {\n        type: 'body',\n        parameters: [\n          { type: 'text', text: $json.firstName },\n          { type: 'text', text: $json.taskName },\n          { type: 'text', text: $json.deadlineStr },\n          { type: 'text', text: $json.progress }\n        ]\n      },\n      {\n        type: 'button',\n        sub_type: 'flow',\n        index: '0',\n        parameters: [\n          { type: 'action', action: { flow_token: $json.taskId + '_' + $json.memberId } }\n        ]\n      }\n    ]\n  }\n}) }}",
+        "options": {}
+      },
+      "id": "b1151141-3cd3-4119-a40c-5507e876ec1c",
+      "name": "Send WhatsApp Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4064,
+        1952
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "function toFV(v) {\n  if (v === null || v === undefined) return { nullValue: null };\n  if (typeof v === 'string') return { stringValue: v };\n  if (typeof v === 'boolean') return { booleanValue: v };\n  if (typeof v === 'number') {\n    if (Number.isInteger(v)) return { integerValue: String(v) };\n    return { doubleValue: v };\n  }\n  if (Array.isArray(v)) return { arrayValue: { values: v.map(toFV) } };\n  if (typeof v === 'object') {\n    var fields = {};\n    for (var k in v) fields[k] = toFV(v[k]);\n    return { mapValue: { fields: fields } };\n  }\n  return { nullValue: null };\n}\n\n// الـ input = WhatsApp API responses\nvar waItems = $input.all();\n\n// جيب الـ decisions من الـ node الصح\nvar decisions = [];\ntry {\n  var autoAll = $('Decide Who To Notify').all();\n  for (var a = 0; a < autoAll.length; a++) {\n    if (!autoAll[a].json.skip) decisions.push(autoAll[a].json);\n  }\n} catch(e) {}\n\nif (!decisions.length) {\n  try {\n    var manualAll = $('Manual: Prepare Notify Data').all();\n    for (var m = 0; m < manualAll.length; m++) {\n      if (!manualAll[m].json.skip) decisions.push(manualAll[m].json);\n    }\n  } catch(e) {}\n}\n\nif (!decisions.length) return [];\n\nvar entriesByTask = {};\n\nfor (var i = 0; i < decisions.length; i++) {\n  var decision = decisions[i];\n  var waRes = waItems[i] ? waItems[i].json : null;\n  if (!waRes || !waRes.messages || !waRes.contacts) continue;\n\n  var phone = waRes.contacts[0] ? waRes.contacts[0].wa_id : null;\n  var msgId = waRes.messages[0] ? waRes.messages[0].id : null;\n  if (!phone || !msgId || !decision.taskId) continue;\n\n  var isManual = decision._source === 'manual';\n  var newEntry = {\n    source:        isManual ? 'manual_notify' : 'system',\n    type:          isManual ? 'manual_notify_sent' : 'reminder_sent',\n    text:          isManual\n      ? ('تم إرسال تنبيه يدوي لـ ' + decision.memberName + ' (+' + phone + ')')\n      : ('Template reminder sent to ' + decision.memberName + ' (+' + phone + ')'),\n    memberId:      decision.memberId,\n    memberName:    decision.memberName,\n    sentMessageId: msgId,\n    timestamp:     Date.now()\n  };\n\n  var tId = decision.taskId;\n  if (!entriesByTask[tId]) entriesByTask[tId] = [];\n  entriesByTask[tId].push(newEntry);\n}\n\nvar output = [];\nfor (var taskId in entriesByTask) {\n  output.push({ json: { taskId: taskId, newEntries: entriesByTask[taskId] } });\n}\nreturn output;"
+      },
+      "id": "c59a1f7f-79b5-4bf2-a3cd-b36c8176ddc8",
+      "name": "Build Log Entry",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4480,
+        1952
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://firestore.googleapis.com/v1/projects/birth-21c5c/databases/(default)/documents/tasks/{{$json.taskId}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "options": {}
+      },
+      "id": "b7321c40-b13a-4651-9cbd-24f86aaa2aa1",
+      "name": "Get Current Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4848,
+        1952
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "6iJQARnHPCmOk2tm",
+          "name": "firebase oauth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "function fromFV(v) {\n  if (v == null) return null;\n  if ('stringValue' in v) return v.stringValue;\n  if ('integerValue' in v) return parseInt(v.integerValue);\n  if ('doubleValue' in v) return parseFloat(v.doubleValue);\n  if ('booleanValue' in v) return v.booleanValue;\n  if ('nullValue' in v) return null;\n  if ('timestampValue' in v) return v.timestampValue;\n  if ('arrayValue' in v) return (v.arrayValue.values || []).map(fromFV);\n  if ('mapValue' in v) return fromFF(v.mapValue.fields || {});\n  return null;\n}\nfunction fromFF(fields) {\n  const o = {};\n  for (const k in fields) o[k] = fromFV(fields[k]);\n  return o;\n}\nfunction toFV(v) {\n  if (v === null || v === undefined) return { nullValue: null };\n  if (typeof v === 'string') return { stringValue: v };\n  if (typeof v === 'boolean') return { booleanValue: v };\n  if (typeof v === 'number') {\n    if (Number.isInteger(v)) return { integerValue: String(v) };\n    return { doubleValue: v };\n  }\n  if (Array.isArray(v)) return { arrayValue: { values: v.map(toFV) } };\n  if (typeof v === 'object') {\n    const fields = {};\n    for (const k in v) fields[k] = toFV(v[k]);\n    return { mapValue: { fields } };\n  }\n  return { nullValue: null };\n}\n\nconst buildItems = $('Build Log Entry').all();\nconst entryMap = {};\nfor (const item of buildItems) {\n  const tId = item.json.taskId;\n  const entries = item.json.newEntries || [];\n  if (!entryMap[tId]) entryMap[tId] = [];\n  entryMap[tId].push(...entries);\n}\n\nconst tasks = $input.all();\nconst output = [];\n\nfor (const taskItem of tasks) {\n  const taskDoc = taskItem.json;\n  const taskId = taskDoc.name.split('/').pop();\n\n  const newEntries = entryMap[taskId];\n  if (!newEntries || newEntries.length === 0) continue;\n\n  const currentLogFV = taskDoc.fields?.activityLog;\n  const currentLog = currentLogFV\n    ? (currentLogFV.arrayValue?.values || []).map(fromFV)\n    : [];\n\n  let updatedLog = [...currentLog];\n  for (const newEntry of newEntries) {\n    const exists = updatedLog.some(e =>\n      e && e.sentMessageId === newEntry.sentMessageId && e.memberId === newEntry.memberId\n    );\n    if (!exists) updatedLog.push(newEntry);\n  }\n\n  output.push({\n    json: {\n      taskId,\n      firestoreBody: { fields: { activityLog: toFV(updatedLog) } }\n    }\n  });\n}\n\nreturn output;"
+      },
+      "id": "a2f456c2-07c9-4624-a393-b113607d28b8",
+      "name": "Append Log Entry",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5200,
+        1952
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://firestore.googleapis.com/v1/projects/birth-21c5c/databases/(default)/documents/tasks/{{ $json.taskId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "updateMask.fieldPaths",
+              "value": "activityLog"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.firestoreBody) }}",
+        "options": {}
+      },
+      "id": "8b8f0872-b3ce-45de-9ea9-fcbb98d8fc69",
+      "name": "Save Reminder Log",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5456,
+        1952
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "6iJQARnHPCmOk2tm",
+          "name": "firebase oauth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "manual-send-notification",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "38c92f28-7f14-4b67-ab07-d449c19c3146",
+      "name": "Manual Notify Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        2704,
+        1936
+      ],
+      "webhookId": "manual-send-notification"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.item.json.body || $input.item.json;\n\nif (body.event !== 'manual_notify') {\n  return { json: { skip: true, reason: 'not_manual_notify_event' } };\n}\n\nconst task      = body.task      || {};\nconst phones    = body.phones    || [];\nconst assignees = body.assignees || [];\nconst memberIds = body.memberIds || [];\n\nif (!task.id || !phones.length) {\n  return { json: { skip: true, reason: 'missing_task_or_phones' } };\n}\n\nconst deadline = (task.deadline && task.deadline !== '') ? new Date(task.deadline) : null;\nconst deadlineStr = deadline && !isNaN(deadline)\n  ? deadline.toLocaleString('en-GB', {\n      day: '2-digit', month: 'short',\n      hour: '2-digit', minute: '2-digit',\n      hour12: false, timeZone: 'Africa/Cairo'\n    })\n  : 'غير محدد';\n\nconst progress = String(task.progress || 0);\n\nconst results = phones.map(function(phone, i) {\n  const cleanPhone = (phone || '').replace(/\\D/g, '');\n  const memberName = assignees[i] || 'الموظف';\n  const firstName  = memberName.split(' ')[0];\n  // استخدم الـ Firestore memberId لو موجود، غير كده استخدم الرقم\n  const memberId   = memberIds[i] || cleanPhone;\n  return {\n    json: {\n      skip: false,\n      taskId:      task.id,\n      memberId:    memberId,\n      memberName:  memberName,\n      memberPhone: cleanPhone,\n      firstName:   firstName,\n      taskName:    task.name || 'Task',\n      deadlineStr: deadlineStr,\n      progress:    progress,\n      currentActivityLog: [],\n      _source: 'manual'\n    }\n  };\n});\n\nreturn results;"
+      },
+      "id": "43329c9a-0859-4938-9cab-c1559709b5b7",
+      "name": "Manual: Prepare Notify Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2944,
+        1936
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "aa1f530f-5d9f-4d55-a1b9-9032c1c46f7b"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "128c1d0e-75fc-4a36-a053-b558102986fd",
+      "name": "Manual: Skip?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        3184,
+        1936
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"status\":\"error\",\"reason\":\"{{ $('Manual: Prepare Notify Data').first().json.reason }}\"}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "e38c491c-417c-424d-81d1-e603a17bf80e",
+      "name": "Manual: Respond Invalid",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        3728,
+        1680
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"status\":\"ok\",\"message\":\"تم إرسال التنبيه بنجاح\",\"to\":\"{{ $('Manual: Prepare Notify Data').first().json.memberName }}\"}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "38d6c216-2416-48e1-848c-9a23421a0a8e",
+      "name": "Manual: Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        3760,
+        2192
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Send WhatsApp Message": {
+      "main": [
+        [
+          {
+            "node": "Build Log Entry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Log Entry": {
+      "main": [
+        [
+          {
+            "node": "Get Current Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Current Task": {
+      "main": [
+        [
+          {
+            "node": "Append Log Entry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append Log Entry": {
+      "main": [
+        [
+          {
+            "node": "Save Reminder Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Notify Webhook": {
+      "main": [
+        [
+          {
+            "node": "Manual: Prepare Notify Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual: Prepare Notify Data": {
+      "main": [
+        [
+          {
+            "node": "Manual: Skip?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual: Skip?": {
+      "main": [
+        [
+          {
+            "node": "Manual: Respond Invalid",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Manual: Respond OK",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send WhatsApp Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "2a7aceca-4bd7-4e0a-99a8-0497fb7d2ae7",
+  "meta": {
+    "instanceId": "66a10ccf1191e26cf11454f1eda8e19c591fe7a3b375a70106819505eb7cf5ce"
+  },
+  "id": "7LCat4APzhgYWnDSzDRzf",
+  "tags": []
+}
