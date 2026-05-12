@@ -3,7 +3,7 @@ import { motion, type Variants } from "framer-motion";
 import { useLocation } from "wouter";
 import {
   CheckCircle2, Clock, AlertCircle, TrendingUp, Calendar, Layers, ArrowRight,
-  UserCheck, RefreshCw, MessageSquare,
+  UserCheck, RefreshCw, MessageSquare, Search,
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { useAllTasks } from "@/hooks/useTasks";
@@ -49,6 +49,8 @@ export default function Dashboard() {
   const [reassigning, setReassigning] = useState<string | null>(null);
   const [reassignTarget, setReassignTarget] = useState<Record<string, string>>({});
   const [reassignReason, setReassignReason] = useState<Record<string, string>>({});
+  const [reassignDeadline, setReassignDeadline] = useState<Record<string, string>>({});
+  const [memberSearch, setMemberSearch] = useState<Record<string, string>>({});
 
   const stats = useMemo(() => {
     const total = tasks.length;
@@ -87,6 +89,7 @@ export default function Dashboard() {
   const handleReassign = async (taskId: string) => {
     const newAssigneeId = reassignTarget[taskId];
     const reason = (reassignReason[taskId] || "").trim();
+    const newDeadlineStr = reassignDeadline[taskId] || "";
     if (!newAssigneeId) return;
 
     const task = tasks.find((t) => t.id === taskId);
@@ -100,19 +103,25 @@ export default function Dashboard() {
     try {
       const activityEntry = {
         type: "reassign",
-        text: `Task reassigned by ${adminName} from [${prevAssignees || "unassigned"}] to ${newAssigneeMember?.displayName || newAssigneeMember?.email || newAssigneeId}${reason ? ` — Reason: ${reason}` : ""}`,
+        text: `Task reassigned by ${adminName} from [${prevAssignees || "unassigned"}] to ${newAssigneeMember?.displayName || newAssigneeMember?.email || newAssigneeId}${reason ? ` — Reason: ${reason}` : ""}${newDeadlineStr ? ` — New deadline: ${newDeadlineStr}` : ""}`,
         timestamp: Date.now(),
         sender: adminName,
         reassignedBy: userDoc?.id || "",
         fromAssignees: task.assigneeIds,
         toAssignee: newAssigneeId,
         reason: reason || "",
+        newDeadline: newDeadlineStr || "",
       };
 
-      await updateDoc(doc(db, "tasks", taskId), {
+      const updatePayload: Record<string, unknown> = {
         assigneeIds: [newAssigneeId],
         activityLog: arrayUnion(activityEntry),
-      });
+      };
+      if (newDeadlineStr) {
+        updatePayload.deadline = new Date(newDeadlineStr);
+      }
+
+      await updateDoc(doc(db, "tasks", taskId), updatePayload);
 
       // Write notifications for removed assignees and new assignee
       const notifBase = {
@@ -151,6 +160,8 @@ export default function Dashboard() {
       toast.success(`Task reassigned to ${newAssigneeMember?.displayName || "member"}`);
       setReassignTarget((prev) => { const next = { ...prev }; delete next[taskId]; return next; });
       setReassignReason((prev) => { const next = { ...prev }; delete next[taskId]; return next; });
+      setReassignDeadline((prev) => { const next = { ...prev }; delete next[taskId]; return next; });
+      setMemberSearch((prev) => { const next = { ...prev }; delete next[taskId]; return next; });
     } catch {
       toast.error("Failed to reassign");
     } finally {
@@ -387,35 +398,82 @@ export default function Dashboard() {
 
                       {/* Reassign controls */}
                       <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-2">
-                          <select
-                            value={reassignTarget[task.id] || ""}
-                            onChange={(e) => setReassignTarget((prev) => ({ ...prev, [task.id]: e.target.value }))}
-                            className="flex-1 text-xs px-2.5 py-1.5 bg-background border border-input rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/30"
-                          >
-                            <option value="">Reassign to...</option>
-                            {members.map((m) => <option key={m.id} value={m.id}>{m.displayName || m.email}</option>)}
-                          </select>
-                          <button
-                            onClick={() => handleReassign(task.id)}
-                            disabled={!hasTarget || reassigning === task.id}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors shrink-0"
-                          >
-                            <RefreshCw className="w-3 h-3" />
-                            {reassigning === task.id ? "..." : "Assign"}
-                          </button>
+                        {/* Member search box */}
+                        <div className="relative">
+                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
+                          <input
+                            type="text"
+                            value={memberSearch[task.id] || ""}
+                            onChange={(e) => setMemberSearch((prev) => ({ ...prev, [task.id]: e.target.value }))}
+                            placeholder="Search member by name..."
+                            className="w-full text-xs pl-7 pr-2.5 py-1.5 bg-background border border-input rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/30"
+                          />
                         </div>
+                        {/* Filtered member list */}
+                        {(() => {
+                          const q = (memberSearch[task.id] || "").toLowerCase();
+                          const filtered = q
+                            ? members.filter((m) => (m.displayName || m.email || "").toLowerCase().includes(q))
+                            : members;
+                          return (
+                            <div className="flex items-center gap-2">
+                              <select
+                                value={reassignTarget[task.id] || ""}
+                                onChange={(e) => setReassignTarget((prev) => ({ ...prev, [task.id]: e.target.value }))}
+                                className="flex-1 text-xs px-2.5 py-1.5 bg-background border border-input rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/30"
+                              >
+                                <option value="">Reassign to...</option>
+                                {filtered.map((m) => (
+                                  <option key={m.id} value={m.id}>{m.displayName || m.email}</option>
+                                ))}
+                              </select>
+                              <button
+                                onClick={() => handleReassign(task.id)}
+                                disabled={!hasTarget || reassigning === task.id}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors shrink-0"
+                              >
+                                <RefreshCw className="w-3 h-3" />
+                                {reassigning === task.id ? "..." : "Assign"}
+                              </button>
+                            </div>
+                          );
+                        })()}
                         {hasTarget && (
-                          <div className="flex items-start gap-2">
-                            <MessageSquare className="w-3.5 h-3.5 text-muted-foreground mt-2 shrink-0" />
-                            <textarea
-                              value={reassignReason[task.id] || ""}
-                              onChange={(e) => setReassignReason((prev) => ({ ...prev, [task.id]: e.target.value }))}
-                              placeholder="Reason for reassigning... (optional)"
-                              rows={2}
-                              className="flex-1 text-xs px-2.5 py-1.5 bg-background border border-input rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/30 resize-none"
-                            />
-                          </div>
+                          <>
+                            {/* Reason */}
+                            <div className="flex items-start gap-2">
+                              <MessageSquare className="w-3.5 h-3.5 text-muted-foreground mt-2 shrink-0" />
+                              <textarea
+                                value={reassignReason[task.id] || ""}
+                                onChange={(e) => setReassignReason((prev) => ({ ...prev, [task.id]: e.target.value }))}
+                                placeholder="Reason for reassigning... (optional)"
+                                rows={2}
+                                className="flex-1 text-xs px-2.5 py-1.5 bg-background border border-input rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/30 resize-none"
+                              />
+                            </div>
+                            {/* New deadline */}
+                            <div className="flex items-center gap-2">
+                              <Calendar className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                              <div className="flex-1 flex items-center gap-2">
+                                <label className="text-xs text-muted-foreground shrink-0">New deadline</label>
+                                <input
+                                  type="date"
+                                  value={reassignDeadline[task.id] || ""}
+                                  onChange={(e) => setReassignDeadline((prev) => ({ ...prev, [task.id]: e.target.value }))}
+                                  className="flex-1 text-xs px-2.5 py-1.5 bg-background border border-input rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/30"
+                                />
+                                {reassignDeadline[task.id] && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setReassignDeadline((prev) => { const n = { ...prev }; delete n[task.id]; return n; })}
+                                    className="text-xs text-muted-foreground hover:text-foreground"
+                                  >
+                                    Clear
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </>
                         )}
                       </div>
                     </div>

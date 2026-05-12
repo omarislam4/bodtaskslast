@@ -203,7 +203,6 @@ export default function SpaceDetail() {
   const handleAddData = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!dataName.trim() || !spaceId) return;
-    if (dataType === "link" && !dataUrl.trim()) return;
     setAddingData(true);
     try {
       await addDoc(collection(db, "spaces", spaceId, "data"), {
@@ -267,6 +266,7 @@ export default function SpaceDetail() {
       const payload: Record<string, string> = {
         userId: userDoc?.id || "",
         userName: userDoc?.displayName || userDoc?.email || "",
+        userEmail: userDoc?.email || "",
         spaceId: spaceId || "",
         spaceName: space?.name || "",
         timestamp: now,
@@ -302,6 +302,7 @@ export default function SpaceDetail() {
       await fireWebhook("https://n8n.athar-riyada.com/webhook/weekly-report", {
         userId: userDoc?.id || "",
         userName: userDoc?.displayName || userDoc?.email || "",
+        userEmail: userDoc?.email || "",
         spaceId: spaceId || "",
         spaceName: space?.name || "",
         timestamp: now,
@@ -851,8 +852,8 @@ export default function SpaceDetail() {
                       <input value={dataName} onChange={(e) => setDataName(e.target.value)} placeholder={dataType === "folder" ? "Folder name..." : "Link title..."}
                         className="w-full px-3 py-2.5 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30" required autoFocus />
                       {dataType === "link" && (
-                        <input value={dataUrl} onChange={(e) => setDataUrl(e.target.value)} placeholder="https://..." type="url"
-                          className="w-full px-3 py-2.5 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30" required />
+                        <input value={dataUrl} onChange={(e) => setDataUrl(e.target.value)} placeholder="https://... (optional)" type="url"
+                          className="w-full px-3 py-2.5 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30" />
                       )}
                       <textarea value={dataNotes} onChange={(e) => setDataNotes(e.target.value)} placeholder="Add a note or description..." rows={2}
                         className="w-full px-3 py-2.5 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
