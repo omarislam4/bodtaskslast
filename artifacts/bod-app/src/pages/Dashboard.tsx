@@ -51,6 +51,7 @@ export default function Dashboard() {
   const [reassignReason, setReassignReason] = useState<Record<string, string>>({});
   const [reassignDeadline, setReassignDeadline] = useState<Record<string, string>>({});
   const [memberSearch, setMemberSearch] = useState<Record<string, string>>({});
+  const [dropdownOpen, setDropdownOpen] = useState<Record<string, boolean>>({});
 
   const stats = useMemo(() => {
     const total = tasks.length;
@@ -398,46 +399,76 @@ export default function Dashboard() {
 
                       {/* Reassign controls */}
                       <div className="flex flex-col gap-2">
-                        {/* Member search box */}
-                        <div className="relative">
-                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
-                          <input
-                            type="text"
-                            value={memberSearch[task.id] || ""}
-                            onChange={(e) => setMemberSearch((prev) => ({ ...prev, [task.id]: e.target.value }))}
-                            placeholder="Search member by name..."
-                            className="w-full text-xs pl-7 pr-2.5 py-1.5 bg-background border border-input rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/30"
-                          />
+                        {/* Custom searchable dropdown + Assign button */}
+                        <div className="flex items-center gap-2">
+                          <div className="relative flex-1">
+                            {/* Trigger button */}
+                            <button
+                              type="button"
+                              onClick={() => setDropdownOpen((prev) => ({ ...prev, [task.id]: !prev[task.id] }))}
+                              className="w-full text-left text-xs px-2.5 py-1.5 bg-background border border-input rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/30 flex items-center justify-between gap-2"
+                            >
+                              <span className={reassignTarget[task.id] ? "text-foreground" : "text-muted-foreground"}>
+                                {reassignTarget[task.id]
+                                  ? (members.find((m) => m.id === reassignTarget[task.id])?.displayName || members.find((m) => m.id === reassignTarget[task.id])?.email || "Member")
+                                  : "Reassign to..."}
+                              </span>
+                              <Search className="w-3 h-3 text-muted-foreground shrink-0" />
+                            </button>
+                            {/* Dropdown panel */}
+                            {dropdownOpen[task.id] && (
+                              <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg overflow-hidden">
+                                {/* Search inside dropdown */}
+                                <div className="p-2 border-b border-border">
+                                  <div className="relative">
+                                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
+                                    <input
+                                      autoFocus
+                                      type="text"
+                                      value={memberSearch[task.id] || ""}
+                                      onChange={(e) => setMemberSearch((prev) => ({ ...prev, [task.id]: e.target.value }))}
+                                      placeholder="Search by name..."
+                                      className="w-full text-xs pl-6 pr-2 py-1.5 bg-background border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-primary/30"
+                                    />
+                                  </div>
+                                </div>
+                                {/* Member list */}
+                                <div className="max-h-40 overflow-y-auto">
+                                  {(() => {
+                                    const q = (memberSearch[task.id] || "").toLowerCase();
+                                    const filtered = q
+                                      ? members.filter((m) => (m.displayName || m.email || "").toLowerCase().includes(q))
+                                      : members;
+                                    return filtered.length > 0 ? filtered.map((m) => (
+                                      <button
+                                        key={m.id}
+                                        type="button"
+                                        onClick={() => {
+                                          setReassignTarget((prev) => ({ ...prev, [task.id]: m.id }));
+                                          setDropdownOpen((prev) => ({ ...prev, [task.id]: false }));
+                                          setMemberSearch((prev) => ({ ...prev, [task.id]: "" }));
+                                        }}
+                                        className={`w-full text-left text-xs px-3 py-2 hover:bg-muted transition-colors ${reassignTarget[task.id] === m.id ? "bg-primary/10 text-primary font-medium" : "text-foreground"}`}
+                                      >
+                                        {m.displayName || m.email}
+                                      </button>
+                                    )) : (
+                                      <p className="text-xs text-muted-foreground text-center py-3">No members found</p>
+                                    );
+                                  })()}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => handleReassign(task.id)}
+                            disabled={!hasTarget || reassigning === task.id}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors shrink-0"
+                          >
+                            <RefreshCw className="w-3 h-3" />
+                            {reassigning === task.id ? "..." : "Assign"}
+                          </button>
                         </div>
-                        {/* Filtered member list */}
-                        {(() => {
-                          const q = (memberSearch[task.id] || "").toLowerCase();
-                          const filtered = q
-                            ? members.filter((m) => (m.displayName || m.email || "").toLowerCase().includes(q))
-                            : members;
-                          return (
-                            <div className="flex items-center gap-2">
-                              <select
-                                value={reassignTarget[task.id] || ""}
-                                onChange={(e) => setReassignTarget((prev) => ({ ...prev, [task.id]: e.target.value }))}
-                                className="flex-1 text-xs px-2.5 py-1.5 bg-background border border-input rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/30"
-                              >
-                                <option value="">Reassign to...</option>
-                                {filtered.map((m) => (
-                                  <option key={m.id} value={m.id}>{m.displayName || m.email}</option>
-                                ))}
-                              </select>
-                              <button
-                                onClick={() => handleReassign(task.id)}
-                                disabled={!hasTarget || reassigning === task.id}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors shrink-0"
-                              >
-                                <RefreshCw className="w-3 h-3" />
-                                {reassigning === task.id ? "..." : "Assign"}
-                              </button>
-                            </div>
-                          );
-                        })()}
                         {hasTarget && (
                           <>
                             {/* Reason */}
