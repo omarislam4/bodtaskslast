@@ -3,7 +3,7 @@ import { motion, type Variants } from "framer-motion";
 import { useLocation } from "wouter";
 import {
   CheckCircle2, Clock, AlertCircle, TrendingUp, Calendar, Layers, ArrowRight,
-  UserCheck, RefreshCw,
+  UserCheck, RefreshCw, MessageSquare,
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { useAllTasks } from "@/hooks/useTasks";
@@ -16,7 +16,7 @@ import { KanbanBoard } from "@/components/tasks/KanbanBoard";
 import { useLang } from "@/contexts/LangContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, isWithinInterval, addDays, isPast } from "date-fns";
-import { updateDoc, doc } from "firebase/firestore";
+import { updateDoc, doc, arrayUnion } from "firebase/firestore";
 import { db } from "@/firebase";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -48,6 +48,7 @@ export default function Dashboard() {
   const [view, setView] = useState<DashView>("overview");
   const [reassigning, setReassigning] = useState<string | null>(null);
   const [reassignTarget, setReassignTarget] = useState<Record<string, string>>({});
+  const [reassignReason, setReassignReason] = useState<Record<string, string>>({});
 
   const stats = useMemo(() => {
     const total = tasks.length;
@@ -84,13 +85,72 @@ export default function Dashboard() {
   ];
 
   const handleReassign = async (taskId: string) => {
-    const newAssignee = reassignTarget[taskId];
-    if (!newAssignee) return;
+    const newAssigneeId = reassignTarget[taskId];
+    const reason = (reassignReason[taskId] || "").trim();
+    if (!newAssigneeId) return;
+
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
+
+    const newAssigneeMember = members.find((m) => m.id === newAssigneeId);
+    const prevAssignees = task.assigneeIds.map((id) => members.find((m) => m.id === id)?.displayName || id).join(", ");
+    const adminName = userDoc?.displayName || userDoc?.email || "Admin";
+
     setReassigning(taskId);
     try {
-      await updateDoc(doc(db, "tasks", taskId), { assigneeIds: [newAssignee] });
-      toast.success("Task reassigned");
+      const activityEntry = {
+        type: "reassign",
+        text: `Task reassigned by ${adminName} from [${prevAssignees || "unassigned"}] to ${newAssigneeMember?.displayName || newAssigneeMember?.email || newAssigneeId}${reason ? ` — Reason: ${reason}` : ""}`,
+        timestamp: Date.now(),
+        sender: adminName,
+        reassignedBy: userDoc?.id || "",
+        fromAssignees: task.assigneeIds,
+        toAssignee: newAssigneeId,
+        reason: reason || "",
+      };
+
+      await updateDoc(doc(db, "tasks", taskId), {
+        assigneeIds: [newAssigneeId],
+        activityLog: arrayUnion(activityEntry),
+      });
+
+      // Write notifications for removed assignees and new assignee
+      const notifBase = {
+        taskId,
+        taskTitle: task.title,
+        type: "reassign",
+        by: adminName,
+        byId: userDoc?.id || "",
+        reason: reason || "",
+        timestamp: Date.now(),
+        read: false,
+      };
+
+      const notifPromises: Promise<unknown>[] = [];
+
+      // Notify removed assignees
+      for (const oldId of task.assigneeIds) {
+        if (oldId !== newAssigneeId) {
+          notifPromises.push(
+            updateDoc(doc(db, "users", oldId), {
+              notifications: arrayUnion({ ...notifBase, message: `You were removed from task "${task.title}"${reason ? ` — Reason: ${reason}` : ""}` }),
+            }).catch(() => {})
+          );
+        }
+      }
+
+      // Notify new assignee
+      notifPromises.push(
+        updateDoc(doc(db, "users", newAssigneeId), {
+          notifications: arrayUnion({ ...notifBase, message: `You were assigned to task "${task.title}" by ${adminName}${reason ? ` — Reason: ${reason}` : ""}` }),
+        }).catch(() => {})
+      );
+
+      await Promise.all(notifPromises);
+
+      toast.success(`Task reassigned to ${newAssigneeMember?.displayName || "member"}`);
       setReassignTarget((prev) => { const next = { ...prev }; delete next[taskId]; return next; });
+      setReassignReason((prev) => { const next = { ...prev }; delete next[taskId]; return next; });
     } catch {
       toast.error("Failed to reassign");
     } finally {
@@ -301,43 +361,62 @@ export default function Dashboard() {
                   <p className="text-xs text-muted-foreground">{stats.overdue.length} tasks past deadline — review & reassign</p>
                 </div>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {stats.overdue.slice(0, 10).map((task) => {
                   const assigned = task.assigneeIds.map((id) => members.find((m) => m.id === id)?.displayName || "").filter(Boolean);
                   const spaceName = spaces.find((s) => s.id === task.spaceId)?.name || "";
+                  const hasTarget = !!reassignTarget[task.id];
                   return (
-                    <div key={task.id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 sm:p-3.5 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-900/20">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <span className="text-sm font-medium text-foreground truncate cursor-pointer hover:text-primary" onClick={() => navigate(`/spaces/${task.spaceId}/tasks/${task.id}`)}>
-                            {task.title}
-                          </span>
-                          <TaskPriorityBadge priority={task.priority} size="sm" />
-                        </div>
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-                          {spaceName && <span className="flex items-center gap-1"><Layers className="w-3 h-3" />{spaceName}</span>}
-                          {assigned.length > 0 && <span className="flex items-center gap-1"><UserCheck className="w-3 h-3" />{assigned.join(", ")}</span>}
-                          {task.deadline && <span className="text-red-500 font-medium">Due {format(task.deadline, "MMM d")}</span>}
+                    <div key={task.id} className="p-3 sm:p-4 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-900/20 space-y-3">
+                      {/* Task info row */}
+                      <div className="flex items-start gap-2 flex-wrap">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <span className="text-sm font-medium text-foreground cursor-pointer hover:text-primary" onClick={() => navigate(`/spaces/${task.spaceId}/tasks/${task.id}`)}>
+                              {task.title}
+                            </span>
+                            <TaskPriorityBadge priority={task.priority} size="sm" />
+                          </div>
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                            {spaceName && <span className="flex items-center gap-1"><Layers className="w-3 h-3" />{spaceName}</span>}
+                            {assigned.length > 0 && <span className="flex items-center gap-1"><UserCheck className="w-3 h-3" />{assigned.join(", ")}</span>}
+                            {task.deadline && <span className="text-red-500 font-medium">Due {format(task.deadline, "MMM d")}</span>}
+                          </div>
                         </div>
                       </div>
-                      {/* Reassign control */}
-                      <div className="flex items-center gap-2 shrink-0">
-                        <select
-                          value={reassignTarget[task.id] || ""}
-                          onChange={(e) => setReassignTarget((prev) => ({ ...prev, [task.id]: e.target.value }))}
-                          className="text-xs px-2 py-1.5 bg-background border border-input rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/30 max-w-[160px]"
-                        >
-                          <option value="">Reassign to...</option>
-                          {members.map((m) => <option key={m.id} value={m.id}>{m.displayName || m.email}</option>)}
-                        </select>
-                        <button
-                          onClick={() => handleReassign(task.id)}
-                          disabled={!reassignTarget[task.id] || reassigning === task.id}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
-                        >
-                          <RefreshCw className="w-3 h-3" />
-                          {reassigning === task.id ? "..." : "Assign"}
-                        </button>
+
+                      {/* Reassign controls */}
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={reassignTarget[task.id] || ""}
+                            onChange={(e) => setReassignTarget((prev) => ({ ...prev, [task.id]: e.target.value }))}
+                            className="flex-1 text-xs px-2.5 py-1.5 bg-background border border-input rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/30"
+                          >
+                            <option value="">Reassign to...</option>
+                            {members.map((m) => <option key={m.id} value={m.id}>{m.displayName || m.email}</option>)}
+                          </select>
+                          <button
+                            onClick={() => handleReassign(task.id)}
+                            disabled={!hasTarget || reassigning === task.id}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors shrink-0"
+                          >
+                            <RefreshCw className="w-3 h-3" />
+                            {reassigning === task.id ? "..." : "Assign"}
+                          </button>
+                        </div>
+                        {hasTarget && (
+                          <div className="flex items-start gap-2">
+                            <MessageSquare className="w-3.5 h-3.5 text-muted-foreground mt-2 shrink-0" />
+                            <textarea
+                              value={reassignReason[task.id] || ""}
+                              onChange={(e) => setReassignReason((prev) => ({ ...prev, [task.id]: e.target.value }))}
+                              placeholder="Reason for reassigning... (optional)"
+                              rows={2}
+                              className="flex-1 text-xs px-2.5 py-1.5 bg-background border border-input rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/30 resize-none"
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
                   );

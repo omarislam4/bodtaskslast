@@ -24,13 +24,13 @@ args = "Birth Of Dream"
 name = "Birth Of Dream"
 author = "agent"
 
-[workflows.workflow.metadata]
-outputType = "webview"
-
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "PORT=21446 pnpm --filter @workspace/bod-app run dev"
+args = "pnpm --filter @workspace/bod-app run dev"
 waitForPort = 21446
+
+[workflows.workflow.metadata]
+outputType = "webview"
 
 [agent]
 stack = "PNPM_WORKSPACE"

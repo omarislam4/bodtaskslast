@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import {
   doc, getDoc, addDoc, collection, serverTimestamp, Timestamp,
-  updateDoc, arrayUnion, arrayRemove, deleteDoc, onSnapshot, query, where, orderBy,
+  updateDoc, arrayUnion, arrayRemove, deleteDoc, onSnapshot, query, where,
 } from "firebase/firestore";
 import { db } from "@/firebase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -41,6 +41,19 @@ function toDate(val: unknown): Date {
 }
 
 type Tab = "overview" | "tasks" | "kanban" | "timeline" | "members" | "data" | "attendance" | "weekly-report" | "subspaces";
+
+async function fireWebhook(url: string, payload: Record<string, string>): Promise<void> {
+  try {
+    await fetch(url, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    throw new Error("Network error — check your connection");
+  }
+}
 
 export default function SpaceDetail() {
   const { spaceId } = useParams<{ spaceId: string }>();
@@ -109,19 +122,19 @@ export default function SpaceDetail() {
     });
   }, [spaceId]);
 
-  // Load sub-spaces
+  // Load sub-spaces (sort client-side to avoid composite index requirement)
   useEffect(() => {
     if (!spaceId) return;
     const q = query(
       collection(db, "spaces"),
-      where("parentSpaceId", "==", spaceId),
-      orderBy("createdAt", "desc")
+      where("parentSpaceId", "==", spaceId)
     );
     const unsub = onSnapshot(q, (snap) => {
       const data = snap.docs.map((d) => ({
         name: "", description: "", color: "#6366f1", icon: "", memberIds: [], createdBy: "",
         ...d.data(), id: d.id, createdAt: toDate(d.data().createdAt),
       })) as Space[];
+      data.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
       setSubSpaces(data);
     });
     return () => unsub();
@@ -265,19 +278,15 @@ export default function SpaceDetail() {
         payload.message = `End Shift — ${now}`;
         payload.report = endShiftReport;
       }
-      await fetch(urls[type], {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      await fireWebhook(urls[type], payload);
       if (type === "end") setEndShiftReport("");
       toast.success(
         type === "start" ? "Shift started!" :
         type === "midday" ? "Mid-day attendance recorded!" :
         "Shift ended & report sent!"
       );
-    } catch {
-      toast.error("Failed to send. Please try again.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to send. Please try again.");
     } finally {
       setSendingAttendance(null);
     }
@@ -290,22 +299,18 @@ export default function SpaceDetail() {
     setSendingWeeklyReport(true);
     try {
       const now = new Date().toISOString();
-      await fetch("https://n8n.athar-riyada.com/webhook/weekly-report", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: userDoc?.id || "",
-          userName: userDoc?.displayName || userDoc?.email || "",
-          spaceId: spaceId || "",
-          spaceName: space?.name || "",
-          timestamp: now,
-          report: weeklyReport,
-        }),
+      await fireWebhook("https://n8n.athar-riyada.com/webhook/weekly-report", {
+        userId: userDoc?.id || "",
+        userName: userDoc?.displayName || userDoc?.email || "",
+        spaceId: spaceId || "",
+        spaceName: space?.name || "",
+        timestamp: now,
+        report: weeklyReport,
       });
       setWeeklyReport("");
       toast.success("Weekly report sent!");
-    } catch {
-      toast.error("Failed to send report. Please try again.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to send report. Please try again.");
     } finally {
       setSendingWeeklyReport(false);
     }
@@ -322,7 +327,7 @@ export default function SpaceDetail() {
         description: newSubDesc.trim(),
         color: newSubColor,
         icon: "layers",
-        memberIds: space?.memberIds || [],
+        memberIds: [],
         parentSpaceId: spaceId,
         createdAt: serverTimestamp(),
         createdBy: userDoc?.id,
@@ -359,7 +364,7 @@ export default function SpaceDetail() {
     { id: "data", label: t.data, icon: FolderOpen },
     { id: "attendance", label: "Attendance", icon: ClipboardCheck },
     { id: "weekly-report", label: "Weekly Report", icon: FileText },
-    { id: "subspaces", label: "Sub-spaces", icon: Layers, adminOnly: true },
+    { id: "subspaces", label: "Sub-spaces", icon: Layers },
   ];
 
   const visibleTabs = tabs.filter((tab) => !tab.adminOnly || isAdmin);
@@ -1001,21 +1006,23 @@ export default function SpaceDetail() {
             </motion.div>
           )}
 
-          {/* ─── SUB-SPACES (Admin only) ─── */}
-          {activeTab === "subspaces" && isAdmin && (
+          {/* ─── SUB-SPACES (Visible to all, create admin-only) ─── */}
+          {activeTab === "subspaces" && (
             <motion.div key="subspaces" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-4 sm:p-6 max-w-4xl mx-auto">
               <div className="flex items-center justify-between mb-5">
                 <div>
                   <h2 className="text-sm font-semibold text-foreground">Sub-spaces</h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">{subSpaces.length} sub-spaces</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{subSpaces.length} sub-spaces inside this space</p>
                 </div>
-                <motion.button
-                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                  onClick={() => setShowCreateSub(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-xl hover:bg-primary/90 transition-colors shadow-sm"
-                >
-                  <Plus className="w-4 h-4" /> New Sub-space
-                </motion.button>
+                {isAdmin && (
+                  <motion.button
+                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                    onClick={() => setShowCreateSub(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-xl hover:bg-primary/90 transition-colors shadow-sm"
+                  >
+                    <Plus className="w-4 h-4" /> New Sub-space
+                  </motion.button>
+                )}
               </div>
 
               {/* Create sub-space form */}

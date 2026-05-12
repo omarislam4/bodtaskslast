@@ -1,19 +1,21 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, Layers, Calendar, Users, Send,
   History, Settings, ChevronRight, Sun,
-  Moon, LogOut, ChevronDown, Menu, X,
+  Moon, LogOut, ChevronDown, Menu, X, CornerDownRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useLang } from "@/contexts/LangContext";
-import { useSpaces } from "@/hooks/useSpaces";
+import { useSpaces, Space } from "@/hooks/useSpaces";
 import { signOut } from "firebase/auth";
 import { auth } from "@/firebase";
 import bodLogo from "@assets/bod-logo.png";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { db } from "@/firebase";
 
 interface SidebarProps {
   onClose?: () => void;
@@ -27,8 +29,33 @@ export const Sidebar = ({ onClose }: SidebarProps) => {
   const { theme, toggleTheme } = useTheme();
   const { lang, setLang, t } = useLang();
   const { spaces } = useSpaces();
+  const [subSpacesMap, setSubSpacesMap] = useState<Record<string, Space[]>>({});
 
   const handleLogout = () => signOut(auth);
+
+  // Detect current space from URL
+  const spaceMatch = location.match(/^\/spaces\/([^/]+)/);
+  const currentSpaceId = spaceMatch ? spaceMatch[1] : null;
+
+  // Top-level (non-sub) spaces
+  const topSpaces = spaces.filter((s) => !(s as Space & { parentSpaceId?: string }).parentSpaceId);
+
+  // Load sub-spaces for the currently active space (sort client-side)
+  useEffect(() => {
+    if (!currentSpaceId) return;
+    const q = query(
+      collection(db, "spaces"),
+      where("parentSpaceId", "==", currentSpaceId)
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      const subs = snap.docs.map((d) => ({
+        name: "", description: "", color: "#6366f1", icon: "", memberIds: [], createdBy: "",
+        ...d.data(), id: d.id,
+      })) as Space[];
+      setSubSpacesMap((prev) => ({ ...prev, [currentSpaceId]: subs }));
+    });
+    return () => unsub();
+  }, [currentSpaceId]);
 
   const navItems = [
     { icon: LayoutDashboard, label: t.dashboard, href: "/" },
@@ -67,7 +94,6 @@ export const Sidebar = ({ onClose }: SidebarProps) => {
           )}
         </AnimatePresence>
         <div className="flex items-center gap-1 ml-auto">
-          {/* Mobile close button */}
           {onClose && (
             <button
               onClick={onClose}
@@ -107,7 +133,7 @@ export const Sidebar = ({ onClose }: SidebarProps) => {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5 scrollbar-hide">
         {visibleNav.map((item, i) => {
           const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
           return (
@@ -146,7 +172,7 @@ export const Sidebar = ({ onClose }: SidebarProps) => {
               </Link>
 
               {/* Spaces submenu */}
-              {item.href === "/spaces" && !collapsed && spaces.length > 0 && (
+              {item.href === "/spaces" && !collapsed && topSpaces.length > 0 && (
                 <div className="mt-0.5">
                   <button
                     onClick={() => setSpacesOpen((v) => !v)}
@@ -162,25 +188,61 @@ export const Sidebar = ({ onClose }: SidebarProps) => {
                         transition={{ duration: 0.2 }}
                         className="overflow-hidden pl-3"
                       >
-                        {spaces
-                          .filter((s) => !(s as unknown as { parentSpaceId?: string }).parentSpaceId)
-                          .slice(0, 8)
-                          .map((space) => (
-                            <Link key={space.id} href={`/spaces/${space.id}`}>
-                              <div
-                                onClick={handleNavClick}
-                                className={cn(
-                                  "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs cursor-pointer transition-all duration-150",
-                                  location === `/spaces/${space.id}`
-                                    ? "bg-primary/15 text-primary"
-                                    : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-white/10"
+                        {topSpaces.map((space) => {
+                          const isSpaceActive = location.startsWith(`/spaces/${space.id}`);
+                          const spaceSubs = subSpacesMap[space.id] || [];
+                          const showSubs = isSpaceActive && spaceSubs.length > 0 && currentSpaceId === space.id;
+
+                          return (
+                            <div key={space.id}>
+                              <Link href={`/spaces/${space.id}`}>
+                                <div
+                                  onClick={handleNavClick}
+                                  className={cn(
+                                    "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs cursor-pointer transition-all duration-150",
+                                    isSpaceActive
+                                      ? "bg-primary/15 text-primary"
+                                      : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-white/10"
+                                  )}
+                                >
+                                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: space.color || "#6366f1" }} />
+                                  <span className="truncate flex-1">{space.name}</span>
+                                </div>
+                              </Link>
+
+                              {/* Sub-spaces shown indented when inside this space */}
+                              <AnimatePresence>
+                                {showSubs && (
+                                  <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: "auto", opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ duration: 0.18 }}
+                                    className="overflow-hidden pl-3 mt-0.5 mb-0.5"
+                                  >
+                                    {spaceSubs.map((sub) => (
+                                      <Link key={sub.id} href={`/spaces/${sub.id}`}>
+                                        <div
+                                          onClick={handleNavClick}
+                                          className={cn(
+                                            "flex items-center gap-2 px-2 py-1.5 rounded-md text-[11px] cursor-pointer transition-all duration-150",
+                                            location === `/spaces/${sub.id}` || location.startsWith(`/spaces/${sub.id}/`)
+                                              ? "bg-primary/10 text-primary"
+                                              : "text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-white/8"
+                                          )}
+                                        >
+                                          <CornerDownRight className="w-3 h-3 shrink-0 opacity-50" />
+                                          <span className="w-1.5 h-1.5 rounded-full shrink-0 opacity-70" style={{ backgroundColor: sub.color || "#6366f1" }} />
+                                          <span className="truncate">{sub.name}</span>
+                                        </div>
+                                      </Link>
+                                    ))}
+                                  </motion.div>
                                 )}
-                              >
-                                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: space.color || "#6366f1" }} />
-                                <span className="truncate">{space.name}</span>
-                              </div>
-                            </Link>
-                          ))}
+                              </AnimatePresence>
+                            </div>
+                          );
+                        })}
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -193,7 +255,6 @@ export const Sidebar = ({ onClose }: SidebarProps) => {
 
       {/* Footer */}
       <div className="border-t border-sidebar-border px-2 py-3 space-y-1">
-        {/* Language switcher */}
         <AnimatePresence>
           {!collapsed && (
             <motion.div
@@ -220,7 +281,6 @@ export const Sidebar = ({ onClose }: SidebarProps) => {
           )}
         </AnimatePresence>
 
-        {/* Theme toggle */}
         <button
           onClick={toggleTheme}
           className="flex items-center gap-3 px-3 py-2 rounded-lg w-full text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-white/10 transition-all duration-150"
@@ -235,7 +295,6 @@ export const Sidebar = ({ onClose }: SidebarProps) => {
           </AnimatePresence>
         </button>
 
-        {/* User info */}
         {userDoc && (
           <div className={cn("flex items-center gap-2.5 px-3 py-2 rounded-lg", collapsed && "justify-center")}>
             <div className="w-7 h-7 rounded-full bg-primary/30 flex items-center justify-center text-xs font-bold text-primary shrink-0">
