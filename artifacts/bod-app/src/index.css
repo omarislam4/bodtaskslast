@@ -214,6 +214,24 @@
     @apply hidden;
   }
 
+  .scrollbar-hide {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .shadow-card {
+    box-shadow: var(--shadow-sm);
+  }
+  .shadow-card-md {
+    box-shadow: var(--shadow-md);
+  }
+  .shadow-card-lg {
+    box-shadow: var(--shadow-lg);
+  }
+
   [contenteditable][data-placeholder]:empty::before {
     content: attr(data-placeholder);
     color: hsl(var(--muted-foreground));

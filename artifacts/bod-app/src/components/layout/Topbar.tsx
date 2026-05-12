@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Search, Bell, X, Command, CheckCircle2, AlertCircle, Clock } from "lucide-react";
+import { Search, Bell, X, Command, CheckCircle2, AlertCircle, Clock, Menu } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useAllTasks } from "@/hooks/useTasks";
@@ -9,7 +9,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
 import { format, differenceInDays, isWithinInterval, addDays } from "date-fns";
 
-export const Topbar = () => {
+interface TopbarProps {
+  onMenuClick?: () => void;
+}
+
+export const Topbar = ({ onMenuClick }: TopbarProps) => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [notifOpen, setNotifOpen] = useState(false);
@@ -88,14 +92,22 @@ export const Topbar = () => {
     : [];
 
   return (
-    <header className="h-14 flex items-center gap-4 px-6 border-b border-border bg-background/80 backdrop-blur-sm shrink-0 relative">
-      <div className="flex-1">
-        <span className="text-sm font-semibold text-foreground">{currentLabel}</span>
+    <header className="h-14 flex items-center gap-2 sm:gap-4 px-3 sm:px-6 border-b border-border bg-background/80 backdrop-blur-sm shrink-0 relative shadow-sm">
+      {/* Mobile hamburger */}
+      <button
+        onClick={onMenuClick}
+        className="lg:hidden flex items-center justify-center w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+      >
+        <Menu className="w-4 h-4" />
+      </button>
+
+      <div className="flex-1 min-w-0">
+        <span className="text-sm font-semibold text-foreground truncate">{currentLabel}</span>
       </div>
 
       <button
         onClick={() => { setSearchOpen(true); setTimeout(() => searchRef.current?.focus(), 100); }}
-        className="flex items-center gap-2 px-3 py-1.5 text-sm text-muted-foreground bg-muted rounded-lg hover:bg-muted/80 transition-colors duration-150"
+        className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 text-sm text-muted-foreground bg-muted rounded-lg hover:bg-muted/80 transition-colors duration-150"
       >
         <Search className="w-3.5 h-3.5" />
         <span className="hidden sm:block text-xs">{t.search}</span>
@@ -174,7 +186,6 @@ export const Topbar = () => {
                         ))}
                       </div>
                     )}
-
                     {dueSoonTasks.length > 0 && (
                       <div>
                         <p className="text-xs font-semibold text-amber-500 uppercase tracking-wide px-4 py-1.5">{t.dueSoon}</p>
@@ -198,7 +209,6 @@ export const Topbar = () => {
                         })}
                       </div>
                     )}
-
                     {inProgressTasks.length > 0 && (
                       <div>
                         <p className="text-xs font-semibold text-blue-500 uppercase tracking-wide px-4 py-1.5">{t.inProgress}</p>
@@ -211,9 +221,7 @@ export const Topbar = () => {
                             <CheckCircle2 className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
                             <div className="min-w-0 flex-1">
                               <p className="text-xs font-medium text-foreground truncate">{tk.title}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {tk.deadline ? format(tk.deadline, "MMM d") : t.noDeadline}
-                              </p>
+                              <p className="text-xs text-muted-foreground">{tk.deadline ? format(tk.deadline, "MMM d") : t.noDeadline}</p>
                             </div>
                           </button>
                         ))}
@@ -251,7 +259,7 @@ export const Topbar = () => {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: -8 }}
               transition={{ duration: 0.15, ease: "easeOut" }}
-              className="fixed top-16 left-1/2 -translate-x-1/2 w-full max-w-xl bg-card border border-border rounded-2xl shadow-2xl z-50 overflow-hidden"
+              className="fixed top-16 left-1/2 -translate-x-1/2 w-[calc(100vw-2rem)] max-w-xl bg-card border border-border rounded-2xl shadow-2xl z-50 overflow-hidden"
             >
               <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
                 <Search className="w-4 h-4 text-muted-foreground shrink-0" />

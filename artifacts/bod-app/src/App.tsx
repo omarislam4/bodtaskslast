@@ -9,6 +9,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import Login from "@/pages/Login";
 import Signup from "@/pages/Signup";
 import Dashboard from "@/pages/Dashboard";
+import MemberDashboard from "@/pages/MemberDashboard";
 import Spaces from "@/pages/Spaces";
 import SpaceDetail from "@/pages/SpaceDetail";
 import TaskDetail from "@/pages/TaskDetail";
@@ -32,11 +33,17 @@ function LoadingScreen() {
   );
 }
 
-function ProtectedRoute({ component: Component, adminOnly }: { component: () => React.ReactElement; adminOnly?: boolean }) {
+function ProtectedRoute({
+  component: Component,
+  adminOnly,
+}: {
+  component: () => React.ReactElement;
+  adminOnly?: boolean;
+}) {
   const { user, loading, isAdmin } = useAuth();
   if (loading) return <LoadingScreen />;
   if (!user) return <Redirect to="/login" />;
-  if (adminOnly && !isAdmin) return <Redirect to="/spaces" />;
+  if (adminOnly && !isAdmin) return <Redirect to="/" />;
   return (
     <AppLayout>
       <Component />
@@ -47,8 +54,19 @@ function ProtectedRoute({ component: Component, adminOnly }: { component: () => 
 function PublicRoute({ component: Component }: { component: () => React.ReactElement }) {
   const { user, loading } = useAuth();
   if (loading) return <LoadingScreen />;
-  if (user) return <Redirect to="/spaces" />;
+  if (user) return <Redirect to="/" />;
   return <Component />;
+}
+
+function HomeRoute() {
+  const { user, loading, isAdmin } = useAuth();
+  if (loading) return <LoadingScreen />;
+  if (!user) return <Redirect to="/login" />;
+  return (
+    <AppLayout>
+      {isAdmin ? <Dashboard /> : <MemberDashboard />}
+    </AppLayout>
+  );
 }
 
 function Router() {
@@ -56,7 +74,7 @@ function Router() {
     <Switch>
       <Route path="/login" component={() => <PublicRoute component={Login} />} />
       <Route path="/signup" component={() => <PublicRoute component={Signup} />} />
-      <Route path="/" component={() => <ProtectedRoute component={Dashboard} adminOnly />} />
+      <Route path="/" component={HomeRoute} />
       <Route path="/spaces" component={() => <ProtectedRoute component={Spaces} />} />
       <Route path="/spaces/:spaceId" component={() => <ProtectedRoute component={SpaceDetail} />} />
       <Route path="/spaces/:spaceId/tasks/:taskId" component={() => <ProtectedRoute component={TaskDetail} />} />
@@ -74,15 +92,15 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <LangProvider>
-      <ThemeProvider>
-        <AuthProvider>
-          <TooltipProvider>
-            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-              <Router />
-            </WouterRouter>
-          </TooltipProvider>
-        </AuthProvider>
-      </ThemeProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <TooltipProvider>
+              <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                <Router />
+              </WouterRouter>
+            </TooltipProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </LangProvider>
     </QueryClientProvider>
   );

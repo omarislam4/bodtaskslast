@@ -5,10 +5,11 @@ import {
   Plus, ArrowLeft, CheckCircle2, Clock, Users, LayoutDashboard,
   Calendar, FolderOpen, Trash2, Link2, FolderPlus, ExternalLink,
   ChevronRight, ChevronDown, UserPlus, UserMinus, Filter,
+  Kanban, ClipboardCheck, FileText, Send, Layers,
 } from "lucide-react";
 import {
   doc, getDoc, addDoc, collection, serverTimestamp, Timestamp,
-  updateDoc, arrayUnion, arrayRemove, deleteDoc,
+  updateDoc, arrayUnion, arrayRemove, deleteDoc, onSnapshot, query, where, orderBy,
 } from "firebase/firestore";
 import { db } from "@/firebase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,6 +19,7 @@ import { useMembers } from "@/hooks/useMembers";
 import { useSenders } from "@/hooks/useSenders";
 import { useSpaceData, SpaceDataItem } from "@/hooks/useSpaceData";
 import { TaskCard } from "@/components/tasks/TaskCard";
+import { KanbanBoard } from "@/components/tasks/KanbanBoard";
 import { TaskStatusBadge, statusOptions } from "@/components/tasks/TaskStatusBadge";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { TaskCardSkeleton } from "@/components/shared/SkeletonLoader";
@@ -38,7 +40,7 @@ function toDate(val: unknown): Date {
   return new Date();
 }
 
-type Tab = "overview" | "tasks" | "timeline" | "members" | "data";
+type Tab = "overview" | "tasks" | "kanban" | "timeline" | "members" | "data" | "attendance" | "weekly-report" | "subspaces";
 
 export default function SpaceDetail() {
   const { spaceId } = useParams<{ spaceId: string }>();
@@ -52,6 +54,22 @@ export default function SpaceDetail() {
   const { userDoc, isAdmin } = useAuth();
   const { t } = useLang();
   const [, navigate] = useLocation();
+
+  // Sub-spaces
+  const [subSpaces, setSubSpaces] = useState<Space[]>([]);
+  const [showCreateSub, setShowCreateSub] = useState(false);
+  const [newSubName, setNewSubName] = useState("");
+  const [newSubDesc, setNewSubDesc] = useState("");
+  const [newSubColor, setNewSubColor] = useState("#6366f1");
+  const [creatingSubSpace, setCreatingSubSpace] = useState(false);
+
+  // Attendance
+  const [endShiftReport, setEndShiftReport] = useState("");
+  const [sendingAttendance, setSendingAttendance] = useState<string | null>(null);
+
+  // Weekly report
+  const [weeklyReport, setWeeklyReport] = useState("");
+  const [sendingWeeklyReport, setSendingWeeklyReport] = useState(false);
 
   // Task creation
   const [statusFilter, setStatusFilter] = useState<TaskStatus | "all">("all");
@@ -91,6 +109,24 @@ export default function SpaceDetail() {
     });
   }, [spaceId]);
 
+  // Load sub-spaces
+  useEffect(() => {
+    if (!spaceId) return;
+    const q = query(
+      collection(db, "spaces"),
+      where("parentSpaceId", "==", spaceId),
+      orderBy("createdAt", "desc")
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      const data = snap.docs.map((d) => ({
+        name: "", description: "", color: "#6366f1", icon: "", memberIds: [], createdBy: "",
+        ...d.data(), id: d.id, createdAt: toDate(d.data().createdAt),
+      })) as Space[];
+      setSubSpaces(data);
+    });
+    return () => unsub();
+  }, [spaceId]);
+
   const spaceMembers = members.filter((m) => space?.memberIds?.includes(m.id));
   const nonSpaceMembers = members.filter((m) => !space?.memberIds?.includes(m.id));
   const filtered = statusFilter === "all" ? tasks : tasks.filter((t) => t.status === statusFilter);
@@ -100,7 +136,6 @@ export default function SpaceDetail() {
     return acc;
   }, {} as Record<TaskStatus, number>);
 
-  // Check if current user is in this space
   const isInSpace = isAdmin || (userDoc && space?.memberIds?.includes(userDoc.id));
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -130,9 +165,7 @@ export default function SpaceDetail() {
     if (!selectedNewMember || !spaceId) return;
     setAddingMember(true);
     try {
-      await updateDoc(doc(db, "spaces", spaceId), {
-        memberIds: arrayUnion(selectedNewMember),
-      });
+      await updateDoc(doc(db, "spaces", spaceId), { memberIds: arrayUnion(selectedNewMember) });
       setSpace((prev) => prev ? { ...prev, memberIds: [...(prev.memberIds || []), selectedNewMember] } : prev);
       setSelectedNewMember("");
       toast.success("Member added to space");
@@ -146,9 +179,7 @@ export default function SpaceDetail() {
   const handleRemoveMember = async (memberId: string) => {
     if (!spaceId) return;
     try {
-      await updateDoc(doc(db, "spaces", spaceId), {
-        memberIds: arrayRemove(memberId),
-      });
+      await updateDoc(doc(db, "spaces", spaceId), { memberIds: arrayRemove(memberId) });
       setSpace((prev) => prev ? { ...prev, memberIds: (prev.memberIds || []).filter((id) => id !== memberId) } : prev);
       toast.success("Member removed from space");
     } catch {
@@ -163,20 +194,12 @@ export default function SpaceDetail() {
     setAddingData(true);
     try {
       await addDoc(collection(db, "spaces", spaceId, "data"), {
-        type: dataType,
-        name: dataName.trim(),
-        url: dataType === "link" ? dataUrl.trim() : "",
-        notes: dataNotes.trim(),
-        parentId: dataParentId,
-        createdAt: serverTimestamp(),
-        createdBy: userDoc?.id || "",
+        type: dataType, name: dataName.trim(), url: dataType === "link" ? dataUrl.trim() : "",
+        notes: dataNotes.trim(), parentId: dataParentId, createdAt: serverTimestamp(), createdBy: userDoc?.id || "",
       });
       toast.success(`${dataType === "folder" ? "Folder" : "Link"} added`);
       setShowAddData(false);
-      setDataName("");
-      setDataUrl("");
-      setDataNotes("");
-      setDataParentId(null);
+      setDataName(""); setDataUrl(""); setDataNotes(""); setDataParentId(null);
     } catch {
       toast.error("Failed to add item");
     } finally {
@@ -209,10 +232,109 @@ export default function SpaceDetail() {
   const toggleFolder = (id: string) => {
     setExpandedFolders((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
+  };
+
+  // Attendance webhook handler
+  const handleAttendance = async (type: "start" | "midday" | "end") => {
+    const urls: Record<string, string> = {
+      start: "https://n8n.athar-riyada.com/webhook/start-shift",
+      midday: "https://n8n.athar-riyada.com/webhook/mid-day-attendence",
+      end: "https://n8n.athar-riyada.com/webhook/end-shift",
+    };
+    if (type === "end" && !endShiftReport.trim()) {
+      toast.error("Please write a report before submitting");
+      return;
+    }
+    setSendingAttendance(type);
+    try {
+      const now = new Date().toISOString();
+      const payload: Record<string, string> = {
+        userId: userDoc?.id || "",
+        userName: userDoc?.displayName || userDoc?.email || "",
+        spaceId: spaceId || "",
+        spaceName: space?.name || "",
+        timestamp: now,
+        type,
+      };
+      if (type === "start") payload.message = `Start Main Shift — ${now}`;
+      if (type === "midday") payload.message = `Mid Day Attendance — ${now}`;
+      if (type === "end") {
+        payload.message = `End Shift — ${now}`;
+        payload.report = endShiftReport;
+      }
+      await fetch(urls[type], {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (type === "end") setEndShiftReport("");
+      toast.success(
+        type === "start" ? "Shift started!" :
+        type === "midday" ? "Mid-day attendance recorded!" :
+        "Shift ended & report sent!"
+      );
+    } catch {
+      toast.error("Failed to send. Please try again.");
+    } finally {
+      setSendingAttendance(null);
+    }
+  };
+
+  // Weekly report webhook handler
+  const handleWeeklyReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!weeklyReport.trim()) return;
+    setSendingWeeklyReport(true);
+    try {
+      const now = new Date().toISOString();
+      await fetch("https://n8n.athar-riyada.com/webhook/weekly-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: userDoc?.id || "",
+          userName: userDoc?.displayName || userDoc?.email || "",
+          spaceId: spaceId || "",
+          spaceName: space?.name || "",
+          timestamp: now,
+          report: weeklyReport,
+        }),
+      });
+      setWeeklyReport("");
+      toast.success("Weekly report sent!");
+    } catch {
+      toast.error("Failed to send report. Please try again.");
+    } finally {
+      setSendingWeeklyReport(false);
+    }
+  };
+
+  // Create sub-space
+  const handleCreateSubSpace = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSubName.trim() || !spaceId) return;
+    setCreatingSubSpace(true);
+    try {
+      await addDoc(collection(db, "spaces"), {
+        name: newSubName.trim(),
+        description: newSubDesc.trim(),
+        color: newSubColor,
+        icon: "layers",
+        memberIds: space?.memberIds || [],
+        parentSpaceId: spaceId,
+        createdAt: serverTimestamp(),
+        createdBy: userDoc?.id,
+      });
+      toast.success("Sub-space created");
+      setShowCreateSub(false);
+      setNewSubName(""); setNewSubDesc("");
+    } catch {
+      toast.error("Failed to create sub-space");
+    } finally {
+      setCreatingSubSpace(false);
+    }
   };
 
   if (spaceLoading) {
@@ -226,41 +348,49 @@ export default function SpaceDetail() {
     );
   }
 
-  const tabs: { id: Tab; label: string; icon: typeof LayoutDashboard }[] = [
+  const SPACE_COLORS = ["#6366f1", "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6"];
+
+  const tabs: { id: Tab; label: string; icon: typeof LayoutDashboard; adminOnly?: boolean }[] = [
     { id: "overview", label: t.overview, icon: LayoutDashboard },
     { id: "tasks", label: t.tasksTab, icon: CheckCircle2 },
+    { id: "kanban", label: "Kanban", icon: Kanban },
     { id: "timeline", label: t.timelineTab, icon: Calendar },
     { id: "members", label: t.membersTab, icon: Users },
     { id: "data", label: t.data, icon: FolderOpen },
+    { id: "attendance", label: "Attendance", icon: ClipboardCheck },
+    { id: "weekly-report", label: "Weekly Report", icon: FileText },
+    { id: "subspaces", label: "Sub-spaces", icon: Layers, adminOnly: true },
   ];
+
+  const visibleTabs = tabs.filter((tab) => !tab.adminOnly || isAdmin);
 
   return (
     <div className="flex flex-col h-full">
       {/* Space header */}
-      <div className="px-6 pt-5 pb-0 border-b border-border bg-background">
-        <div className="flex items-center gap-3 mb-4">
+      <div className="px-3 sm:px-6 pt-4 sm:pt-5 pb-0 border-b border-border bg-background">
+        <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4 flex-wrap">
           <button
             onClick={() => navigate("/spaces")}
-            className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+            className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground shrink-0"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
           {space && (
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${space.color || "#6366f1"}20` }}>
-                <div className="w-4 h-4 rounded-full" style={{ backgroundColor: space.color || "#6366f1" }} />
+            <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${space.color || "#6366f1"}20` }}>
+                <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full" style={{ backgroundColor: space.color || "#6366f1" }} />
               </div>
               <div className="min-w-0">
-                <h1 className="text-lg font-bold text-foreground truncate">{space.name}</h1>
-                {space.description && <p className="text-xs text-muted-foreground truncate">{space.description}</p>}
+                <h1 className="text-base sm:text-lg font-bold text-foreground truncate">{space.name}</h1>
+                {space.description && <p className="text-xs text-muted-foreground truncate hidden sm:block">{space.description}</p>}
               </div>
             </div>
           )}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-auto">
             {/* Member avatars */}
-            <div className="flex -space-x-2">
+            <div className="hidden sm:flex -space-x-2">
               {spaceMembers.slice(0, 4).map((m) => (
-                <div key={m.id} className="w-7 h-7 rounded-full bg-primary/20 border-2 border-background flex items-center justify-center text-xs font-bold text-primary" title={m.displayName}>
+                <div key={m.id} className="w-7 h-7 rounded-full bg-primary/20 border-2 border-background flex items-center justify-center text-xs font-bold text-primary shadow-sm" title={m.displayName}>
                   {(m.displayName || m.email || "?")[0].toUpperCase()}
                 </div>
               ))}
@@ -270,52 +400,47 @@ export default function SpaceDetail() {
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-2">
-              {isAdmin && (
-                <motion.button
-                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                  onClick={handleDeleteSpace}
-                  className="flex items-center gap-2 px-3 py-2 border border-destructive/30 text-destructive text-sm font-semibold rounded-xl hover:bg-destructive/10 transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" /> {t.deleteSpace}
-                </motion.button>
-              )}
-              {isInSpace && (
-                <motion.button
-                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                  onClick={() => { setActiveTab("tasks"); setShowCreate(true); }}
-                  className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-xl hover:bg-primary/90 transition-colors"
-                >
-                  <Plus className="w-4 h-4" /> {t.newTask}
-                </motion.button>
-              )}
-            </div>
+            {isAdmin && (
+              <motion.button
+                whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                onClick={handleDeleteSpace}
+                className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 border border-destructive/30 text-destructive text-xs sm:text-sm font-semibold rounded-xl hover:bg-destructive/10 transition-colors shadow-sm"
+              >
+                <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">{t.deleteSpace}</span>
+              </motion.button>
+            )}
+            {isInSpace && (
+              <motion.button
+                whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                onClick={() => { setActiveTab("tasks"); setShowCreate(true); }}
+                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-primary text-primary-foreground text-xs sm:text-sm font-semibold rounded-xl hover:bg-primary/90 transition-colors shadow-sm"
+              >
+                <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> <span className="hidden sm:inline">{t.newTask}</span><span className="sm:hidden">Task</span>
+              </motion.button>
+            )}
           </div>
         </div>
 
         {/* Tab nav */}
-        <div className="flex gap-1 overflow-x-auto">
-          {tabs.map((tab) => (
+        <div className="flex gap-0.5 sm:gap-1 overflow-x-auto scrollbar-hide">
+          {visibleTabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "flex items-center gap-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-all duration-150",
+                "flex items-center gap-1.5 px-2.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 transition-all duration-150",
                 activeTab === tab.id
                   ? "border-primary text-primary"
                   : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
               )}
             >
-              <tab.icon className="w-3.5 h-3.5" />
-              {tab.label}
+              <tab.icon className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+              <span className="hidden sm:inline">{tab.label}</span>
+              <span className="sm:hidden">{tab.label.split(" ")[0]}</span>
               {tab.id === "tasks" && tasks.length > 0 && (
-                <span className="text-xs bg-muted text-muted-foreground rounded-full px-1.5 py-0.5 leading-none">
+                <span className="text-xs bg-muted text-muted-foreground rounded-full px-1.5 py-0.5 leading-none hidden sm:inline">
                   {tasks.length}
-                </span>
-              )}
-              {tab.id === "members" && spaceMembers.length > 0 && (
-                <span className="text-xs bg-muted text-muted-foreground rounded-full px-1.5 py-0.5 leading-none">
-                  {spaceMembers.length}
                 </span>
               )}
             </button>
@@ -328,8 +453,7 @@ export default function SpaceDetail() {
         <AnimatePresence mode="wait">
           {/* ─── OVERVIEW ─── */}
           {activeTab === "overview" && (
-            <motion.div key="overview" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-6 max-w-5xl mx-auto">
-              {/* Stats */}
+            <motion.div key="overview" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-4 sm:p-6 max-w-5xl mx-auto">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
                 {[
                   { label: t.totalTasks, value: tasks.length, color: "text-primary", bg: "bg-primary/10" },
@@ -337,16 +461,14 @@ export default function SpaceDetail() {
                   { label: t.done, value: statusCounts["done"] || 0, color: "text-emerald-500", bg: "bg-emerald-500/10" },
                   { label: t.membersLabel, value: spaceMembers.length, color: "text-purple-500", bg: "bg-purple-500/10" },
                 ].map((s) => (
-                  <div key={s.label} className="bg-card border border-border rounded-xl p-4">
+                  <div key={s.label} className="bg-card border border-border rounded-xl p-3 sm:p-4 shadow-sm">
                     <p className="text-xs text-muted-foreground mb-1">{s.label}</p>
-                    <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
+                    <p className={`text-xl sm:text-2xl font-bold ${s.color}`}>{s.value}</p>
                   </div>
                 ))}
               </div>
-
-              {/* Progress overview */}
               <div className="grid sm:grid-cols-2 gap-4 mb-6">
-                <div className="bg-card border border-border rounded-xl p-5">
+                <div className="bg-card border border-border rounded-xl p-4 sm:p-5 shadow-sm">
                   <h3 className="text-sm font-semibold text-foreground mb-3">{t.completion}</h3>
                   {statusOptions.map((s) => {
                     const count = statusCounts[s] || 0;
@@ -354,17 +476,16 @@ export default function SpaceDetail() {
                     const colors: Record<string, string> = { "todo": "#94a3b8", "in-progress": "#3b82f6", "review": "#f59e0b", "done": "#10b981", "blocked": "#ef4444" };
                     return (
                       <div key={s} className="flex items-center gap-3 mb-2">
-                        <span className="text-xs text-muted-foreground w-20 capitalize">{s.replace("-", " ")}</span>
+                        <span className="text-xs text-muted-foreground w-16 sm:w-20 capitalize">{s.replace("-", " ")}</span>
                         <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
                           <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: colors[s] }} />
                         </div>
-                        <span className="text-xs text-muted-foreground w-6 text-right">{count}</span>
+                        <span className="text-xs text-muted-foreground w-5 text-right">{count}</span>
                       </div>
                     );
                   })}
                 </div>
-
-                <div className="bg-card border border-border rounded-xl p-5">
+                <div className="bg-card border border-border rounded-xl p-4 sm:p-5 shadow-sm">
                   <h3 className="text-sm font-semibold text-foreground mb-3">{t.upcomingDeadlines}</h3>
                   {tasks.filter((task) => task.deadline && task.status !== "done" && isWithinInterval(task.deadline, { start: new Date(), end: addDays(new Date(), 14) }))
                     .sort((a, b) => (a.deadline?.getTime() || 0) - (b.deadline?.getTime() || 0))
@@ -385,9 +506,7 @@ export default function SpaceDetail() {
                   )}
                 </div>
               </div>
-
-              {/* Members */}
-              <div className="bg-card border border-border rounded-xl p-5">
+              <div className="bg-card border border-border rounded-xl p-4 sm:p-5 shadow-sm">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-sm font-semibold text-foreground">{t.teamMembers}</h3>
                   {isAdmin && (
@@ -411,14 +530,13 @@ export default function SpaceDetail() {
 
           {/* ─── TASKS ─── */}
           {activeTab === "tasks" && (
-            <motion.div key="tasks" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-6 max-w-6xl mx-auto">
-              {/* Create form */}
+            <motion.div key="tasks" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-4 sm:p-6 max-w-6xl mx-auto">
               <AnimatePresence>
                 {showCreate && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="bg-card border border-border rounded-xl p-5 mb-6 overflow-hidden"
+                    className="bg-card border border-border rounded-xl p-4 sm:p-5 mb-6 overflow-hidden shadow-md"
                   >
                     <h3 className="text-sm font-semibold text-foreground mb-4">{t.createTask}</h3>
                     <form onSubmit={handleCreate} className="space-y-4">
@@ -430,8 +548,7 @@ export default function SpaceDetail() {
                       />
                       <textarea
                         value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                        placeholder={t.description}
-                        rows={2}
+                        placeholder={t.description} rows={2}
                         className="w-full px-3 py-2.5 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all resize-none"
                       />
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -460,8 +577,6 @@ export default function SpaceDetail() {
                             className="w-full px-3 py-2 text-sm bg-background border border-input rounded-xl focus:outline-none" min={0} />
                         </div>
                       </div>
-
-                      {/* Assignees — space members only */}
                       <div>
                         <label className="text-xs text-muted-foreground block mb-1.5">{t.assignMembers}</label>
                         {spaceMembers.length === 0 ? (
@@ -485,7 +600,7 @@ export default function SpaceDetail() {
                                 )}
                               >
                                 <span className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary">
-                                  {(m.displayName || m.email || "?")[0].toUpperCase()}
+                                  {(m.displayName || "?")[0].toUpperCase()}
                                 </span>
                                 {m.displayName || m.email}
                               </button>
@@ -493,10 +608,9 @@ export default function SpaceDetail() {
                           </div>
                         )}
                       </div>
-
                       {senders.length > 0 && (
                         <div>
-                          <label className="text-xs text-muted-foreground block mb-1">Sender (from manager)</label>
+                          <label className="text-xs text-muted-foreground block mb-1">{t.senderFrom}</label>
                           <select value={form.senderId} onChange={(e) => setForm((f) => ({ ...f, senderId: e.target.value }))}
                             className="w-full px-3 py-2 text-sm bg-background border border-input rounded-xl focus:outline-none">
                             <option value="">None</option>
@@ -504,11 +618,10 @@ export default function SpaceDetail() {
                           </select>
                         </div>
                       )}
-
                       <div className="flex gap-3 justify-end pt-2">
-                        <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground">Cancel</button>
+                        <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground">{t.cancel}</button>
                         <button type="submit" disabled={creating} className="px-4 py-2 text-sm font-semibold bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 disabled:opacity-60">
-                          {creating ? "Creating..." : "Create Task"}
+                          {creating ? t.creating : t.createTask}
                         </button>
                       </div>
                     </form>
@@ -519,12 +632,12 @@ export default function SpaceDetail() {
               {/* Status filter */}
               <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
                 <button onClick={() => setStatusFilter("all")}
-                  className={cn("flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition-all", statusFilter === "all" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground")}>
+                  className={cn("flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition-all", statusFilter === "all" ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:text-foreground")}>
                   <Filter className="w-3 h-3" /> All ({tasks.length})
                 </button>
                 {statusOptions.map((s) => (
                   <button key={s} onClick={() => setStatusFilter(s)}
-                    className={cn("px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition-all", statusFilter === s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground")}>
+                    className={cn("px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition-all", statusFilter === s ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:text-foreground")}>
                     {s.charAt(0).toUpperCase() + s.slice(1).replace("-", " ")} ({statusCounts[s] || 0})
                   </button>
                 ))}
@@ -552,9 +665,26 @@ export default function SpaceDetail() {
             </motion.div>
           )}
 
+          {/* ─── KANBAN ─── */}
+          {activeTab === "kanban" && (
+            <motion.div key="kanban" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-4 sm:p-6">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-sm font-semibold text-foreground">Kanban Board</h2>
+                <span className="text-xs text-muted-foreground">{tasks.length} total tasks</span>
+              </div>
+              {tasksLoading ? (
+                <div className="flex gap-4 overflow-x-auto">
+                  {Array(5).fill(0).map((_, i) => <div key={i} className="w-72 h-64 bg-muted rounded-2xl animate-pulse shrink-0" />)}
+                </div>
+              ) : (
+                <KanbanBoard tasks={tasks} members={members} spaceId={spaceId} />
+              )}
+            </motion.div>
+          )}
+
           {/* ─── TIMELINE ─── */}
           {activeTab === "timeline" && (
-            <motion.div key="timeline" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-6 max-w-5xl mx-auto">
+            <motion.div key="timeline" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-4 sm:p-6 max-w-5xl mx-auto">
               <h2 className="text-sm font-semibold text-foreground mb-4">{t.taskTimeline}</h2>
               {tasks.filter((task) => task.deadline).length === 0 ? (
                 <EmptyState icon={Calendar} title={t.noDeadlinesSet} description={t.noUpcomingDeadlines} />
@@ -572,20 +702,20 @@ export default function SpaceDetail() {
                           key={task.id}
                           initial={{ opacity: 0, x: -8 }}
                           animate={{ opacity: 1, x: 0 }}
-                          className="bg-card border border-border rounded-xl p-4 cursor-pointer hover:border-primary/30 transition-all group"
+                          className="bg-card border border-border rounded-xl p-3 sm:p-4 cursor-pointer hover:border-primary/30 transition-all group shadow-sm"
                           onClick={() => navigate(`/spaces/${spaceId}/tasks/${task.id}`)}
                         >
-                          <div className="flex items-start gap-4">
-                            <div className={cn("text-center shrink-0 w-12", isOverdue ? "text-red-500" : "text-muted-foreground")}>
+                          <div className="flex items-start gap-3 sm:gap-4">
+                            <div className={cn("text-center shrink-0 w-10 sm:w-12", isOverdue ? "text-red-500" : "text-muted-foreground")}>
                               <p className="text-xs font-medium">{task.deadline ? format(task.deadline, "MMM") : ""}</p>
-                              <p className="text-xl font-bold leading-tight">{task.deadline ? format(task.deadline, "d") : ""}</p>
+                              <p className="text-lg sm:text-xl font-bold leading-tight">{task.deadline ? format(task.deadline, "d") : ""}</p>
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
+                              <div className="flex items-center gap-2 mb-1 flex-wrap">
                                 <h4 className="text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate">{task.title}</h4>
                                 <TaskStatusBadge status={task.status} size="sm" />
                               </div>
-                              <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-3 flex-wrap">
                                 {assigned.length > 0 && (
                                   <div className="flex -space-x-1.5">
                                     {assigned.slice(0, 3).map((m) => (
@@ -619,20 +749,17 @@ export default function SpaceDetail() {
 
           {/* ─── MEMBERS ─── */}
           {activeTab === "members" && (
-            <motion.div key="members" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-6 max-w-3xl mx-auto">
+            <motion.div key="members" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-4 sm:p-6 max-w-3xl mx-auto">
               <div className="flex items-center justify-between mb-5">
                 <h2 className="text-sm font-semibold text-foreground">Space Members ({spaceMembers.length})</h2>
               </div>
-
-              {/* Add member (admin only) */}
               {isAdmin && nonSpaceMembers.length > 0 && (
-                <div className="bg-card border border-border rounded-xl p-4 mb-5">
+                <div className="bg-card border border-border rounded-xl p-4 mb-5 shadow-sm">
                   <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Add Member</h3>
                   <div className="flex gap-2">
                     <select
-                      value={selectedNewMember}
-                      onChange={(e) => setSelectedNewMember(e.target.value)}
-                      className="flex-1 px-3 py-2 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      value={selectedNewMember} onChange={(e) => setSelectedNewMember(e.target.value)}
+                      className="flex-1 px-3 py-2 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 min-w-0"
                     >
                       <option value="">Select a member...</option>
                       {nonSpaceMembers.map((m) => (
@@ -640,18 +767,14 @@ export default function SpaceDetail() {
                       ))}
                     </select>
                     <button
-                      onClick={handleAddMember}
-                      disabled={!selectedNewMember || addingMember}
-                      className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 disabled:opacity-60 transition-colors"
+                      onClick={handleAddMember} disabled={!selectedNewMember || addingMember}
+                      className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-semibold bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 disabled:opacity-60 transition-colors shrink-0 shadow-sm"
                     >
-                      <UserPlus className="w-4 h-4" />
-                      Add
+                      <UserPlus className="w-4 h-4" /><span className="hidden sm:inline">Add</span>
                     </button>
                   </div>
                 </div>
               )}
-
-              {/* Member list */}
               {spaceMembers.length === 0 ? (
                 <EmptyState icon={Users} title="No members yet" description={isAdmin ? "Add members from the section above." : "No members have been added to this space."} />
               ) : (
@@ -660,30 +783,24 @@ export default function SpaceDetail() {
                     const memberTasks = tasks.filter((t) => t.assigneeIds.includes(m.id));
                     const doneTasks = memberTasks.filter((t) => t.status === "done").length;
                     return (
-                      <div key={m.id} className="bg-card border border-border rounded-xl p-4 flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary shrink-0">
+                      <div key={m.id} className="bg-card border border-border rounded-xl p-3 sm:p-4 flex items-center gap-3 sm:gap-4 shadow-sm">
+                        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary shrink-0">
                           {(m.displayName || m.email || "?")[0].toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-foreground">{m.displayName || "Unnamed"}</p>
-                          <p className="text-xs text-muted-foreground">{m.email}</p>
+                          <p className="text-sm font-semibold text-foreground truncate">{m.displayName || "Unnamed"}</p>
+                          <p className="text-xs text-muted-foreground truncate">{m.email}</p>
                         </div>
-                        <div className="text-right shrink-0">
+                        <div className="text-right shrink-0 hidden sm:block">
                           <p className="text-xs text-muted-foreground">{memberTasks.length} tasks</p>
                           <p className="text-xs text-emerald-500 font-medium">{doneTasks} done</p>
                         </div>
                         <span className={cn(
                           "text-xs px-2 py-0.5 rounded-full font-medium shrink-0",
                           m.role === "admin" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-                        )}>
-                          {m.role}
-                        </span>
+                        )}>{m.role}</span>
                         {isAdmin && m.role !== "admin" && (
-                          <button
-                            onClick={() => handleRemoveMember(m.id)}
-                            className="text-muted-foreground hover:text-destructive transition-colors p-1 shrink-0"
-                            title="Remove from space"
-                          >
+                          <button onClick={() => handleRemoveMember(m.id)} className="text-muted-foreground hover:text-destructive transition-colors p-1 shrink-0" title="Remove from space">
                             <UserMinus className="w-4 h-4" />
                           </button>
                         )}
@@ -697,8 +814,8 @@ export default function SpaceDetail() {
 
           {/* ─── DATA ─── */}
           {activeTab === "data" && (
-            <motion.div key="data" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-6 max-w-4xl mx-auto">
-              <div className="flex items-center justify-between mb-5">
+            <motion.div key="data" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-4 sm:p-6 max-w-4xl mx-auto">
+              <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
                 <h2 className="text-sm font-semibold text-foreground">{t.filesLinks}</h2>
                 <div className="flex gap-2">
                   <button
@@ -715,70 +832,220 @@ export default function SpaceDetail() {
                   </button>
                 </div>
               </div>
-
-              {/* Add data form */}
               <AnimatePresence>
                 {showAddData && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="bg-card border border-border rounded-xl p-5 mb-5 overflow-hidden"
+                    className="bg-card border border-border rounded-xl p-4 sm:p-5 mb-5 overflow-hidden shadow-md"
                   >
                     <h3 className="text-sm font-semibold text-foreground mb-4">
                       {dataType === "folder" ? t.createFolder : t.addLink}
                     </h3>
                     <form onSubmit={handleAddData} className="space-y-3">
-                      <div>
-                        <label className="text-xs text-muted-foreground block mb-1">Name</label>
-                        <input
-                          value={dataName} onChange={(e) => setDataName(e.target.value)}
-                          placeholder={dataType === "folder" ? "Folder name..." : "Link title..."}
-                          className="w-full px-3 py-2.5 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30"
-                          required autoFocus
-                        />
-                      </div>
+                      <input value={dataName} onChange={(e) => setDataName(e.target.value)} placeholder={dataType === "folder" ? "Folder name..." : "Link title..."}
+                        className="w-full px-3 py-2.5 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30" required autoFocus />
                       {dataType === "link" && (
-                        <div>
-                          <label className="text-xs text-muted-foreground block mb-1">URL</label>
-                          <input
-                            value={dataUrl} onChange={(e) => setDataUrl(e.target.value)}
-                            placeholder="https://..."
-                            type="url"
-                            className="w-full px-3 py-2.5 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30"
-                            required
-                          />
-                        </div>
+                        <input value={dataUrl} onChange={(e) => setDataUrl(e.target.value)} placeholder="https://..." type="url"
+                          className="w-full px-3 py-2.5 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30" required />
                       )}
-                      {/* Notes field */}
-                      <div>
-                        <label className="text-xs text-muted-foreground block mb-1">Notes (optional)</label>
-                        <textarea
-                          value={dataNotes} onChange={(e) => setDataNotes(e.target.value)}
-                          placeholder="Add a note or description..."
-                          rows={2}
-                          className="w-full px-3 py-2.5 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
-                        />
-                      </div>
-                      {/* Add to folder option */}
+                      <textarea value={dataNotes} onChange={(e) => setDataNotes(e.target.value)} placeholder="Add a note or description..." rows={2}
+                        className="w-full px-3 py-2.5 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
                       {dataType === "link" && dataItems.filter((i) => i.type === "folder").length > 0 && (
-                        <div>
-                          <label className="text-xs text-muted-foreground block mb-1">Add to folder (optional)</label>
-                          <select
-                            value={dataParentId || ""}
-                            onChange={(e) => setDataParentId(e.target.value || null)}
-                            className="w-full px-3 py-2 text-sm bg-background border border-input rounded-xl focus:outline-none"
-                          >
-                            <option value="">Root (no folder)</option>
-                            {dataItems.filter((i) => i.type === "folder").map((f) => (
-                              <option key={f.id} value={f.id}>{f.name}</option>
-                            ))}
-                          </select>
-                        </div>
+                        <select value={dataParentId || ""} onChange={(e) => setDataParentId(e.target.value || null)}
+                          className="w-full px-3 py-2 text-sm bg-background border border-input rounded-xl focus:outline-none">
+                          <option value="">Root (no folder)</option>
+                          {dataItems.filter((i) => i.type === "folder").map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                        </select>
                       )}
                       <div className="flex gap-3 justify-end">
-                        <button type="button" onClick={() => { setShowAddData(false); setDataName(""); setDataUrl(""); setDataNotes(""); }} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground">Cancel</button>
+                        <button type="button" onClick={() => { setShowAddData(false); setDataName(""); setDataUrl(""); setDataNotes(""); }} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground">{t.cancel}</button>
                         <button type="submit" disabled={addingData} className="px-4 py-2 text-sm font-semibold bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 disabled:opacity-60">
-                          {addingData ? "Adding..." : dataType === "folder" ? "Create Folder" : "Add Link"}
+                          {addingData ? t.adding : dataType === "folder" ? t.createFolder : t.addLink}
+                        </button>
+                      </div>
+                    </form>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              {dataLoading ? (
+                <div className="space-y-2">{Array(4).fill(0).map((_, i) => <div key={i} className="h-12 bg-muted rounded-xl animate-pulse" />)}</div>
+              ) : dataItems.length === 0 ? (
+                <EmptyState icon={FolderOpen} title="No files or links yet" description={isAdmin ? "Create folders and add links to organize your space resources." : "No files or links have been added yet."} />
+              ) : (
+                <DataTree items={dataItems} parentId={null} expandedFolders={expandedFolders} onToggleFolder={toggleFolder} isAdmin={isAdmin} onDelete={handleDeleteData} onAddToFolder={(folderId) => { setDataType("link"); setDataParentId(folderId); setShowAddData(true); }} />
+              )}
+            </motion.div>
+          )}
+
+          {/* ─── ATTENDANCE ─── */}
+          {activeTab === "attendance" && (
+            <motion.div key="attendance" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-4 sm:p-6 max-w-2xl mx-auto">
+              <div className="mb-6">
+                <h2 className="text-lg font-bold text-foreground mb-1">Attendance</h2>
+                <p className="text-sm text-muted-foreground">Record your attendance for the day</p>
+              </div>
+
+              <div className="space-y-4">
+                {/* Start Main Shift */}
+                <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                      <Clock className="w-5 h-5 text-emerald-500" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground">Start Main Shift</h3>
+                      <p className="text-xs text-muted-foreground">Record when your shift begins</p>
+                    </div>
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                    onClick={() => handleAttendance("start")}
+                    disabled={sendingAttendance !== null}
+                    className="w-full py-3 bg-emerald-500 text-white text-sm font-semibold rounded-xl hover:bg-emerald-600 disabled:opacity-60 transition-colors shadow-sm"
+                  >
+                    {sendingAttendance === "start" ? "Recording..." : "Start Main Shift"}
+                  </motion.button>
+                </div>
+
+                {/* Mid Day Attendance */}
+                <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                      <CheckCircle2 className="w-5 h-5 text-blue-500" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground">Mid Day Attendance</h3>
+                      <p className="text-xs text-muted-foreground">Record your midday check-in</p>
+                    </div>
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                    onClick={() => handleAttendance("midday")}
+                    disabled={sendingAttendance !== null}
+                    className="w-full py-3 bg-blue-500 text-white text-sm font-semibold rounded-xl hover:bg-blue-600 disabled:opacity-60 transition-colors shadow-sm"
+                  >
+                    {sendingAttendance === "midday" ? "Recording..." : "Mid Day Attendance"}
+                  </motion.button>
+                </div>
+
+                {/* End Shift */}
+                <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center">
+                      <Send className="w-5 h-5 text-orange-500" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground">End Shift</h3>
+                      <p className="text-xs text-muted-foreground">Write a daily report and submit when your shift ends</p>
+                    </div>
+                  </div>
+                  <textarea
+                    value={endShiftReport}
+                    onChange={(e) => setEndShiftReport(e.target.value)}
+                    placeholder="Write your daily report... (What did you accomplish today? Any blockers?)"
+                    rows={4}
+                    className="w-full px-4 py-3 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all resize-none mb-3"
+                  />
+                  <motion.button
+                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                    onClick={() => handleAttendance("end")}
+                    disabled={sendingAttendance !== null || !endShiftReport.trim()}
+                    className="w-full py-3 bg-orange-500 text-white text-sm font-semibold rounded-xl hover:bg-orange-600 disabled:opacity-60 transition-colors shadow-sm flex items-center justify-center gap-2"
+                  >
+                    <Send className="w-4 h-4" />
+                    {sendingAttendance === "end" ? "Sending..." : "End Shift"}
+                  </motion.button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ─── WEEKLY REPORT ─── */}
+          {activeTab === "weekly-report" && (
+            <motion.div key="weekly-report" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-4 sm:p-6 max-w-2xl mx-auto">
+              <div className="mb-6">
+                <h2 className="text-lg font-bold text-foreground mb-1">Weekly Report</h2>
+                <p className="text-sm text-muted-foreground">Submit your weekly report to HR</p>
+              </div>
+              <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 shadow-sm">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-purple-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground">Weekly Summary</h3>
+                    <p className="text-xs text-muted-foreground">Week of {format(new Date(), "MMM d, yyyy")}</p>
+                  </div>
+                </div>
+                <form onSubmit={handleWeeklyReport} className="space-y-4">
+                  <textarea
+                    value={weeklyReport}
+                    onChange={(e) => setWeeklyReport(e.target.value)}
+                    placeholder="Write your weekly report here... (What did you accomplish this week? What are your goals for next week? Any issues or blockers?)"
+                    rows={8}
+                    className="w-full px-4 py-3 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all resize-none"
+                    required
+                  />
+                  <motion.button
+                    type="submit"
+                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                    disabled={sendingWeeklyReport || !weeklyReport.trim()}
+                    className="w-full py-3 bg-purple-500 text-white text-sm font-semibold rounded-xl hover:bg-purple-600 disabled:opacity-60 transition-colors shadow-sm flex items-center justify-center gap-2"
+                  >
+                    <Send className="w-4 h-4" />
+                    {sendingWeeklyReport ? "Sending Report..." : "Send Report"}
+                  </motion.button>
+                </form>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ─── SUB-SPACES (Admin only) ─── */}
+          {activeTab === "subspaces" && isAdmin && (
+            <motion.div key="subspaces" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-4 sm:p-6 max-w-4xl mx-auto">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h2 className="text-sm font-semibold text-foreground">Sub-spaces</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">{subSpaces.length} sub-spaces</p>
+                </div>
+                <motion.button
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                  onClick={() => setShowCreateSub(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-xl hover:bg-primary/90 transition-colors shadow-sm"
+                >
+                  <Plus className="w-4 h-4" /> New Sub-space
+                </motion.button>
+              </div>
+
+              {/* Create sub-space form */}
+              <AnimatePresence>
+                {showCreateSub && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="bg-card border border-border rounded-xl p-5 mb-6 overflow-hidden shadow-md"
+                  >
+                    <h3 className="text-sm font-semibold text-foreground mb-4">Create Sub-space</h3>
+                    <form onSubmit={handleCreateSubSpace} className="space-y-4">
+                      <input value={newSubName} onChange={(e) => setNewSubName(e.target.value)} placeholder="Sub-space name"
+                        className="w-full px-3 py-2.5 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30" required autoFocus />
+                      <input value={newSubDesc} onChange={(e) => setNewSubDesc(e.target.value)} placeholder="Description (optional)"
+                        className="w-full px-3 py-2.5 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                      <div>
+                        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-2">Color</label>
+                        <div className="flex gap-2 flex-wrap">
+                          {SPACE_COLORS.map((c) => (
+                            <button key={c} type="button" onClick={() => setNewSubColor(c)}
+                              className="w-7 h-7 rounded-full transition-transform hover:scale-110"
+                              style={{ backgroundColor: c, outline: newSubColor === c ? `3px solid ${c}` : "none", outlineOffset: "2px" }} />
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex gap-3 justify-end pt-2">
+                        <button type="button" onClick={() => setShowCreateSub(false)} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground">{t.cancel}</button>
+                        <button type="submit" disabled={creatingSubSpace} className="px-4 py-2 text-sm font-semibold bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 disabled:opacity-60">
+                          {creatingSubSpace ? t.creating : "Create Sub-space"}
                         </button>
                       </div>
                     </form>
@@ -786,15 +1053,37 @@ export default function SpaceDetail() {
                 )}
               </AnimatePresence>
 
-              {/* Data tree */}
-              {dataLoading ? (
-                <div className="space-y-2">
-                  {Array(4).fill(0).map((_, i) => <div key={i} className="h-12 bg-muted rounded-xl animate-pulse" />)}
-                </div>
-              ) : dataItems.length === 0 ? (
-                <EmptyState icon={FolderOpen} title="No files or links yet" description={isAdmin ? "Create folders and add links to organize your space resources." : "No files or links have been added yet."} />
+              {subSpaces.length === 0 ? (
+                <EmptyState icon={Layers} title="No sub-spaces yet" description="Create sub-spaces to organize this space further." action={{ label: "Create Sub-space", onClick: () => setShowCreateSub(true) }} />
               ) : (
-                <DataTree items={dataItems} parentId={null} expandedFolders={expandedFolders} onToggleFolder={toggleFolder} isAdmin={isAdmin} onDelete={handleDeleteData} onAddToFolder={(folderId) => { setDataType("link"); setDataParentId(folderId); setShowAddData(true); }} />
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {subSpaces.map((sub, i) => (
+                    <motion.div
+                      key={sub.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.05 }}
+                      whileHover={{ y: -2 }}
+                      onClick={() => navigate(`/spaces/${sub.id}`)}
+                      className="bg-card border border-border rounded-xl p-5 cursor-pointer hover:shadow-md transition-all group shadow-sm"
+                    >
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${sub.color || "#6366f1"}20` }}>
+                          <Layers className="w-4 h-4" style={{ color: sub.color || "#6366f1" }} />
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="text-sm font-semibold text-foreground truncate group-hover:text-primary transition-colors">{sub.name}</h3>
+                          {sub.description && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{sub.description}</p>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Users className="w-3.5 h-3.5" /> {sub.memberIds?.length || 0} members
+                        </span>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
               )}
             </motion.div>
           )}
@@ -805,14 +1094,7 @@ export default function SpaceDetail() {
 }
 
 function DataTree({
-  items,
-  parentId,
-  expandedFolders,
-  onToggleFolder,
-  isAdmin,
-  onDelete,
-  onAddToFolder,
-  depth = 0,
+  items, parentId, expandedFolders, onToggleFolder, isAdmin, onDelete, onAddToFolder, depth = 0,
 }: {
   items: SpaceDataItem[];
   parentId: string | null;
@@ -855,23 +1137,17 @@ function DataTree({
                 </button>
               </div>
             ) : (
-              <div className="bg-card border border-border rounded-xl hover:border-primary/30 transition-all group p-3">
+              <div className="bg-card border border-border rounded-xl hover:border-primary/30 transition-all group p-3 shadow-sm">
                 <div className="flex items-start gap-2">
                   <Link2 className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
-                    <a
-                      href={item.url} target="_blank" rel="noopener noreferrer"
-                      className="text-sm font-medium text-foreground hover:text-primary transition-colors truncate block"
-                    >
+                    <a href={item.url} target="_blank" rel="noopener noreferrer"
+                      className="text-sm font-medium text-foreground hover:text-primary transition-colors truncate block">
                       {item.name}
                       <ExternalLink className="w-3 h-3 inline ml-1 opacity-0 group-hover:opacity-70 transition-opacity" />
                     </a>
-                    {item.url && (
-                      <p className="text-xs text-muted-foreground truncate">{item.url}</p>
-                    )}
-                    {item.notes && (
-                      <p className="text-xs text-muted-foreground mt-1 bg-muted rounded-lg px-2 py-1">{item.notes}</p>
-                    )}
+                    {item.url && <p className="text-xs text-muted-foreground truncate">{item.url}</p>}
+                    {item.notes && <p className="text-xs text-muted-foreground mt-1 bg-muted rounded-lg px-2 py-1">{item.notes}</p>}
                   </div>
                   {isAdmin && (
                     <button onClick={() => onDelete(item.id)} className="p-1 text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100 shrink-0">

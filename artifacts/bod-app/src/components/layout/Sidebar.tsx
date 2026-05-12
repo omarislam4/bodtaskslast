@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, Layers, Calendar, Users, Send,
   History, Settings, ChevronRight, Sun,
-  Moon, LogOut, ChevronDown, Menu,
+  Moon, LogOut, ChevronDown, Menu, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,7 +15,11 @@ import { signOut } from "firebase/auth";
 import { auth } from "@/firebase";
 import bodLogo from "@assets/bod-logo.png";
 
-export const Sidebar = () => {
+interface SidebarProps {
+  onClose?: () => void;
+}
+
+export const Sidebar = ({ onClose }: SidebarProps) => {
   const [collapsed, setCollapsed] = useState(false);
   const [spacesOpen, setSpacesOpen] = useState(true);
   const [location] = useLocation();
@@ -27,7 +31,7 @@ export const Sidebar = () => {
   const handleLogout = () => signOut(auth);
 
   const navItems = [
-    { icon: LayoutDashboard, label: t.dashboard, href: "/", adminOnly: true },
+    { icon: LayoutDashboard, label: t.dashboard, href: "/" },
     { icon: Layers, label: t.spaces, href: "/spaces" },
     { icon: Calendar, label: t.timeline, href: "/timeline", adminOnly: true },
     { icon: History, label: t.history, href: "/history", adminOnly: true },
@@ -38,12 +42,16 @@ export const Sidebar = () => {
 
   const visibleNav = navItems.filter((item) => !item.adminOnly || isAdmin);
 
+  const handleNavClick = () => {
+    if (onClose) onClose();
+  };
+
   return (
     <motion.aside
       initial={false}
       animate={{ width: collapsed ? 64 : 240 }}
       transition={{ duration: 0.25, ease: "easeInOut" }}
-      className="relative flex flex-col h-full bg-sidebar border-r border-sidebar-border shrink-0 overflow-hidden"
+      className="relative flex flex-col h-full bg-sidebar border-r border-sidebar-border shrink-0 overflow-hidden shadow-lg lg:shadow-none"
     >
       {/* Toggle row */}
       <div className="flex items-center justify-between h-10 px-3 border-b border-sidebar-border/50 shrink-0">
@@ -58,12 +66,23 @@ export const Sidebar = () => {
             </motion.span>
           )}
         </AnimatePresence>
-        <button
-          onClick={() => setCollapsed((v) => !v)}
-          className="flex items-center justify-center w-7 h-7 rounded-lg text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-white/10 transition-all duration-150 ml-auto"
-        >
-          {collapsed ? <ChevronRight className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
-        </button>
+        <div className="flex items-center gap-1 ml-auto">
+          {/* Mobile close button */}
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="lg:hidden flex items-center justify-center w-7 h-7 rounded-lg text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-white/10 transition-all duration-150"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+          <button
+            onClick={() => setCollapsed((v) => !v)}
+            className="hidden lg:flex items-center justify-center w-7 h-7 rounded-lg text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-white/10 transition-all duration-150"
+          >
+            {collapsed ? <ChevronRight className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+          </button>
+        </div>
       </div>
 
       {/* Logo + app name */}
@@ -100,6 +119,7 @@ export const Sidebar = () => {
             >
               <Link href={item.href}>
                 <div
+                  onClick={handleNavClick}
                   className={cn(
                     "flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all duration-150 group",
                     isActive
@@ -142,21 +162,25 @@ export const Sidebar = () => {
                         transition={{ duration: 0.2 }}
                         className="overflow-hidden pl-3"
                       >
-                        {spaces.slice(0, 8).map((space) => (
-                          <Link key={space.id} href={`/spaces/${space.id}`}>
-                            <div
-                              className={cn(
-                                "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs cursor-pointer transition-all duration-150",
-                                location === `/spaces/${space.id}`
-                                  ? "bg-primary/15 text-primary"
-                                  : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-white/10"
-                              )}
-                            >
-                              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: space.color || "#6366f1" }} />
-                              <span className="truncate">{space.name}</span>
-                            </div>
-                          </Link>
-                        ))}
+                        {spaces
+                          .filter((s) => !(s as unknown as { parentSpaceId?: string }).parentSpaceId)
+                          .slice(0, 8)
+                          .map((space) => (
+                            <Link key={space.id} href={`/spaces/${space.id}`}>
+                              <div
+                                onClick={handleNavClick}
+                                className={cn(
+                                  "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs cursor-pointer transition-all duration-150",
+                                  location === `/spaces/${space.id}`
+                                    ? "bg-primary/15 text-primary"
+                                    : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-white/10"
+                                )}
+                              >
+                                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: space.color || "#6366f1" }} />
+                                <span className="truncate">{space.name}</span>
+                              </div>
+                            </Link>
+                          ))}
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -183,9 +207,7 @@ export const Sidebar = () => {
                   "text-xs font-semibold px-2 py-0.5 rounded transition-all",
                   lang === "en" ? "bg-primary/20 text-primary" : "text-sidebar-foreground/40 hover:text-sidebar-foreground"
                 )}
-              >
-                EN
-              </button>
+              >EN</button>
               <span className="text-sidebar-foreground/20 text-xs">|</span>
               <button
                 onClick={() => setLang("ar")}
@@ -193,9 +215,7 @@ export const Sidebar = () => {
                   "text-xs font-semibold px-2 py-0.5 rounded transition-all",
                   lang === "ar" ? "bg-primary/20 text-primary" : "text-sidebar-foreground/40 hover:text-sidebar-foreground"
                 )}
-              >
-                AR
-              </button>
+              >AR</button>
             </motion.div>
           )}
         </AnimatePresence>
