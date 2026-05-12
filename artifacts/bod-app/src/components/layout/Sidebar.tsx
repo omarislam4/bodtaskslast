@@ -48,10 +48,17 @@ export const Sidebar = ({ onClose }: SidebarProps) => {
       where("parentSpaceId", "==", currentSpaceId)
     );
     const unsub = onSnapshot(q, (snap) => {
-      const subs = snap.docs.map((d) => ({
-        name: "", description: "", color: "#6366f1", icon: "", memberIds: [], createdBy: "",
-        ...d.data(), id: d.id,
-      })) as Space[];
+     const subs = snap.docs.map((d) => ({
+  name: "",
+  description: "",
+  color: "#6366f1",
+  icon: "",
+  memberIds: [],
+  createdBy: "",
+  createdAt: new Date(),
+  ...d.data(),
+  id: d.id,
+})) as Space[];
       setSubSpacesMap((prev) => ({ ...prev, [currentSpaceId]: subs }));
     });
     return () => unsub();
