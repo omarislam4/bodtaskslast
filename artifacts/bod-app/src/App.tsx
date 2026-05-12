@@ -18,6 +18,8 @@ import Members from "@/pages/Members";
 import Senders from "@/pages/Senders";
 import History from "@/pages/History";
 import Settings from "@/pages/Settings";
+import Attendance from "@/pages/Attendance";
+import WeeklyReport from "@/pages/WeeklyReport";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -83,6 +85,8 @@ function Router() {
       <Route path="/senders" component={() => <ProtectedRoute component={Senders} adminOnly />} />
       <Route path="/history" component={() => <ProtectedRoute component={History} adminOnly />} />
       <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
+      <Route path="/attendance" component={() => <ProtectedRoute component={Attendance} />} />
+      <Route path="/weekly-report" component={() => <ProtectedRoute component={WeeklyReport} />} />
       <Route component={NotFound} />
     </Switch>
   );

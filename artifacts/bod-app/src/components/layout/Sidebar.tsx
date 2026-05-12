@@ -5,6 +5,7 @@ import {
   LayoutDashboard, Layers, Calendar, Users, Send,
   History, Settings, ChevronRight, Sun,
   Moon, LogOut, ChevronDown, Menu, X, CornerDownRight,
+  ClipboardCheck, FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -67,6 +68,8 @@ export const Sidebar = ({ onClose }: SidebarProps) => {
   const navItems = [
     { icon: LayoutDashboard, label: t.dashboard, href: "/" },
     { icon: Layers, label: t.spaces, href: "/spaces" },
+    { icon: ClipboardCheck, label: "Attendance", href: "/attendance" },
+    { icon: FileText, label: "Weekly Report", href: "/weekly-report" },
     { icon: Calendar, label: t.timeline, href: "/timeline", adminOnly: true },
     { icon: History, label: t.history, href: "/history", adminOnly: true },
     { icon: Users, label: t.members, href: "/members", adminOnly: true },
