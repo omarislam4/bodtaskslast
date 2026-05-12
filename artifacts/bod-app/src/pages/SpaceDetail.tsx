@@ -5,7 +5,7 @@ import {
   Plus, ArrowLeft, CheckCircle2, Clock, Users, LayoutDashboard,
   Calendar, FolderOpen, Trash2, Link2, FolderPlus, ExternalLink,
   ChevronRight, ChevronDown, UserPlus, UserMinus, Filter,
-  Kanban, Layers,
+  Kanban, Layers, Bug, AlertTriangle,
 } from "lucide-react";
 import {
   doc, getDoc, addDoc, collection, serverTimestamp, Timestamp,
@@ -14,7 +14,7 @@ import {
 import { db } from "@/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
-import { useTasks, TaskStatus, TaskPriority } from "@/hooks/useTasks";
+import { useTasks, TaskStatus, TaskPriority, TaskType, BugSeverity } from "@/hooks/useTasks";
 import { useMembers } from "@/hooks/useMembers";
 import { useSenders } from "@/hooks/useSenders";
 import { useSpaceData, SpaceDataItem } from "@/hooks/useSpaceData";
@@ -40,7 +40,14 @@ function toDate(val: unknown): Date {
   return new Date();
 }
 
-type Tab = "overview" | "tasks" | "kanban" | "timeline" | "members" | "data" | "subspaces";
+type Tab = "overview" | "tasks" | "bugs" | "kanban" | "timeline" | "members" | "data" | "subspaces";
+
+const SEVERITY_CONFIG: Record<BugSeverity, { label: string; color: string; bg: string; border: string }> = {
+  critical: { label: "Critical", color: "text-red-500", bg: "bg-red-500/10", border: "border-red-500/30" },
+  high: { label: "High", color: "text-orange-500", bg: "bg-orange-500/10", border: "border-orange-500/30" },
+  medium: { label: "Medium", color: "text-yellow-500", bg: "bg-yellow-500/10", border: "border-yellow-500/30" },
+  low: { label: "Low", color: "text-blue-400", bg: "bg-blue-400/10", border: "border-blue-400/30" },
+};
 
 export default function SpaceDetail() {
   const { spaceId } = useParams<{ spaceId: string }>();
@@ -71,6 +78,8 @@ export default function SpaceDetail() {
     title: "", description: "", status: "todo" as TaskStatus,
     priority: "medium" as TaskPriority, deadline: "", estimatedHours: 0,
     assigneeIds: [] as string[], senderId: "", progress: 0,
+    type: "task" as TaskType, bugSeverity: "medium" as BugSeverity,
+    stepsToReproduce: "", expectedBehavior: "", actualBehavior: "",
   });
 
   // Space member management
@@ -145,7 +154,7 @@ export default function SpaceDetail() {
       });
       toast.success("Task created");
       setShowCreate(false);
-      setForm({ title: "", description: "", status: "todo", priority: "medium", deadline: "", estimatedHours: 0, assigneeIds: [], senderId: "", progress: 0 });
+      setForm({ title: "", description: "", status: "todo", priority: "medium", deadline: "", estimatedHours: 0, assigneeIds: [], senderId: "", progress: 0, type: "task", bugSeverity: "medium", stepsToReproduce: "", expectedBehavior: "", actualBehavior: "" });
     } catch {
       toast.error("Failed to create task");
     } finally {
@@ -267,9 +276,17 @@ export default function SpaceDetail() {
 
   const SPACE_COLORS = ["#6366f1", "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6"];
 
+  const bugs = tasks.filter((tk) => tk.type === "bug");
+  const bugCounts = {
+    total: bugs.length,
+    open: bugs.filter((b) => b.status === "todo").length,
+    critical: bugs.filter((b) => b.bugSeverity === "critical").length,
+  };
+
   const tabs: { id: Tab; label: string; icon: typeof LayoutDashboard; adminOnly?: boolean }[] = [
     { id: "overview", label: t.overview, icon: LayoutDashboard },
     { id: "tasks", label: t.tasksTab, icon: CheckCircle2 },
+    { id: "bugs", label: t.bugTab, icon: Bug },
     { id: "kanban", label: "Kanban", icon: Kanban },
     { id: "timeline", label: t.timelineTab, icon: Calendar },
     { id: "members", label: t.membersTab, icon: Users },
@@ -466,6 +483,66 @@ export default function SpaceDetail() {
                         placeholder={t.description} rows={2}
                         className="w-full px-3 py-2.5 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all resize-none"
                       />
+                      {/* Type selector */}
+                      <div className="flex gap-2 flex-wrap">
+                        {(["task", "bug", "feature", "improvement"] as TaskType[]).map((tp) => (
+                          <button
+                            key={tp} type="button"
+                            onClick={() => setForm((f) => ({ ...f, type: tp }))}
+                            className={cn(
+                              "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-all",
+                              form.type === tp
+                                ? tp === "bug" ? "bg-red-500/10 border-red-500/50 text-red-400"
+                                  : tp === "feature" ? "bg-purple-500/10 border-purple-500/50 text-purple-400"
+                                  : tp === "improvement" ? "bg-blue-500/10 border-blue-500/50 text-blue-400"
+                                  : "bg-primary/10 border-primary/50 text-primary"
+                                : "border-border text-muted-foreground hover:border-primary/30"
+                            )}
+                          >
+                            {tp === "bug" && <Bug className="w-3 h-3" />}
+                            {tp.charAt(0).toUpperCase() + tp.slice(1)}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Bug-specific fields */}
+                      {form.type === "bug" && (
+                        <div className="space-y-3 p-3 bg-red-500/5 border border-red-500/20 rounded-xl">
+                          <div>
+                            <label className="text-xs text-muted-foreground block mb-1">{t.bugSeverity}</label>
+                            <div className="flex gap-2 flex-wrap">
+                              {(["critical", "high", "medium", "low"] as BugSeverity[]).map((sv) => (
+                                <button key={sv} type="button"
+                                  onClick={() => setForm((f) => ({ ...f, bugSeverity: sv }))}
+                                  className={cn(
+                                    "px-3 py-1 text-xs font-medium rounded-lg border transition-all",
+                                    form.bugSeverity === sv
+                                      ? `${SEVERITY_CONFIG[sv].bg} ${SEVERITY_CONFIG[sv].color} ${SEVERITY_CONFIG[sv].border}`
+                                      : "border-border text-muted-foreground hover:border-border"
+                                  )}
+                                >
+                                  <AlertTriangle className="w-3 h-3 inline mr-1" />
+                                  {SEVERITY_CONFIG[sv].label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <textarea
+                            value={form.stepsToReproduce} onChange={(e) => setForm((f) => ({ ...f, stepsToReproduce: e.target.value }))}
+                            placeholder="Steps to reproduce..." rows={2}
+                            className="w-full px-3 py-2 text-sm bg-background border border-input rounded-xl focus:outline-none resize-none"
+                          />
+                          <div className="grid grid-cols-2 gap-2">
+                            <textarea value={form.expectedBehavior} onChange={(e) => setForm((f) => ({ ...f, expectedBehavior: e.target.value }))}
+                              placeholder="Expected behavior..." rows={2}
+                              className="w-full px-3 py-2 text-xs bg-background border border-input rounded-xl focus:outline-none resize-none" />
+                            <textarea value={form.actualBehavior} onChange={(e) => setForm((f) => ({ ...f, actualBehavior: e.target.value }))}
+                              placeholder="Actual behavior..." rows={2}
+                              className="w-full px-3 py-2 text-xs bg-background border border-input rounded-xl focus:outline-none resize-none" />
+                          </div>
+                        </div>
+                      )}
+
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         <div>
                           <label className="text-xs text-muted-foreground block mb-1">{t.status}</label>
@@ -575,6 +652,76 @@ export default function SpaceDetail() {
                   {filtered.map((task, i) => (
                     <TaskCard key={task.id} task={task} members={members} index={i} onClick={() => navigate(`/spaces/${spaceId}/tasks/${task.id}`)} />
                   ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {/* ─── BUGS ─── */}
+          {activeTab === "bugs" && (
+            <motion.div key="bugs" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-4 sm:p-6 max-w-6xl mx-auto">
+              {/* Bug stats */}
+              <div className="grid grid-cols-3 gap-3 mb-5">
+                {[
+                  { label: "Total Bugs", value: bugCounts.total, color: "text-red-400", bg: "bg-red-400/10" },
+                  { label: "Open", value: bugCounts.open, color: "text-blue-400", bg: "bg-blue-400/10" },
+                  { label: "Critical", value: bugCounts.critical, color: "text-red-600", bg: "bg-red-600/10" },
+                ].map((s) => (
+                  <div key={s.label} className="bg-card border border-border rounded-xl p-3 shadow-sm text-center">
+                    <p className="text-xs text-muted-foreground mb-1">{s.label}</p>
+                    <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* New Bug button */}
+              {isInSpace && (
+                <div className="flex justify-end mb-4">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                    onClick={() => { setForm((f) => ({ ...f, type: "bug" })); setActiveTab("tasks"); setShowCreate(true); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 text-white text-xs font-semibold rounded-xl hover:bg-red-600 transition-colors"
+                  >
+                    <Bug className="w-3.5 h-3.5" /> Report Bug
+                  </motion.button>
+                </div>
+              )}
+
+              {bugs.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                  <Bug className="w-10 h-10 mb-3 opacity-20" />
+                  <p className="text-sm font-medium">No bugs in this space</p>
+                  <p className="text-xs mt-1">Report a bug to start tracking issues.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {bugs.map((bug) => {
+                    const assigned = bug.assigneeIds.map((id) => members.find((m) => m.id === id)).filter(Boolean) as typeof members;
+                    const cfg = SEVERITY_CONFIG[bug.bugSeverity || "medium"];
+                    return (
+                      <motion.div
+                        key={bug.id}
+                        initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+                        onClick={() => navigate(`/spaces/${spaceId}/tasks/${bug.id}`)}
+                        className="bg-card border border-border rounded-xl p-3 sm:p-4 cursor-pointer hover:border-primary/30 transition-all group flex items-center gap-3 flex-wrap sm:flex-nowrap"
+                      >
+                        <Bug className="w-4 h-4 text-red-400 shrink-0" />
+                        <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border shrink-0", cfg.bg, cfg.color, cfg.border)}>
+                          <AlertTriangle className="w-3 h-3" />{cfg.label}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground group-hover:text-primary truncate">{bug.title}</p>
+                          {assigned.length > 0 && (
+                            <p className="text-xs text-muted-foreground mt-0.5">{assigned.map((m) => m.displayName || m.email).join(", ")}</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <TaskStatusBadge status={bug.status} size="sm" />
+                          {bug.deadline && <span className="text-xs text-muted-foreground hidden sm:block">{format(bug.deadline, "MMM d")}</span>}
+                        </div>
+                      </motion.div>
+                    );
+                  })}
                 </div>
               )}
             </motion.div>

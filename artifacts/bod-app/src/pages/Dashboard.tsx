@@ -3,9 +3,12 @@ import { motion, type Variants } from "framer-motion";
 import { useLocation } from "wouter";
 import {
   CheckCircle2, Clock, AlertCircle, TrendingUp, Calendar, Layers, ArrowRight,
-  UserCheck, RefreshCw, MessageSquare, Search,
+  UserCheck, RefreshCw, MessageSquare, Search, Bug, BarChart2, Users,
 } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import {
+  PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend,
+} from "recharts";
 import { useAllTasks } from "@/hooks/useTasks";
 import { useSpaces } from "@/hooks/useSpaces";
 import { useMembers } from "@/hooks/useMembers";
@@ -28,6 +31,11 @@ const STATUS_COLORS: Record<string, string> = {
   done: "#10b981",
   blocked: "#ef4444",
 };
+
+const MEMBER_PALETTE = [
+  "#6366f1", "#3b82f6", "#10b981", "#f59e0b", "#ef4444",
+  "#8b5cf6", "#ec4899", "#14b8a6", "#f97316", "#06b6d4",
+];
 
 const cardVariants: Variants = {
   hidden: { opacity: 0, y: 12 },
@@ -58,6 +66,7 @@ export default function Dashboard() {
     const done = tasks.filter((tk) => tk.status === "done").length;
     const inProgress = tasks.filter((tk) => tk.status === "in-progress").length;
     const blocked = tasks.filter((tk) => tk.status === "blocked").length;
+    const bugs = tasks.filter((tk) => tk.type === "bug").length;
     const statusBreakdown = [
       { name: "To Do", value: tasks.filter((tk) => tk.status === "todo").length, key: "todo" },
       { name: "In Progress", value: inProgress, key: "in-progress" },
@@ -77,14 +86,44 @@ export default function Dashboard() {
 
     const recent = tasks.slice(0, 6);
 
-    return { total, done, inProgress, blocked, statusBreakdown, upcoming, overdue, recent };
+    return { total, done, inProgress, blocked, bugs, statusBreakdown, upcoming, overdue, recent };
   }, [tasks]);
+
+  // Employee stats for admin charts
+  const memberStats = useMemo(() => {
+    return members
+      .map((m, idx) => {
+        const memberTasks = tasks.filter((tk) => tk.assigneeIds.includes(m.id));
+        const todo = memberTasks.filter((tk) => tk.status === "todo").length;
+        const inProg = memberTasks.filter((tk) => tk.status === "in-progress").length;
+        const review = memberTasks.filter((tk) => tk.status === "review").length;
+        const done = memberTasks.filter((tk) => tk.status === "done").length;
+        const blocked = memberTasks.filter((tk) => tk.status === "blocked").length;
+        const total = memberTasks.length;
+        const completionRate = total > 0 ? Math.round((done / total) * 100) : 0;
+        return {
+          name: (m.displayName || m.email || "Unknown").split(" ")[0],
+          fullName: m.displayName || m.email || "Unknown",
+          todo, inProgress: inProg, review, done, blocked, total, completionRate,
+          color: MEMBER_PALETTE[idx % MEMBER_PALETTE.length],
+        };
+      })
+      .filter((m) => m.total > 0)
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 10);
+  }, [tasks, members]);
+
+  const memberPieData = useMemo(() =>
+    memberStats.map((m) => ({ name: m.name, value: m.total, color: m.color })),
+    [memberStats]
+  );
 
   const statCards = [
     { label: t.totalTasks, value: stats.total, icon: TrendingUp, color: "text-primary", bg: "bg-primary/10" },
     { label: t.inProgress, value: stats.inProgress, icon: Clock, color: "text-blue-500", bg: "bg-blue-500/10" },
     { label: t.completed, value: stats.done, icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-500/10" },
     { label: "Blocked", value: stats.blocked, icon: AlertCircle, color: "text-red-500", bg: "bg-red-500/10" },
+    ...(isAdmin ? [{ label: t.bugs, value: stats.bugs, icon: Bug, color: "text-orange-500", bg: "bg-orange-500/10" }] : []),
   ];
 
   const handleReassign = async (taskId: string) => {
@@ -124,7 +163,6 @@ export default function Dashboard() {
 
       await updateDoc(doc(db, "tasks", taskId), updatePayload);
 
-      // Write notifications for removed assignees and new assignee
       const notifBase = {
         taskId,
         taskTitle: task.title,
@@ -138,7 +176,6 @@ export default function Dashboard() {
 
       const notifPromises: Promise<unknown>[] = [];
 
-      // Notify removed assignees
       for (const oldId of task.assigneeIds) {
         if (oldId !== newAssigneeId) {
           notifPromises.push(
@@ -149,7 +186,6 @@ export default function Dashboard() {
         }
       }
 
-      // Notify new assignee
       notifPromises.push(
         updateDoc(doc(db, "users", newAssigneeId), {
           notifications: arrayUnion({ ...notifBase, message: `You were assigned to task "${task.title}" by ${adminName}${reason ? ` — Reason: ${reason}` : ""}` }),
@@ -195,9 +231,9 @@ export default function Dashboard() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-6 sm:mb-8">
         {tasksLoading
-          ? Array(4).fill(0).map((_, i) => <DashboardStatSkeleton key={i} />)
+          ? Array(5).fill(0).map((_, i) => <DashboardStatSkeleton key={i} />)
           : statCards.map((card, i) => (
               <motion.div
                 key={card.label}
@@ -358,7 +394,7 @@ export default function Dashboard() {
             </motion.div>
           </div>
 
-          {/* ─── OVERDUE TASKS SECTION ─── */}
+          {/* ─── OVERDUE TASKS ─── */}
           {stats.overdue.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32 }}
@@ -380,7 +416,6 @@ export default function Dashboard() {
                   const hasTarget = !!reassignTarget[task.id];
                   return (
                     <div key={task.id} className="p-3 sm:p-4 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-900/20 space-y-3">
-                      {/* Task info row */}
                       <div className="flex items-start gap-2 flex-wrap">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -396,13 +431,9 @@ export default function Dashboard() {
                           </div>
                         </div>
                       </div>
-
-                      {/* Reassign controls */}
                       <div className="flex flex-col gap-2">
-                        {/* Custom searchable dropdown + Assign button */}
                         <div className="flex items-center gap-2">
                           <div className="relative flex-1">
-                            {/* Trigger button */}
                             <button
                               type="button"
                               onClick={() => setDropdownOpen((prev) => ({ ...prev, [task.id]: !prev[task.id] }))}
@@ -415,10 +446,8 @@ export default function Dashboard() {
                               </span>
                               <Search className="w-3 h-3 text-muted-foreground shrink-0" />
                             </button>
-                            {/* Dropdown panel */}
                             {dropdownOpen[task.id] && (
                               <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg overflow-hidden">
-                                {/* Search inside dropdown */}
                                 <div className="p-2 border-b border-border">
                                   <div className="relative">
                                     <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
@@ -432,7 +461,6 @@ export default function Dashboard() {
                                     />
                                   </div>
                                 </div>
-                                {/* Member list */}
                                 <div className="max-h-40 overflow-y-auto">
                                   {(() => {
                                     const q = (memberSearch[task.id] || "").toLowerCase();
@@ -471,7 +499,6 @@ export default function Dashboard() {
                         </div>
                         {hasTarget && (
                           <>
-                            {/* Reason */}
                             <div className="flex items-start gap-2">
                               <MessageSquare className="w-3.5 h-3.5 text-muted-foreground mt-2 shrink-0" />
                               <textarea
@@ -482,7 +509,6 @@ export default function Dashboard() {
                                 className="flex-1 text-xs px-2.5 py-1.5 bg-background border border-input rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/30 resize-none"
                               />
                             </div>
-                            {/* New deadline */}
                             <div className="flex items-center gap-2">
                               <Calendar className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                               <div className="flex-1 flex items-center gap-2">
@@ -498,9 +524,7 @@ export default function Dashboard() {
                                     type="button"
                                     onClick={() => setReassignDeadline((prev) => { const n = { ...prev }; delete n[task.id]; return n; })}
                                     className="text-xs text-muted-foreground hover:text-foreground"
-                                  >
-                                    Clear
-                                  </button>
+                                  >Clear</button>
                                 )}
                               </div>
                             </div>
@@ -532,7 +556,7 @@ export default function Dashboard() {
                 <table className="w-full text-sm min-w-[500px]">
                   <thead>
                     <tr className="border-b border-border">
-                      {[t.tasksTab, t.status, t.priority, t.assignMembers, t.deadline].map((h) => (
+                      {[t.tasksTab, "Type", t.status, t.priority, t.assignMembers, t.deadline].map((h) => (
                         <th key={h} className="text-left text-xs font-semibold text-muted-foreground pb-2.5 pr-4">{h}</th>
                       ))}
                     </tr>
@@ -547,6 +571,18 @@ export default function Dashboard() {
                           onClick={() => navigate(`/spaces/${task.spaceId}/tasks/${task.id}`)}
                         >
                           <td className="py-2.5 pr-4"><span className="font-medium text-foreground line-clamp-1">{task.title}</span></td>
+                          <td className="py-2.5 pr-4">
+                            <span className={cn(
+                              "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium",
+                              task.type === "bug" ? "bg-red-500/10 text-red-500" :
+                              task.type === "feature" ? "bg-purple-500/10 text-purple-500" :
+                              task.type === "improvement" ? "bg-blue-500/10 text-blue-500" :
+                              "bg-muted text-muted-foreground"
+                            )}>
+                              {task.type === "bug" && <Bug className="w-3 h-3" />}
+                              {task.type}
+                            </span>
+                          </td>
                           <td className="py-2.5 pr-4"><TaskStatusBadge status={task.status} size="sm" /></td>
                           <td className="py-2.5 pr-4"><TaskPriorityBadge priority={task.priority} size="sm" /></td>
                           <td className="py-2.5 pr-4"><span className="text-xs text-muted-foreground">{assigned.slice(0, 2).join(", ") || "—"}</span></td>
@@ -561,6 +597,101 @@ export default function Dashboard() {
               <p className="text-sm text-muted-foreground text-center py-8">{t.noTasksYet}</p>
             )}
           </motion.div>
+
+          {/* ─── ADMIN: TEAM PERFORMANCE ─── */}
+          {isAdmin && memberStats.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+              className="mt-5 sm:mt-6"
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <BarChart2 className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">{t.teamPerformance}</h3>
+                  <p className="text-xs text-muted-foreground">{t.employeeStats}</p>
+                </div>
+              </div>
+
+              <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
+                {/* Stacked bar chart: tasks per member by status */}
+                <div className="lg:col-span-2 bg-card border border-border rounded-xl p-4 sm:p-5 shadow-sm">
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-4">{t.tasksByMember}</h4>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={memberStats} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: "var(--color-muted-foreground)" }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 11, fill: "var(--color-muted-foreground)" }} axisLine={false} tickLine={false} allowDecimals={false} />
+                      <Tooltip
+                        contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: "8px", fontSize: "12px" }}
+                        cursor={{ fill: "var(--color-muted)", opacity: 0.3 }}
+                      />
+                      <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }} />
+                      <Bar dataKey="todo" name="To Do" stackId="a" fill={STATUS_COLORS.todo} radius={[0, 0, 0, 0]} />
+                      <Bar dataKey="inProgress" name="In Progress" stackId="a" fill={STATUS_COLORS["in-progress"]} />
+                      <Bar dataKey="review" name="Review" stackId="a" fill={STATUS_COLORS.review} />
+                      <Bar dataKey="blocked" name="Blocked" stackId="a" fill={STATUS_COLORS.blocked} />
+                      <Bar dataKey="done" name="Done" stackId="a" fill={STATUS_COLORS.done} radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Right column: pie + completion rates */}
+                <div className="space-y-4">
+                  {/* Task distribution pie */}
+                  <div className="bg-card border border-border rounded-xl p-4 sm:p-5 shadow-sm">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">{t.taskDistribution}</h4>
+                    <ResponsiveContainer width="100%" height={130}>
+                      <PieChart>
+                        <Pie data={memberPieData} cx="50%" cy="50%" innerRadius={35} outerRadius={55} paddingAngle={2} dataKey="value">
+                          {memberPieData.map((entry, index) => (
+                            <Cell key={index} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: "8px", fontSize: "11px" }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="mt-2 space-y-1.5 max-h-32 overflow-y-auto">
+                      {memberPieData.map((m) => (
+                        <div key={m.name} className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: m.color }} />
+                            <span className="text-muted-foreground truncate">{m.name}</span>
+                          </div>
+                          <span className="font-semibold text-foreground">{m.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Completion rates */}
+                  <div className="bg-card border border-border rounded-xl p-4 sm:p-5 shadow-sm">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Users className="w-3.5 h-3.5 text-muted-foreground" />
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t.completionRate}</h4>
+                    </div>
+                    <div className="space-y-2.5">
+                      {memberStats.slice(0, 6).map((m) => (
+                        <div key={m.name}>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs text-foreground font-medium truncate flex-1">{m.name}</span>
+                            <span className="text-xs font-bold text-emerald-500 shrink-0 ml-2">{m.completionRate}%</span>
+                          </div>
+                          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all duration-700"
+                              style={{ width: `${m.completionRate}%`, backgroundColor: m.completionRate >= 70 ? "#10b981" : m.completionRate >= 40 ? "#f59e0b" : "#ef4444" }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
         </>
       )}
     </div>
