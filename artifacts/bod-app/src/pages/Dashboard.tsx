@@ -68,6 +68,7 @@ export default function Dashboard() {
     const inProgress = tasks.filter((tk) => tk.status === "in-progress").length;
     const blocked = tasks.filter((tk) => tk.status === "blocked").length;
     const bugs = tasks.filter((tk) => tk.type === "bug").length;
+    const unassigned = tasks.filter((tk) => !tk.assigneeIds || tk.assigneeIds.length === 0).length;
     const statusBreakdown = [
       { name: "To Do", value: tasks.filter((tk) => tk.status === "todo").length, key: "todo" },
       { name: "In Progress", value: inProgress, key: "in-progress" },
@@ -87,13 +88,13 @@ export default function Dashboard() {
 
     const recent = tasks.slice(0, 6);
 
-    return { total, done, inProgress, blocked, bugs, statusBreakdown, upcoming, overdue, recent };
+    return { total, done, inProgress, blocked, bugs, unassigned, statusBreakdown, upcoming, overdue, recent };
   }, [tasks]);
 
   // Employee stats for admin charts
   const memberStats = useMemo(() => {
     const filteredTasks = perfSpaceId === "all" ? tasks : tasks.filter(tk => tk.spaceId === perfSpaceId);
-    return members
+    const assignedStats = members
       .map((m, idx) => {
         const memberTasks = filteredTasks.filter((tk) => tk.assigneeIds.includes(m.id));
         const todo = memberTasks.filter((tk) => tk.status === "todo").length;
@@ -113,6 +114,25 @@ export default function Dashboard() {
       .filter((m) => m.total > 0)
       .sort((a, b) => b.total - a.total)
       .slice(0, 10);
+
+    const unassignedTasks = filteredTasks.filter(tk => !tk.assigneeIds || tk.assigneeIds.length === 0);
+    if (unassignedTasks.length > 0) {
+      const todo = unassignedTasks.filter(tk => tk.status === "todo").length;
+      const inProg = unassignedTasks.filter(tk => tk.status === "in-progress").length;
+      const review = unassignedTasks.filter(tk => tk.status === "review").length;
+      const done = unassignedTasks.filter(tk => tk.status === "done").length;
+      const blocked = unassignedTasks.filter(tk => tk.status === "blocked").length;
+      assignedStats.push({
+        name: "Unassigned",
+        fullName: "Unassigned Tasks",
+        todo, inProgress: inProg, review, done, blocked,
+        total: unassignedTasks.length,
+        completionRate: unassignedTasks.length > 0 ? Math.round((done / unassignedTasks.length) * 100) : 0,
+        color: "#94a3b8",
+      });
+    }
+
+    return assignedStats;
   }, [tasks, members, perfSpaceId]);
 
   const memberPieData = useMemo(() =>
@@ -125,6 +145,7 @@ export default function Dashboard() {
     { label: t.inProgress, value: stats.inProgress, icon: Clock, color: "text-blue-500", bg: "bg-blue-500/10" },
     { label: t.completed, value: stats.done, icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-500/10" },
     { label: "Blocked", value: stats.blocked, icon: AlertCircle, color: "text-red-500", bg: "bg-red-500/10" },
+    { label: "Not Assigned", value: stats.unassigned, icon: Users, color: "text-amber-500", bg: "bg-amber-500/10" },
     ...(isAdmin ? [{ label: t.bugs, value: stats.bugs, icon: Bug, color: "text-orange-500", bg: "bg-orange-500/10" }] : []),
   ];
 
@@ -615,7 +636,7 @@ export default function Dashboard() {
           </motion.div>
 
           {/* ─── ADMIN: TEAM PERFORMANCE ─── */}
-          {isAdmin && memberStats.length > 0 && (
+          {isAdmin && (
             <motion.div
               initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
               className="mt-5 sm:mt-6"

@@ -445,11 +445,12 @@ export default function SpaceDetail() {
           {/* ─── OVERVIEW ─── */}
           {activeTab === "overview" && (
             <motion.div key="overview" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-4 sm:p-6 max-w-5xl mx-auto">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
                 {[
                   { label: t.totalTasks, value: tasks.length, color: "text-primary", bg: "bg-primary/10" },
                   { label: t.inProgress, value: statusCounts["in-progress"] || 0, color: "text-blue-500", bg: "bg-blue-500/10" },
                   { label: t.done, value: statusCounts["done"] || 0, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+                  { label: "Not Assigned", value: tasks.filter(tk => !tk.assigneeIds || tk.assigneeIds.length === 0).length, color: "text-amber-500", bg: "bg-amber-500/10" },
                   { label: t.membersLabel, value: spaceMembers.length, color: "text-purple-500", bg: "bg-purple-500/10" },
                 ].map((s) => (
                   <div key={s.label} className="bg-card border border-border rounded-xl p-3 sm:p-4 shadow-sm">
