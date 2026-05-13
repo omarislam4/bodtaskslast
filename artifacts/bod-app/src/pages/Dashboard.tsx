@@ -19,7 +19,7 @@ import { KanbanBoard } from "@/components/tasks/KanbanBoard";
 import { useLang } from "@/contexts/LangContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, isWithinInterval, addDays, isPast } from "date-fns";
-import { updateDoc, doc, arrayUnion } from "firebase/firestore";
+import { updateDoc, doc, arrayUnion, addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { db } from "@/firebase";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -60,6 +60,7 @@ export default function Dashboard() {
   const [reassignDeadline, setReassignDeadline] = useState<Record<string, string>>({});
   const [memberSearch, setMemberSearch] = useState<Record<string, string>>({});
   const [dropdownOpen, setDropdownOpen] = useState<Record<string, boolean>>({});
+  const [perfSpaceId, setPerfSpaceId] = useState("all");
 
   const stats = useMemo(() => {
     const total = tasks.length;
@@ -91,9 +92,10 @@ export default function Dashboard() {
 
   // Employee stats for admin charts
   const memberStats = useMemo(() => {
+    const filteredTasks = perfSpaceId === "all" ? tasks : tasks.filter(tk => tk.spaceId === perfSpaceId);
     return members
       .map((m, idx) => {
-        const memberTasks = tasks.filter((tk) => tk.assigneeIds.includes(m.id));
+        const memberTasks = filteredTasks.filter((tk) => tk.assigneeIds.includes(m.id));
         const todo = memberTasks.filter((tk) => tk.status === "todo").length;
         const inProg = memberTasks.filter((tk) => tk.status === "in-progress").length;
         const review = memberTasks.filter((tk) => tk.status === "review").length;
@@ -179,16 +181,30 @@ export default function Dashboard() {
       for (const oldId of task.assigneeIds) {
         if (oldId !== newAssigneeId) {
           notifPromises.push(
-            updateDoc(doc(db, "users", oldId), {
-              notifications: arrayUnion({ ...notifBase, message: `You were removed from task "${task.title}"${reason ? ` — Reason: ${reason}` : ""}` }),
+            addDoc(collection(db, "notifications"), {
+              userId: oldId,
+              type: "assignment",
+              title: "Removed from task",
+              body: `You were removed from "${task.title}"${reason ? ` — ${reason}` : ""}`,
+              taskId,
+              spaceId: task.spaceId || null,
+              read: false,
+              createdAt: serverTimestamp(),
             }).catch(() => {})
           );
         }
       }
 
       notifPromises.push(
-        updateDoc(doc(db, "users", newAssigneeId), {
-          notifications: arrayUnion({ ...notifBase, message: `You were assigned to task "${task.title}" by ${adminName}${reason ? ` — Reason: ${reason}` : ""}` }),
+        addDoc(collection(db, "notifications"), {
+          userId: newAssigneeId,
+          type: "assignment",
+          title: "Assigned to task",
+          body: `You were assigned to "${task.title}" by ${adminName}${reason ? ` — ${reason}` : ""}`,
+          taskId,
+          spaceId: task.spaceId || null,
+          read: false,
+          createdAt: serverTimestamp(),
         }).catch(() => {})
       );
 
@@ -604,15 +620,31 @@ export default function Dashboard() {
               initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
               className="mt-5 sm:mt-6"
             >
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <BarChart2 className="w-4 h-4 text-primary" />
+              <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <BarChart2 className="w-4 h-4 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground">{t.teamPerformance}</h3>
+                    <p className="text-xs text-muted-foreground">{t.employeeStats}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-foreground">{t.teamPerformance}</h3>
-                  <p className="text-xs text-muted-foreground">{t.employeeStats}</p>
-                </div>
+                <select
+                  value={perfSpaceId}
+                  onChange={e => setPerfSpaceId(e.target.value)}
+                  className="text-xs px-3 py-1.5 bg-background border border-input rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/30"
+                >
+                  <option value="all">All Spaces</option>
+                  {spaces.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
               </div>
+              {memberStats.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-10 text-muted-foreground text-sm">
+                  <Users className="w-8 h-8 mb-2 opacity-30" />
+                  No task data for this space
+                </div>
+              )}
 
               <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
                 {/* Stacked bar chart: tasks per member by status */}

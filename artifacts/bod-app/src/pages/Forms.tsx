@@ -78,7 +78,10 @@ export default function Forms() {
     catch { toast.error("Failed"); }
   };
 
-  const getPublicLink = (id: string) => `${window.location.origin}/form/${id}`;
+  const getPublicLink = (id: string) => {
+    const base = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+    return `${window.location.origin}${base}/form/${id}`;
+  };
 
   const copyLink = (id: string) => {
     navigator.clipboard.writeText(getPublicLink(id));

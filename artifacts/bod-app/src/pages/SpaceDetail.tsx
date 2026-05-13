@@ -5,7 +5,7 @@ import {
   Plus, ArrowLeft, CheckCircle2, Clock, Users, LayoutDashboard,
   Calendar, FolderOpen, Trash2, Link2, FolderPlus, ExternalLink,
   ChevronRight, ChevronDown, UserPlus, UserMinus, Filter,
-  Kanban, Layers, Bug, AlertTriangle,
+  Kanban, Layers, Bug, AlertTriangle, MessageCircle,
 } from "lucide-react";
 import {
   doc, getDoc, addDoc, collection, serverTimestamp, Timestamp,
@@ -25,6 +25,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { TaskCardSkeleton } from "@/components/shared/SkeletonLoader";
 import { Space } from "@/hooks/useSpaces";
 import { UserDoc } from "@/contexts/AuthContext";
+import { ChatPanel } from "@/components/chat/ChatPanel";
 import { toast } from "sonner";
 import { format, isWithinInterval, addDays, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -40,7 +41,7 @@ function toDate(val: unknown): Date {
   return new Date();
 }
 
-type Tab = "overview" | "tasks" | "bugs" | "kanban" | "timeline" | "members" | "data" | "subspaces" | "calendar" | "workload" | "table" | "gantt";
+type Tab = "overview" | "tasks" | "bugs" | "kanban" | "timeline" | "members" | "data" | "subspaces" | "calendar" | "workload" | "table" | "gantt" | "chat";
 
 const SEVERITY_CONFIG: Record<BugSeverity, { label: string; color: string; bg: string; border: string }> = {
   critical: { label: "Critical", color: "text-red-500", bg: "bg-red-500/10", border: "border-red-500/30" },
@@ -61,6 +62,33 @@ export default function SpaceDetail() {
   const { userDoc, isAdmin } = useAuth();
   const { t } = useLang();
   const [, navigate] = useLocation();
+
+  // Space chat channel
+  const [spaceChatId, setSpaceChatId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!spaceId) return;
+    const q = query(collection(db, "chatChannels"), where("spaceId", "==", spaceId));
+    const unsub = onSnapshot(q, async (snap) => {
+      if (!snap.empty) {
+        setSpaceChatId(snap.docs[0].id);
+      } else if (activeTab === "chat") {
+        try {
+          const ref = await addDoc(collection(db, "chatChannels"), {
+            name: "space-chat",
+            description: "Space discussion",
+            spaceId,
+            isPrivate: false,
+            memberIds: [],
+            createdBy: userDoc?.id || "",
+            createdAt: serverTimestamp(),
+          });
+          setSpaceChatId(ref.id);
+        } catch { }
+      }
+    }, () => { });
+    return () => unsub();
+  }, [spaceId, activeTab, userDoc?.id]);
 
   // Sub-spaces
   const [subSpaces, setSubSpaces] = useState<Space[]>([]);
@@ -296,6 +324,7 @@ export default function SpaceDetail() {
     { id: "members",   label: t.membersTab,   icon: Users },
     { id: "data",      label: t.data,         icon: FolderOpen },
     { id: "subspaces", label: t.subspacesTab, icon: Layers },
+    { id: "chat",      label: "Chat",         icon: MessageCircle },
   ];
 
   const visibleTabs = tabs.filter((tab) => !tab.adminOnly || isAdmin);
@@ -1056,6 +1085,26 @@ export default function SpaceDetail() {
                       </div>
                     </motion.div>
                   ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {/* ─── CHAT ─── */}
+          {activeTab === "chat" && (
+            <motion.div key="chat" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="h-full flex flex-col">
+              {spaceChatId ? (
+                <ChatPanel
+                  channelId={spaceChatId}
+                  spaceId={spaceId}
+                  spaceMembers={spaceMembers.map(m => ({ id: m.id, displayName: m.displayName, email: m.email }))}
+                  className="flex-1 min-h-0 h-[calc(100vh-12rem)]"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full py-20 text-muted-foreground">
+                  <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mb-3" />
+                  <p className="text-sm">Loading chat...</p>
                 </div>
               )}
             </motion.div>

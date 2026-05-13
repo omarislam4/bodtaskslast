@@ -6,7 +6,7 @@ import {
   History, Settings, ChevronRight, Sun,
   Moon, LogOut, ChevronDown, Menu, X, CornerDownRight,
   ClipboardCheck, FileText, Bug, CheckSquare, Target, Zap,
-  Bell, BarChart2, MessageCircle, Bot, ClipboardList,
+  Bell, BarChart2, MessageCircle, ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -76,7 +76,6 @@ export const Sidebar = ({ onClose }: SidebarProps) => {
     { icon: BarChart2,       label: t.portfolio,    href: "/portfolio" },
     { icon: MessageCircle,   label: t.chat,         href: "/chat" },
     { icon: Bug,             label: t.bugTracker,   href: "/bugs",           adminOnly: true },
-    { icon: Bot,             label: t.automations,  href: "/automations",    adminOnly: true },
     { icon: ClipboardList,   label: t.forms,        href: "/forms",          adminOnly: true },
     { icon: ClipboardCheck,  label: "Attendance",   href: "/attendance" },
     { icon: FileText,        label: "Weekly Report", href: "/weekly-report" },

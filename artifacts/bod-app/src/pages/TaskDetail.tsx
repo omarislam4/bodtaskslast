@@ -406,24 +406,22 @@ export default function TaskDetail() {
             className="text-2xl font-bold text-foreground outline-none focus:ring-2 focus:ring-primary/30 rounded-lg px-1 -mx-1 cursor-text">{task.title}</h1>
 
           {/* Tags row */}
-          {((task.tags || []).length > 0 || showTagInput) && (
-            <div className="flex items-center gap-2 flex-wrap">
-              {(task.tags || []).map(tag => (
-                <span key={tag} className="flex items-center gap-1 text-xs px-2 py-1 bg-primary/10 text-primary rounded-full">
-                  <Hash className="w-3 h-3" />{tag}
-                  <button onClick={() => removeTag(tag)} className="hover:text-destructive"><X className="w-3 h-3" /></button>
-                </span>
-              ))}
-              {showTagInput ? (
-                <input autoFocus value={tagInput} onChange={e => setTagInput(e.target.value)}
-                  onKeyDown={e => { if (e.key === "Enter") { addTag(tagInput); } if (e.key === "Escape") setShowTagInput(false); }}
-                  onBlur={() => { if (tagInput) addTag(tagInput); else setShowTagInput(false); }}
-                  placeholder={t.addTag} className="text-xs px-2 py-1 bg-background border border-input rounded-full focus:outline-none focus:ring-1 focus:ring-primary/30 w-24" />
-              ) : (
-                <button onClick={() => setShowTagInput(true)} className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 border border-dashed border-border rounded-full transition-colors">+ {t.addTag}</button>
-              )}
-            </div>
-          )}
+          <div className="flex items-center gap-2 flex-wrap">
+            {(task.tags || []).map(tag => (
+              <span key={tag} className="flex items-center gap-1 text-xs px-2 py-1 bg-primary/10 text-primary rounded-full">
+                <Hash className="w-3 h-3" />{tag}
+                <button onClick={() => removeTag(tag)} className="hover:text-destructive"><X className="w-3 h-3" /></button>
+              </span>
+            ))}
+            {showTagInput ? (
+              <input autoFocus value={tagInput} onChange={e => setTagInput(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") { addTag(tagInput); } if (e.key === "Escape") setShowTagInput(false); }}
+                onBlur={() => { if (tagInput) addTag(tagInput); else setShowTagInput(false); }}
+                placeholder={t.addTag} className="text-xs px-2 py-1 bg-background border border-input rounded-full focus:outline-none focus:ring-1 focus:ring-primary/30 w-24" />
+            ) : (
+              <button onClick={() => setShowTagInput(true)} className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 border border-dashed border-border rounded-full transition-colors">+ {t.addTag}</button>
+            )}
+          </div>
 
           {/* Description */}
           <div>
