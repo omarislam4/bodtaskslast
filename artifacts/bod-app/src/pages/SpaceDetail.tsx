@@ -14,7 +14,7 @@ import {
 import { db } from "@/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
-import { useTasks, TaskStatus, TaskPriority, TaskType, BugSeverity } from "@/hooks/useTasks";
+import { useTasks, Task, TaskStatus, TaskPriority, TaskType, BugSeverity } from "@/hooks/useTasks";
 import { useMembers } from "@/hooks/useMembers";
 import { useSenders } from "@/hooks/useSenders";
 import { useSpaceData, SpaceDataItem } from "@/hooks/useSpaceData";
@@ -40,7 +40,7 @@ function toDate(val: unknown): Date {
   return new Date();
 }
 
-type Tab = "overview" | "tasks" | "bugs" | "kanban" | "timeline" | "members" | "data" | "subspaces";
+type Tab = "overview" | "tasks" | "bugs" | "kanban" | "timeline" | "members" | "data" | "subspaces" | "calendar" | "workload" | "table" | "gantt";
 
 const SEVERITY_CONFIG: Record<BugSeverity, { label: string; color: string; bg: string; border: string }> = {
   critical: { label: "Critical", color: "text-red-500", bg: "bg-red-500/10", border: "border-red-500/30" },
@@ -284,14 +284,18 @@ export default function SpaceDetail() {
   };
 
   const tabs: { id: Tab; label: string; icon: typeof LayoutDashboard; adminOnly?: boolean }[] = [
-    { id: "overview", label: t.overview, icon: LayoutDashboard },
-    { id: "tasks", label: t.tasksTab, icon: CheckCircle2 },
-    { id: "bugs", label: t.bugTab, icon: Bug },
-    { id: "kanban", label: "Kanban", icon: Kanban },
-    { id: "timeline", label: t.timelineTab, icon: Calendar },
-    { id: "members", label: t.membersTab, icon: Users },
-    { id: "data", label: t.data, icon: FolderOpen },
-    { id: "subspaces", label: "Sub-spaces", icon: Layers },
+    { id: "overview",  label: t.overview,     icon: LayoutDashboard },
+    { id: "tasks",     label: t.tasksTab,     icon: CheckCircle2 },
+    { id: "bugs",      label: t.bugTab,       icon: Bug },
+    { id: "kanban",    label: t.kanbanView,   icon: Kanban },
+    { id: "calendar",  label: t.calendarView, icon: Calendar },
+    { id: "table",     label: t.tableView,    icon: LayoutDashboard },
+    { id: "gantt",     label: t.ganttView,    icon: Layers },
+    { id: "workload",  label: t.workloadView, icon: Users },
+    { id: "timeline",  label: t.timelineTab,  icon: Calendar },
+    { id: "members",   label: t.membersTab,   icon: Users },
+    { id: "data",      label: t.data,         icon: FolderOpen },
+    { id: "subspaces", label: t.subspacesTab, icon: Layers },
   ];
 
   const visibleTabs = tabs.filter((tab) => !tab.adminOnly || isAdmin);
@@ -941,6 +945,34 @@ export default function SpaceDetail() {
           )}
 
           {/* ─── SUB-SPACES (Visible to all, create admin-only) ─── */}
+          {/* ─── CALENDAR VIEW ─── */}
+          {activeTab === "calendar" && (
+            <motion.div key="calendar" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-4 sm:p-6">
+              <CalendarView tasks={tasks} spaceId={spaceId} onNavigate={navigate} />
+            </motion.div>
+          )}
+
+          {/* ─── TABLE VIEW ─── */}
+          {activeTab === "table" && (
+            <motion.div key="table" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-4 sm:p-6 overflow-x-auto">
+              <TableView tasks={tasks} members={members} spaceId={spaceId} onNavigate={navigate} />
+            </motion.div>
+          )}
+
+          {/* ─── GANTT VIEW ─── */}
+          {activeTab === "gantt" && (
+            <motion.div key="gantt" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-4 sm:p-6 overflow-x-auto">
+              <GanttView tasks={tasks} spaceId={spaceId} onNavigate={navigate} />
+            </motion.div>
+          )}
+
+          {/* ─── WORKLOAD VIEW ─── */}
+          {activeTab === "workload" && (
+            <motion.div key="workload" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-4 sm:p-6">
+              <WorkloadView tasks={tasks} members={members.filter(m => space?.memberIds?.includes(m.id))} />
+            </motion.div>
+          )}
+
           {activeTab === "subspaces" && (
             <motion.div key="subspaces" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-4 sm:p-6 max-w-4xl mx-auto">
               <div className="flex items-center justify-between mb-5">
@@ -1030,6 +1062,300 @@ export default function SpaceDetail() {
           )}
         </AnimatePresence>
       </div>
+    </div>
+  );
+}
+
+// ─── Calendar View ────────────────────────────────────────────────────────────
+function CalendarView({ tasks, spaceId, onNavigate }: { tasks: Task[]; spaceId?: string; onNavigate: (p: string) => void }) {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const monthName = currentDate.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  const today = new Date();
+
+  const getTasksForDay = (day: number) => {
+    const d = new Date(year, month, day);
+    return tasks.filter(t => {
+      if (!t.deadline) return false;
+      const dl = t.deadline;
+      return dl.getFullYear() === year && dl.getMonth() === month && dl.getDate() === day;
+    });
+  };
+
+  const STATUS_COLORS: Record<string, string> = {
+    "todo": "bg-muted-foreground/60",
+    "in-progress": "bg-blue-400",
+    "review": "bg-yellow-400",
+    "done": "bg-emerald-500",
+    "blocked": "bg-red-500",
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto">
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-sm font-semibold text-foreground">{monthName}</h2>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setCurrentDate(new Date(year, month - 1, 1))} className="px-3 py-1.5 text-xs bg-muted rounded-lg hover:bg-muted/80 transition-all">← Prev</button>
+          <button onClick={() => setCurrentDate(new Date())} className="px-3 py-1.5 text-xs bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all">Today</button>
+          <button onClick={() => setCurrentDate(new Date(year, month + 1, 1))} className="px-3 py-1.5 text-xs bg-muted rounded-lg hover:bg-muted/80 transition-all">Next →</button>
+        </div>
+      </div>
+      <div className="grid grid-cols-7 gap-px bg-border rounded-xl overflow-hidden border border-border">
+        {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d => (
+          <div key={d} className="text-center text-xs font-semibold text-muted-foreground py-2 bg-muted/50">{d}</div>
+        ))}
+        {Array.from({ length: firstDay }, (_, i) => <div key={`empty-${i}`} className="bg-card min-h-[80px]" />)}
+        {Array.from({ length: daysInMonth }, (_, i) => {
+          const day = i + 1;
+          const dayTasks = getTasksForDay(day);
+          const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === day;
+          return (
+            <div key={day} className={cn("bg-card min-h-[80px] p-2 border-0", isToday && "bg-primary/5")}>
+              <div className={cn("text-xs font-bold mb-1 w-5 h-5 flex items-center justify-center rounded-full", isToday ? "bg-primary text-primary-foreground" : "text-foreground")}>{day}</div>
+              <div className="space-y-0.5">
+                {dayTasks.slice(0, 3).map(task => (
+                  <div key={task.id} onClick={() => onNavigate(`/spaces/${spaceId}/tasks/${task.id}`)}
+                    className={cn("text-[10px] px-1.5 py-0.5 rounded text-white cursor-pointer truncate font-medium", STATUS_COLORS[task.status] || "bg-primary")}>
+                    {task.title}
+                  </div>
+                ))}
+                {dayTasks.length > 3 && <div className="text-[10px] text-muted-foreground px-1">+{dayTasks.length - 3} more</div>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Table View ───────────────────────────────────────────────────────────────
+function TableView({ tasks, members, spaceId, onNavigate }: { tasks: Task[]; members: { id: string; displayName?: string; email?: string }[]; spaceId?: string; onNavigate: (p: string) => void }) {
+  const { t } = useLang();
+  const [sortField, setSortField] = useState<"title" | "status" | "priority" | "deadline" | "progress">("deadline");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  const sorted = [...tasks].sort((a, b) => {
+    let cmp = 0;
+    if (sortField === "title")    cmp = a.title.localeCompare(b.title);
+    if (sortField === "status")   cmp = a.status.localeCompare(b.status);
+    if (sortField === "priority") cmp = a.priority.localeCompare(b.priority);
+    if (sortField === "deadline") cmp = (a.deadline?.getTime() || 0) - (b.deadline?.getTime() || 0);
+    if (sortField === "progress") cmp = a.progress - b.progress;
+    return sortDir === "asc" ? cmp : -cmp;
+  });
+
+  const toggleSort = (field: typeof sortField) => {
+    if (sortField === field) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortField(field); setSortDir("asc"); }
+  };
+
+  const SortBtn = ({ field, label }: { field: typeof sortField; label: string }) => (
+    <button onClick={() => toggleSort(field)} className="flex items-center gap-1 hover:text-foreground transition-colors">
+      {label}{sortField === field ? (sortDir === "asc" ? " ↑" : " ↓") : ""}
+    </button>
+  );
+
+  const PRIORITY_COLORS: Record<string, string> = { low: "text-blue-400", medium: "text-yellow-400", high: "text-orange-400", urgent: "text-red-500" };
+  const STATUS_COLORS: Record<string, string> = { "todo": "text-muted-foreground", "in-progress": "text-blue-400", "review": "text-yellow-400", "done": "text-emerald-500", "blocked": "text-red-500" };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-sm font-semibold text-foreground">{t.tableView}</h2>
+        <span className="text-xs text-muted-foreground">{tasks.length} tasks</span>
+      </div>
+      <div className="rounded-xl border border-border overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/50">
+            <tr className="text-xs font-semibold text-muted-foreground border-b border-border">
+              <th className="text-start px-4 py-2.5"><SortBtn field="title" label="Title" /></th>
+              <th className="text-start px-3 py-2.5 hidden sm:table-cell"><SortBtn field="status" label="Status" /></th>
+              <th className="text-start px-3 py-2.5 hidden md:table-cell"><SortBtn field="priority" label="Priority" /></th>
+              <th className="text-start px-3 py-2.5 hidden md:table-cell"><SortBtn field="deadline" label="Deadline" /></th>
+              <th className="text-start px-3 py-2.5 hidden lg:table-cell">Assignees</th>
+              <th className="text-start px-3 py-2.5 hidden lg:table-cell"><SortBtn field="progress" label="%" /></th>
+              <th className="text-start px-3 py-2.5 hidden xl:table-cell">Tags</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {sorted.map(task => {
+              const assignees = task.assigneeIds.map(id => members.find(m => m.id === id)).filter(Boolean) as { id: string; displayName?: string; email?: string }[];
+              return (
+                <tr key={task.id} onClick={() => onNavigate(`/spaces/${spaceId}/tasks/${task.id}`)}
+                  className="hover:bg-muted/30 cursor-pointer transition-colors group">
+                  <td className="px-4 py-2.5">
+                    <p className="font-medium text-foreground group-hover:text-primary truncate max-w-[200px] transition-colors">{task.title}</p>
+                  </td>
+                  <td className="px-3 py-2.5 hidden sm:table-cell">
+                    <span className={cn("text-xs font-medium capitalize", STATUS_COLORS[task.status])}>{task.status.replace("-", " ")}</span>
+                  </td>
+                  <td className="px-3 py-2.5 hidden md:table-cell">
+                    <span className={cn("text-xs font-medium capitalize", PRIORITY_COLORS[task.priority])}>{task.priority}</span>
+                  </td>
+                  <td className="px-3 py-2.5 hidden md:table-cell text-xs text-muted-foreground">
+                    {task.deadline ? format(task.deadline, "MMM d, yyyy") : "—"}
+                  </td>
+                  <td className="px-3 py-2.5 hidden lg:table-cell">
+                    <div className="flex -space-x-1.5">
+                      {assignees.slice(0, 3).map(m => (
+                        <div key={m.id} className="w-5 h-5 rounded-full bg-primary/30 border border-card flex items-center justify-center text-[9px] font-bold text-primary">
+                          {(m.displayName || m.email || "U")[0].toUpperCase()}
+                        </div>
+                      ))}
+                      {assignees.length > 3 && <div className="w-5 h-5 rounded-full bg-muted border border-card flex items-center justify-center text-[9px] text-muted-foreground">+{assignees.length - 3}</div>}
+                    </div>
+                  </td>
+                  <td className="px-3 py-2.5 hidden lg:table-cell">
+                    <div className="flex items-center gap-2">
+                      <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div className="h-full bg-primary rounded-full" style={{ width: `${task.progress}%` }} />
+                      </div>
+                      <span className="text-xs text-muted-foreground">{task.progress}%</span>
+                    </div>
+                  </td>
+                  <td className="px-3 py-2.5 hidden xl:table-cell">
+                    <div className="flex gap-1 flex-wrap">
+                      {(task.tags || []).slice(0, 2).map(tag => (
+                        <span key={tag} className="text-[10px] px-1.5 py-0.5 bg-primary/10 text-primary rounded-full">#{tag}</span>
+                      ))}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+            {tasks.length === 0 && (
+              <tr><td colSpan={7} className="px-4 py-8 text-center text-sm text-muted-foreground">No tasks yet</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ─── Gantt View ───────────────────────────────────────────────────────────────
+function GanttView({ tasks, spaceId, onNavigate }: { tasks: Task[]; spaceId?: string; onNavigate: (p: string) => void }) {
+  const tasksWithDates = tasks.filter(t => t.deadline).sort((a, b) => (a.deadline?.getTime() || 0) - (b.deadline?.getTime() || 0));
+  if (tasksWithDates.length === 0) return (
+    <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+      <Layers className="w-12 h-12 opacity-20 mb-3" /><p className="font-semibold">No tasks with deadlines</p>
+    </div>
+  );
+
+  const minDate = tasksWithDates[0].startDate || tasksWithDates[0].createdAt;
+  const maxDate = tasksWithDates[tasksWithDates.length - 1].deadline!;
+  const totalDays = Math.max(1, differenceInDays(maxDate, minDate) + 7);
+  const today = new Date();
+
+  const STATUS_COLORS: Record<string, string> = {
+    "todo": "#6b7280", "in-progress": "#3b82f6", "review": "#f59e0b",
+    "done": "#10b981", "blocked": "#ef4444",
+  };
+
+  return (
+    <div>
+      <h2 className="text-sm font-semibold text-foreground mb-4">Gantt Chart</h2>
+      <div className="min-w-[600px]">
+        {tasksWithDates.map(task => {
+          const start = task.startDate || task.createdAt;
+          const end = task.deadline!;
+          const startOffset = Math.max(0, differenceInDays(start, minDate));
+          const duration = Math.max(1, differenceInDays(end, start));
+          const leftPct = (startOffset / totalDays) * 100;
+          const widthPct = (duration / totalDays) * 100;
+          const isOverdue = end < today && task.status !== "done";
+          const color = isOverdue ? "#ef4444" : STATUS_COLORS[task.status] || "#6366f1";
+
+          return (
+            <div key={task.id} className="flex items-center gap-3 mb-2 group cursor-pointer" onClick={() => onNavigate(`/spaces/${spaceId}/tasks/${task.id}`)}>
+              <div className="w-40 shrink-0 text-xs text-foreground font-medium truncate group-hover:text-primary transition-colors">{task.title}</div>
+              <div className="flex-1 h-7 relative bg-muted/50 rounded-lg overflow-hidden">
+                <div className="absolute h-full rounded-lg transition-all flex items-center px-2 overflow-hidden" style={{ left: `${leftPct}%`, width: `${widthPct}%`, backgroundColor: color + "30", borderLeft: `3px solid ${color}` }}>
+                  <span className="text-[10px] font-semibold truncate" style={{ color }}>{task.progress}%</span>
+                </div>
+                {/* Today marker */}
+                {today >= minDate && today <= maxDate && (
+                  <div className="absolute h-full w-0.5 bg-primary/60" style={{ left: `${(differenceInDays(today, minDate) / totalDays) * 100}%` }} />
+                )}
+              </div>
+              <div className="w-16 text-xs text-muted-foreground shrink-0">{format(end, "MMM d")}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Workload View ────────────────────────────────────────────────────────────
+function WorkloadView({ tasks, members }: { tasks: Task[]; members: { id: string; displayName?: string; email?: string }[] }) {
+  const capacityPerDay = 8;
+  const workDaysInMonth = 22;
+  const totalCapacity = capacityPerDay * workDaysInMonth;
+
+  const getMemberLoad = (memberId: string) => {
+    const memberTasks = tasks.filter(t => t.assigneeIds.includes(memberId) && t.status !== "done");
+    const totalHours = memberTasks.reduce((sum, t) => sum + (t.estimatedHours || 1), 0);
+    return { totalHours, taskCount: memberTasks.length, tasks: memberTasks };
+  };
+
+  const getHealthStatus = (hours: number) => {
+    if (hours > totalCapacity * 1.2) return { label: "Overloaded", color: "text-red-500", bg: "bg-red-500" };
+    if (hours > totalCapacity * 0.8) return { label: "Balanced", color: "text-emerald-500", bg: "bg-emerald-500" };
+    return { label: "Underloaded", color: "text-blue-400", bg: "bg-blue-400" };
+  };
+
+  const showMembers = members.length > 0 ? members : [];
+
+  return (
+    <div className="max-w-3xl mx-auto">
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-sm font-semibold text-foreground">Workload</h2>
+        <span className="text-xs text-muted-foreground">Capacity: {totalCapacity}h/month ({capacityPerDay}h/day)</span>
+      </div>
+      {showMembers.length === 0 ? (
+        <div className="text-center py-10 text-muted-foreground text-sm">No members assigned to this space</div>
+      ) : (
+        <div className="space-y-4">
+          {showMembers.map(member => {
+            const { totalHours, taskCount, tasks: memberTasks } = getMemberLoad(member.id);
+            const pct = Math.min(100, Math.round((totalHours / totalCapacity) * 100));
+            const health = getHealthStatus(totalHours);
+            return (
+              <div key={member.id} className="bg-card border border-border rounded-xl p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-8 h-8 rounded-full bg-primary/30 flex items-center justify-center text-xs font-bold text-primary shrink-0">
+                    {(member.displayName || member.email || "U")[0].toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-foreground">{member.displayName || member.email}</p>
+                    <p className="text-xs text-muted-foreground">{taskCount} active tasks · {totalHours}h estimated</p>
+                  </div>
+                  <span className={cn("text-xs font-semibold", health.color)}>{health.label}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-2.5 bg-muted rounded-full overflow-hidden">
+                    <div className={cn("h-full rounded-full transition-all", health.bg)} style={{ width: `${pct}%` }} />
+                  </div>
+                  <span className="text-xs font-bold text-foreground w-8 text-end">{pct}%</span>
+                </div>
+                {memberTasks.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1">
+                    {memberTasks.slice(0, 5).map(t => (
+                      <span key={t.id} className="text-[10px] px-2 py-0.5 bg-muted text-muted-foreground rounded-full truncate max-w-[120px]">{t.title}</span>
+                    ))}
+                    {memberTasks.length > 5 && <span className="text-[10px] text-muted-foreground">+{memberTasks.length - 5} more</span>}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

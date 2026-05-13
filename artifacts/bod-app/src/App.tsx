@@ -21,6 +21,14 @@ import Settings from "@/pages/Settings";
 import Attendance from "@/pages/Attendance";
 import WeeklyReport from "@/pages/WeeklyReport";
 import Bugs from "@/pages/Bugs";
+import Goals from "@/pages/Goals";
+import MyTasks from "@/pages/MyTasks";
+import Sprints from "@/pages/Sprints";
+import Automations from "@/pages/Automations";
+import Inbox from "@/pages/Inbox";
+import Portfolio from "@/pages/Portfolio";
+import Chat from "@/pages/Chat";
+import Forms from "@/pages/Forms";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -89,6 +97,15 @@ function Router() {
       <Route path="/attendance" component={() => <ProtectedRoute component={Attendance} />} />
       <Route path="/weekly-report" component={() => <ProtectedRoute component={WeeklyReport} />} />
       <Route path="/bugs" component={() => <ProtectedRoute component={Bugs} adminOnly />} />
+      {/* ── New ClickUp-like features ── */}
+      <Route path="/goals" component={() => <ProtectedRoute component={Goals} />} />
+      <Route path="/my-tasks" component={() => <ProtectedRoute component={MyTasks} />} />
+      <Route path="/sprints" component={() => <ProtectedRoute component={Sprints} />} />
+      <Route path="/automations" component={() => <ProtectedRoute component={Automations} adminOnly />} />
+      <Route path="/inbox" component={() => <ProtectedRoute component={Inbox} />} />
+      <Route path="/portfolio" component={() => <ProtectedRoute component={Portfolio} />} />
+      <Route path="/chat" component={() => <ProtectedRoute component={Chat} />} />
+      <Route path="/forms" component={() => <ProtectedRoute component={Forms} adminOnly />} />
       <Route component={NotFound} />
     </Switch>
   );
