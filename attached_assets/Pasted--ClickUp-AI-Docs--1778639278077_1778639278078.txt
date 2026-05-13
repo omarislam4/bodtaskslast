@@ -1,0 +1,457 @@
+# 🚀 برومبت شامل لبناء موقع مثل ClickUp — بدون AI، بدون Docs، بدون صور/فيديو/تسجيلات
+
+---
+
+## 🎯 الهدف
+أنت مطور متخصص في بناء منصات إدارة العمل الشاملة (Work OS). مهمتك بناء منصة متكاملة تحتوي على **جميع** ميزات ClickUp الخاصة بإدارة المهام، التنظيم، التعاون، التقارير، والأتمتة — بدون أي ميزات AI، ومن غير Docs أو Wikis أو Notepad، ومن غير صور أو فيديوهات أو تسجيلات صوتية/شاشة.
+
+---
+
+## 🏗️ 1. هيكل المنصة (Hierarchy System)
+
+- **Workspace** → أعلى مستوى، يمثل الشركة أو المؤسسة بالكامل
+- **Spaces** → تقسيم العمل حسب الفرق أو الأقسام (مثلاً: Marketing, Engineering, HR)
+- **Folders** → تجميع القوائم داخل كل Space
+- **Subfolders** → طبقات إضافية داخل الفولدرات للتنظيم الدقيق (بيتا)
+- **Lists** → القوائم التي تحتوي على المهام مباشرةً
+- **Tasks** → وحدة العمل الأساسية
+- **Subtasks** → تقسيم المهمة إلى أجزاء أصغر (حتى 7 مستويات متداخلة / Nested Subtasks)
+- **Checklists** → قائمة خطوات داخل المهمة الواحدة قابلة للتحديد (✓)
+
+كل مستوى يدعم: اسم مخصص، لون مخصص، أيقونة مخصصة، وصف، وصلاحيات منفصلة.
+
+---
+
+## ✅ 2. إدارة المهام (Task Management)
+
+### إنشاء وتعديل المهام:
+- عنوان + وصف نصي (Rich Text: bold, italic, lists, code, headings, tables)
+- تاريخ بدء (Start Date) + تاريخ انتهاء (Due Date) + وقت محدد لكل منهما
+- **Multiple Assignees**: تعيين المهمة لأكثر من شخص
+- **Task Priorities**: Urgent / High / Normal / Low / No Priority
+- **Custom Task Statuses**: إنشاء حالات مخصصة لكل قائمة مستقلة عن الباقي
+- **Custom Task Types**: تعريف أنواع مخصصة (Bug, Feature, Lead, Epic...) بأيقونات مخصصة
+- **Tags**: تصنيف المهام عبر Tags للبحث والتصفية السريعة
+- **Task Relationships / Dependencies**:
+  - Blocking (هذه المهمة تمنع تقدم مهمة أخرى)
+  - Blocked By (هذه المهمة موقوفة على مهمة أخرى)
+  - Related To (مهام مرتبطة بالموضوع)
+  - Duplicate Of (نسخة مكررة)
+- **Subtasks** حتى 7 مستويات متداخلة
+- **Checklists** داخل المهمة مع إمكانية تعيين كل بند لشخص
+- **Attachments**: رفع ملفات (PDF, Excel, ZIP...) ومشاركة روابط خارجية
+- **Custom Fields**: حقول إضافية مخصصة لكل مهمة (تفصيل كامل في قسم 9)
+- **Task Templates**: حفظ هيكل المهمة كقالب وإعادة استخدامه
+- **Recurring Tasks**: مهام تتكرر تلقائياً (يومياً، أسبوعياً، شهرياً، سنوياً، Custom)
+- **Sprint Points**: تقدير جهد المهمة بالنقاط العددية
+- **Time Estimates**: تحديد المدة الزمنية المتوقعة لإتمام المهمة
+- **Milestones**: تحديد نقاط محورية في الجدول الزمني للمشروع
+- **Epics**: تجميع مهام متعددة تحت هدف أكبر
+- **Task Tray**: تصغير المهمة المفتوحة إلى شريط سفلي دون إغلاقها
+- **Watching a Task**: متابعة مهمة دون الانتساب إليها لاستقبال إشعاراتها
+- **Personal Priorities**: تحديد ترتيب أولوياتك الشخصية
+- **Copy / Duplicate Task**: نسخ مهمة مع كل محتوياتها
+- **Move Task**: نقل مهمة من قائمة إلى أخرى أو من Space إلى آخر
+- **Merge Tasks**: دمج مهمتين في واحدة
+- **Task History / Activity Log**: سجل كامل بكل تعديل حدث على المهمة
+
+---
+
+## 👁️ 3. طرق العرض (Views) — 15+ عرض
+
+كل عرض قابل للتخصيص الكامل مع Filter, Group By, Sort, وحفظ الإعدادات.
+
+### العروض:
+
+**List View**
+عرض قائمة كلاسيكي لكل المهام مع تحرير سريع inline لأي حقل، دعم Group By لأي حقل، collapse/expand للمجموعات.
+
+**Kanban Board View**
+لوحة عمود بعمود تمثل مراحل سير العمل، سحب وإفلات (Drag & Drop) لتغيير الحالة، تحديد حد WIP لكل عمود، ألوان المهام حسب الأولوية أو الحالة.
+
+**Gantt Chart View**
+جدول زمني تفاعلي لإدارة المشاريع، عرض وتعديل التبعيات (Dependencies) بصرياً، المسار الحرج (Critical Path)، سحب وإفلات لتعديل التواريخ، Baseline للمقارنة مع الخطة الأصلية.
+
+**Calendar View**
+تقويم بعرض يومي / أسبوعي / شهري، سحب المهام لتغيير مواعيدها، عرض المهام حسب تاريخ البدء أو الانتهاء.
+
+**Table View**
+عرض جدولي يشبه Spreadsheet، تحرير أي حقل مباشرةً، إضافة/حذف أعمدة، Freeze أعمدة، Resize الأعمدة.
+
+**Timeline View**
+عرض خطي للمهام والمشاريع بالتوازي على محور زمني، مع إدارة التبعيات.
+
+**Workload View**
+عرض طاقة الفريق وتوزيع المهام على الأعضاء، تحديد سعة كل شخص (Capacity)، تحذير عند التحميل الزائد، إعادة توزيع المهام بالسحب والإفلات.
+
+**Map View**
+عرض المهام على خريطة جغرافية تفاعلية بناءً على Location Field في المهمة، مناسب للفرق الميدانية والفعاليات.
+
+**Mind Map View**
+عرض ذهني لهيكلة المشاريع والتبعيات بصرياً، إنشاء مهام جديدة مباشرةً من الـ Mind Map.
+
+**Whiteboard View**
+لوحة بيضاء تفاعلية للعصف الذهني والتخطيط البصري، إضافة أشكال، أسهم، نصوص، sticky notes، وربطها بمهام حقيقية.
+
+**Canvas View**
+عرض ديناميكي بصري مخصص، يجمع Cards من أي مصدر في تخطيط مرن قابل للتعديل.
+
+**Portfolio View**
+نظرة عامة على تقدم عدة مشاريع أو Lists في آن واحد، مع مؤشرات الصحة.
+
+**Activity View**
+سجل كامل بجميع النشاطات والتعديلات على مستوى الـ List أو الـ Space.
+
+**My Tasks View**
+عرض مخصص لكل مستخدم يجمع كل مهامه المُعيّنة من جميع الـ Spaces، مع صفحات Today & Overdue.
+
+**Home**
+الصفحة الرئيسية الشخصية: My Work، التذكيرات، النشاط الأخير، الأحداث القادمة.
+
+### خصائص مشتركة في جميع العروض:
+- **Filter**: تصفية بأي حقل (حالة، منتسب، أولوية، custom field، تاريخ...)
+- **Group By**: تجميع بأي حقل
+- **Sort**: ترتيب بأي حقل تصاعدياً أو تنازلياً
+- **Subtask display**: إظهار أو إخفاء الـ Subtasks
+- **Columns**: إظهار أو إخفاء الأعمدة/الحقول
+- **Save View**: حفظ الإعدادات كـ View محفوظ
+- **Public Link**: مشاركة العرض برابط عام للأطراف الخارجية
+
+---
+
+## ⚙️ 4. الأتمتة (Automations)
+
+واجهة بناء بصرية No-Code لإنشاء قواعد أتمتة.
+
+### المحفزات (Triggers):
+- تغيير حالة المهمة
+- إضافة أو إزالة منتسب
+- تغيير الأولوية
+- إضافة تعليق
+- تغيير قيمة أي Custom Field
+- تغيير تاريخ الانتهاء أو البدء
+- إنشاء مهمة جديدة
+- نقل مهمة إلى قائمة أخرى
+- كلمة مفتاحية تُكتب داخل التعليقات
+- قبل / بعد تاريخ محدد (Deadline triggers)
+- Google Calendar Event
+
+### الشروط (Conditions):
+- إذا كانت قيمة حقل معين تساوي X
+- إذا كانت المهمة في Space / Folder / List معين
+- إذا كانت الأولوية أعلى أو أقل من X
+- شروط مركّبة بـ AND / OR
+- Formula Fields داخل الشروط
+
+### الإجراءات (Actions):
+- تغيير حالة المهمة
+- تعيين أو إلغاء تعيين منتسب
+- تغيير الأولوية
+- إنشاء subtask تلقائياً
+- نسخ أو نقل المهمة
+- تعديل قيمة أي Custom Field
+- إرسال إيميل
+- نشر رسالة في Slack
+- إنشاء / تحديث / حذف Google Calendar Event
+- تشغيل Webhook خارجي
+- إنشاء مهمة جديدة في قائمة أخرى
+
+### خصائص إضافية:
+- ربط Automations عبر Spaces مختلفة
+- عدد Automations حسب الخطة
+- سجل تاريخ تشغيل كل Automation
+
+---
+
+## 💬 5. التواصل والتعاون (Collaboration)
+
+### Chat:
+- محادثات فورية Real-Time داخل المنصة
+- Chat Channels منفصلة للفرق والمشاريع
+- رسائل مباشرة (Direct Messages) بين الأعضاء
+- @mention لأي عضو أو مهمة أو قائمة
+- Thread replies (الرد على رسالة محددة)
+- Reactions (Emoji reactions على الرسائل)
+- Pinning رسائل مهمة
+- تحويل أي رسالة إلى مهمة مباشرةً
+- إرفاق مهام وروابط في المحادثة
+
+### Inbox:
+- مركز إشعارات مركزي لكل التحديثات
+- تصفية الإشعارات حسب النوع (Mentions, Assignments, Comments...)
+- تحديد مقروء / غير مقروء
+- Archive للإشعارات القديمة
+
+### Assign Comments:
+- تحويل أي تعليق على مهمة إلى action item قابل للتعيين لشخص محدد
+- متابعة حالة التعليق المُعيّن (مفتوح / محلول)
+
+### Collaboration Detection:
+- رؤية من يشاهد أو يعدّل نفس المهمة في الوقت الفعلي
+- مؤشر بصري يمنع التعارض في التعديل
+
+### Sync Ups (اجتماعات فورية):
+- اجتماعات مباشرة مدمجة داخل المنصة
+- مرتبطة بالمهام والمشاريع مباشرةً
+
+### Email Project Management:
+- إنشاء مهام جديدة بإرسال إيميل لعنوان خاص بالـ List
+- الرد على التعليقات من الإيميل مباشرةً
+- إرسال إيميلات للعملاء الخارجيين من داخل المهمة
+
+### Forms:
+- نماذج استبيان عامة (Public Forms) مرتبطة بـ List
+- تخصيص كامل: حقول نصية، dropdown، تاريخ، rating، checkbox...
+- Conditional Logic: إظهار/إخفاء حقول بناءً على إجابات سابقة
+- كل submission يُنشئ مهمة تلقائياً في الـ List المحددة
+- مشاركة النموذج برابط عام أو Embed في موقع خارجي
+
+### Reminders:
+- تذكيرات شخصية بتواريخ وأوقات محددة
+- Recurring Reminders (يومي، أسبوعي، شهري، سنوي، Custom)
+- إنشاء التذكيرات بلغة طبيعية ("كل اثنين الساعة 9 صباحاً")
+- متاحة لجميع الأعضاء بما فيهم الـ Guests
+
+### Profiles:
+- صفحة شخصية لكل عضو تُظهر نشاطه ومهامه وتفاصيله
+- إضافة Bio، معلومات التواصل، timezone
+
+---
+
+## 📊 6. التقارير والداشبوردات (Reporting & Dashboards)
+
+### Dashboards:
+- إنشاء لوحات تحكم مخصصة بالكامل
+- إضافة Cards بأحجام مختلفة وترتيبها بسحب وإفلات
+- أنواع الـ Cards المتاحة:
+  - Task List (قائمة مهام بفلاتر محددة)
+  - Burndown Chart (للـ Sprints)
+  - Sprint Velocity Chart
+  - Cumulative Flow Diagram
+  - Time Tracking Summary
+  - Goals Progress
+  - Workload Overview
+  - Custom Bar / Line / Pie Chart
+  - Number Card (عدد مهام، مجموع ساعات...)
+  - Calculation Card (SUM, AVG, MAX, MIN لأي Custom Field)
+  - Portfolios Card
+- فلاتر ديناميكية على مستوى الـ Dashboard
+- تحديث real-time
+- مقارنة فترات زمنية (أسبوع vs أسبوع، شهر vs شهر)
+- مشاركة الـ Dashboard برابط عام أو مع أعضاء محددين
+
+### Goals:
+- إنشاء أهداف كبيرة مرتبطة بـ Tasks أو Lists
+- أنواع Target: رقمي (Number), نسبة مئوية (%), True/False, Currency
+- تتبع التقدم تلقائياً من المهام المرتبطة
+- تجميع Goals تحت Goal Folders
+- عرض نسبة الإنجاز الكلية
+
+### Portfolios:
+- نظرة عامة على تقدم عدة مشاريع أو Lists
+- مؤشرات صحة المشروع (On Track, At Risk, Off Track)
+- مقارنة مشاريع متعددة جنباً إلى جنب
+
+---
+
+## 🗃️ 7. الحقول المخصصة (Custom Fields)
+
+أنواع الحقول المتاحة:
+- **Text** — نص حر
+- **Number** — أرقام مع تحديد وحدة القياس
+- **Currency** — عملة مع تحديد نوع العملة والمنازل العشرية
+- **Date** — تاريخ مع أو بدون وقت
+- **Dropdown** — قائمة منسدلة بخيارات مخصصة
+- **Labels** — تصنيفات متعددة الاختيار من قائمة
+- **Checkbox** — صواب / خطأ
+- **Email** — بريد إلكتروني قابل للنقر
+- **Phone** — رقم هاتف قابل للنقر
+- **URL** — رابط خارجي قابل للنقر
+- **Rating** — تقييم بالنجوم (1-5 أو 1-10)
+- **Progress** — شريط تقدم بنسبة مئوية
+- **Formula** — صيغة حسابية تعتمد على حقول أخرى
+- **Relationship** — ربط بمهام أو Lists أخرى
+- **People** — تعيين أشخاص كحقل مخصص
+- **Location** — إضافة موقع جغرافي
+- **Emoji** — اختيار إيموجي للتعبير عن حالة أو تصنيف
+
+خصائص إضافية للـ Custom Fields:
+- حقول خاصة **(Private Custom Fields)** مع صلاحيات منفصلة
+- إخفاء أو إظهار الحقل في عروض معينة
+- استخدام الحقل في الفلترة، الترتيب، والتجميع
+- استخدام الحقل في الـ Automations والـ Dashboards
+
+---
+
+## ⏱️ 8. إدارة الوقت والموارد (Time & Resource Management)
+
+### Project Time Tracking:
+- مؤقت مدمج (Start / Stop) لتسجيل الوقت على كل مهمة
+- إضافة وقت يدوياً (Manual Time Entry) بتاريخ وملاحظة
+- تعديل أو حذف إدخالات الوقت
+- تمييز الوقت كـ Billable أو Non-Billable
+- عرض إجمالي الوقت المُسجّل لكل مهمة
+
+### Time Estimates:
+- تحديد المدة الزمنية المتوقعة لكل مهمة
+- مقارنة الوقت المقدّر بالوقت الفعلي
+- Rollup لمجموع التقديرات على مستوى الـ List أو الـ Project
+
+### Timesheets:
+- عرض جدولي أسبوعي لجميع ساعات الفريق
+- تصفية حسب الشخص، المشروع، أو الفترة الزمنية
+- موافقة المدير على الساعات (Approvals Workflow)
+- تصدير الـ Timesheets (CSV, Excel)
+
+### Workload View:
+- عرض بصري لطاقة كل عضو في الفريق
+- تحديد الـ Capacity لكل شخص (ساعات/يوم أو نقاط/أسبوع)
+- تحذير تلقائي عند التحميل الزائد (Overloaded)
+- إعادة توزيع المهام بالسحب والإفلات مباشرةً من الـ View
+
+### Teams Hub:
+- مركز إدارة الفريق
+- عرض أولويات كل عضو، نشاطه، وحجم مهامه
+- إدارة متاحية الأعضاء (Availability)
+- عرض حالة الأعضاء (Available, Busy, Away)
+
+### Scheduling:
+- تحديث تواريخ المهام تلقائياً عند التأخير أو التقدم
+- إدارة التبعيات في الجدول الزمني
+
+### Recurring Tasks:
+- تكرار المهمة تلقائياً بأي جدول زمني
+- خيارات: Daily, Weekly, Monthly, Yearly, Custom
+- تحديد نهاية التكرار: للأبد، عدد مرات محدد، تاريخ معين
+
+---
+
+## 🔒 9. الصلاحيات والأمان (Permissions & Security)
+
+### مستويات الوصول:
+- **Owner** — التحكم الكامل في الـ Workspace
+- **Admin** — إدارة الأعضاء والإعدادات
+- **Member** — وصول عادي حسب الصلاحيات
+- **Guest** — وصول محدود وقابل للتخصيص لأطراف خارجية
+
+### Custom Roles:
+- إنشاء أدوار مخصصة بصلاحيات دقيقة محددة
+- تعيين الأدوار على مستوى: Workspace, Space, Folder, List, Task
+
+### إعدادات الأمان:
+- **Two-Factor Authentication (2FA)**
+- **SSO (Single Sign-On)** مع Google, Microsoft, SAML 2.0
+- **SCIM Provisioning** لإدارة الأعضاء تلقائياً (Enterprise)
+- **Audit Logs**: سجل كامل لجميع الإجراءات والتغييرات
+- **IP Restrictions**: تقييد الوصول لعناوين IP محددة (Enterprise)
+- **Custom Data Residency**: اختيار منطقة تخزين البيانات (Enterprise)
+- **SOC 2 Type II Compliance**
+- **HIPAA Compliance** (Enterprise)
+- **Private Custom Fields**: حقول مرئية لفئات محددة فقط
+- تشفير البيانات أثناء النقل وأثناء التخزين
+
+---
+
+## 🔗 10. التكاملات والأدوات (Integrations & Developer Tools)
+
+### تكاملات أصلية رئيسية (1000+ أداة):
+Slack, Google Workspace (Drive, Calendar, Gmail, Sheets, Forms), Microsoft Office 365 (Teams, Outlook, OneDrive), GitHub, GitLab, Bitbucket, Figma, HubSpot, Salesforce, Jira, Trello, Asana, Monday.com, Confluence, Zendesk, Intercom, Zapier, Make (Integromat), Airtable, Typeform, JotForm, Calendly, Discord, Miro, Tableau, Toggl, Clockify, Harvest, Zoom, Stripe, Evernote, Dropbox, Box, و أكثر...
+
+### أدوات المطورين:
+- **REST API** كاملة وموثّقة بـ Swagger
+- **Webhooks**: إرسال events لأي URL خارجي عند حدوث تغييرات في ClickUp
+- **ClickUp MCP**: وصول آمن لبيانات ClickUp
+- **Cursor Integration**: ربط مع Cursor IDE للوصول للمهام أثناء البرمجة
+- OAuth 2.0 للتطبيقات الخارجية
+
+---
+
+## 🎨 11. التخصيص والشخصنة (Customization & Personalization)
+
+- **Custom Color Themes**: اختيار لون مخصص للـ Workspace والـ Spaces
+- **Dark Mode / Light Mode**: تبديل المظهر
+- **Localization**: دعم لغات متعددة (عربي، إنجليزي، فرنسي، إسباني...)
+- **Custom Notifications**: التحكم الكامل في أنواع الإشعارات (ماذا تستقبل وكيف)
+- **Custom Icons** لكل List وSpace وFolder
+- **Sidebar** قابل للتخصيص (إظهار/إخفاء/إعادة ترتيب)
+- **Density Settings**: Compact, Comfortable, Spacious
+- **Start Page** مخصصة لكل مستخدم
+- **Pinned Items**: تثبيت أي عنصر في الشريط الجانبي
+
+---
+
+## 📋 12. القوالب (Templates)
+
+- مكتبة تحتوي على 1000+ قالب جاهز
+- قوالب مُصنّفة حسب: Marketing, Engineering, HR, Sales, Design, Operations, Education, Finance, Legal...
+- قوالب لـ: Spaces, Folders, Lists, Tasks بشكل منفصل
+- إنشاء قوالب مخصصة وحفظها
+- مشاركة القوالب مع الفريق
+- استيراد القوالب من المجتمع
+
+---
+
+## 🏃 13. إدارة Agile و Scrum
+
+- **Sprints**: إنشاء Sprints بتواريخ بدء وانتهاء
+- **Sprint Points**: تقدير المهام بالـ Story Points
+- **Backlog Management**: قائمة منفصلة للـ Backlog
+- **Sprint Board**: Kanban Board مخصص للـ Sprint الحالي
+- **Burndown Chart** في الـ Dashboards
+- **Sprint Velocity Chart** في الـ Dashboards
+- **Cumulative Flow Diagram**
+- **Epics** وـ **User Stories**
+- **Sprint Automations**: نقل المهام غير المنجزة تلقائياً للـ Sprint التالي
+- **Sprint Review**: ملخص إنجازات كل Sprint
+
+---
+
+## 📱 14. المنصات المتاحة (Platforms)
+
+- **Web App** — متصفح (Chrome, Firefox, Safari, Edge)
+- **Desktop App** — Windows, Mac, Linux
+- **Mobile App** — iOS وAndroid مع دعم كامل للميزات
+- **Chrome Extension** — إضافة مهام من أي صفحة ويب مباشرةً
+
+---
+
+## 💳 15. خطط الأسعار (Pricing Plans)
+
+| الخطة | المستهدفون | أبرز الخصائص |
+|---|---|---|
+| **Free Forever** | الأفراد والفرق الصغيرة | 100MB storage، 100 Automations/شهر، unlimited tasks |
+| **Unlimited** | الفرق النامية | Unlimited storage، 1,000 Automations/شهر، Guests مجانيون |
+| **Business** | الفرق المتوسطة | 10,000 Automations/شهر، Timesheets، Workload، Goals متقدمة، Custom Roles |
+| **Enterprise** | المؤسسات الكبيرة | Automations غير محدود، SSO، SCIM، Audit Logs، HIPAA، IP Restrictions |
+
+---
+
+## 🗂️ 16. ميزات عامة وإضافية
+
+- **Global Search**: بحث متقدم في جميع المهام والـ Spaces مع فلاتر
+- **Quick Create**: إنشاء مهمة أو تذكير أو List من أي مكان في الواجهة بسرعة
+- **Recently Visited**: عرض العناصر التي زرتها مؤخراً
+- **Keyboard Shortcuts**: اختصارات لوحة مفاتيح شاملة لكل الوظائف
+- **Import** من أدوات أخرى: Trello, Asana, Monday.com, Jira, Basecamp, Notion, Todoist, Wrike, CSV
+- **Export** للـ CSV, Excel, PDF
+- **Public Sharing**: مشاركة أي Task, List, Dashboard بـ Public link للقراءة فقط
+- **Printable Views**: طباعة أي عرض
+- **Offline Mode**: العمل بدون إنترنت مع مزامنة لاحقة
+- **Email Notifications**: إشعارات بالبريد الإلكتروني قابلة للتخصيص
+- **In-App Notifications**: إشعارات داخل التطبيق
+- **Push Notifications**: إشعارات على الموبايل والـ Desktop
+- **Multi-Workspace Support**: الانتماء لأكثر من Workspace بحساب واحد
+- **Trash / Recycle Bin**: استعادة المهام والعناصر المحذوفة
+- **Version History للمهام**: استعادة أي نسخة سابقة من المهمة
+- **Bulk Edit / Multi-select**: تعديل عدة مهام في نفس الوقت
+- **Merge Tasks**: دمج مهمتين مع بعضهما
+- **Sort, Filter, Group في كل View**
+- **Saved Filters**: حفظ مجموعة فلاتر وإعادة استخدامها
+- **Due Date Warnings**: تحذيرات تلقائية عند اقتراب المواعيد
+- **Status Rollup**: عرض نسبة إنجاز المهام الأب بناءً على الـ Subtasks
+
+---
+
+## 🔔 ملاحظة للمطور
+
+**لا يوجد استثناء.** كل ميزة في هذا البرومبت مطلوب تطبيقها بالكامل. ابدأ بـ Database Schema وـ System Architecture يدعمان كل هذه المميزات قبل كتابة سطر كود واحد.
