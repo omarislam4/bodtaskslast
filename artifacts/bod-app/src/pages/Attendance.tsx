@@ -62,7 +62,6 @@ export default function Attendance() {
     }
   };
 
-  const isLoading = sendingAttendance !== null;
 
   return (
     <div className="p-4 sm:p-6 max-w-2xl mx-auto">
@@ -87,10 +86,10 @@ export default function Attendance() {
             </div>
           </div>
           <motion.button
-            whileHover={isLoading ? {} : { scale: 1.02 }}
-            whileTap={isLoading ? {} : { scale: 0.98 }}
+            whileHover={sendingAttendance === "start" ? {} : { scale: 1.02 }}
+            whileTap={sendingAttendance === "start" ? {} : { scale: 0.98 }}
             onClick={() => handleAttendance("start")}
-            disabled={isLoading}
+            disabled={sendingAttendance === "start"}
             className="w-full py-3 bg-emerald-500 text-white text-sm font-semibold rounded-xl hover:bg-emerald-600 disabled:opacity-60 transition-colors shadow-sm"
           >
             {sendingAttendance === "start" ? "Recording..." : "Start Main Shift"}
@@ -112,10 +111,10 @@ export default function Attendance() {
             </div>
           </div>
           <motion.button
-            whileHover={isLoading ? {} : { scale: 1.02 }}
-            whileTap={isLoading ? {} : { scale: 0.98 }}
+            whileHover={sendingAttendance === "midday" ? {} : { scale: 1.02 }}
+            whileTap={sendingAttendance === "midday" ? {} : { scale: 0.98 }}
             onClick={() => handleAttendance("midday")}
-            disabled={isLoading}
+            disabled={sendingAttendance === "midday"}
             className="w-full py-3 bg-blue-500 text-white text-sm font-semibold rounded-xl hover:bg-blue-600 disabled:opacity-60 transition-colors shadow-sm"
           >
             {sendingAttendance === "midday" ? "Recording..." : "Mid Day Attendance"}
@@ -144,10 +143,10 @@ export default function Attendance() {
             className="w-full px-4 py-3 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all resize-none mb-3"
           />
           <motion.button
-            whileHover={isLoading ? {} : { scale: 1.02 }}
-            whileTap={isLoading ? {} : { scale: 0.98 }}
+            whileHover={sendingAttendance === "end" ? {} : { scale: 1.02 }}
+            whileTap={sendingAttendance === "end" ? {} : { scale: 0.98 }}
             onClick={() => handleAttendance("end")}
-            disabled={isLoading || !endShiftReport.trim()}
+            disabled={sendingAttendance === "end" || !endShiftReport.trim()}
             className="w-full py-3 bg-orange-500 text-white text-sm font-semibold rounded-xl hover:bg-orange-600 disabled:opacity-60 transition-colors shadow-sm flex items-center justify-center gap-2"
           >
             <Send className="w-4 h-4" />

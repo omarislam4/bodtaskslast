@@ -113,7 +113,7 @@ export default function Dashboard() {
       .filter((m) => m.total > 0)
       .sort((a, b) => b.total - a.total)
       .slice(0, 10);
-  }, [tasks, members]);
+  }, [tasks, members, perfSpaceId]);
 
   const memberPieData = useMemo(() =>
     memberStats.map((m) => ({ name: m.name, value: m.total, color: m.color })),

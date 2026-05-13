@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, Send, Reply, Pencil, Trash2, X, Smile, Check } from "lucide-react";
-import { collection, addDoc, updateDoc, doc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, getDocs, query, where, writeBatch } from "firebase/firestore";
 import { db } from "@/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMessages } from "@/hooks/useChat";
@@ -14,14 +14,16 @@ interface Member { id: string; displayName?: string; email?: string; }
 
 interface ChatPanelProps {
   channelId: string;
+  channelName?: string;
   spaceId?: string;
   spaceMembers?: Member[];
   className?: string;
+  onClearChat?: () => void;
 }
 
 const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🔥"];
 
-export function ChatPanel({ channelId, spaceId, spaceMembers = [], className }: ChatPanelProps) {
+export function ChatPanel({ channelId, channelName, spaceId, spaceMembers = [], className, onClearChat }: ChatPanelProps) {
   const { userDoc, isAdmin } = useAuth();
   const { messages, loading } = useMessages(channelId);
 
@@ -136,8 +138,20 @@ export function ChatPanel({ channelId, spaceId, spaceMembers = [], className }: 
 
   const handleDelete = async (msgId: string) => {
     try {
-      await updateDoc(doc(db, "chatMessages", msgId), { deleted: true, text: "" });
+      await deleteDoc(doc(db, "chatMessages", msgId));
     } catch { toast.error("Failed to delete"); }
+  };
+
+  const handleClearChat = async () => {
+    if (!confirm("Clear all messages in this channel?")) return;
+    try {
+      const q = query(collection(db, "chatMessages"), where("channelId", "==", channelId));
+      const snap = await getDocs(q);
+      const batch = writeBatch(db);
+      snap.docs.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+      toast.success("Chat cleared");
+    } catch { toast.error("Failed to clear chat"); }
   };
 
   const handleReact = async (msgId: string, emoji: string) => {
@@ -150,8 +164,21 @@ export function ChatPanel({ channelId, spaceId, spaceMembers = [], className }: 
     try { await updateDoc(doc(db, "chatMessages", msgId), { reactions }); } catch {}
   };
 
+  const clearChat = onClearChat || handleClearChat;
+
   return (
     <div className={cn("flex flex-col h-full", className)} onClick={() => setEmojiPickerId(null)}>
+      {/* Channel header */}
+      {(channelName || isAdmin) && (
+        <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card/50">
+          {channelName && <span className="text-sm font-semibold text-foreground truncate"># {channelName}</span>}
+          {isAdmin && (
+            <button onClick={clearChat} className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1 transition-colors ml-auto">
+              <Trash2 className="w-3 h-3" /> Clear chat
+            </button>
+          )}
+        </div>
+      )}
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-0.5 min-h-0">
         {loading ? (

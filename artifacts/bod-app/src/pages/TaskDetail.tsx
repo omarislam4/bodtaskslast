@@ -4,11 +4,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, Bell, Calendar, Clock, User, Send,
   CheckCircle2, AlertCircle, Activity, Loader2, MessageSquare, Trash2,
-  Plus, X, Tag, Timer, Link2, Eye, EyeOff, Repeat, ChevronDown,
-  GitBranch, Star, CheckSquare, Flame, Hash,
+  Plus, X, Timer, Link2, Eye, EyeOff, Repeat, ChevronDown,
+  GitBranch, Star, CheckSquare, Flame,
 } from "lucide-react";
 import {
-  doc, updateDoc, arrayUnion, serverTimestamp, Timestamp, onSnapshot, deleteDoc,
+  doc, updateDoc, arrayUnion, serverTimestamp, Timestamp, onSnapshot, deleteDoc, addDoc, collection,
 } from "firebase/firestore";
 import { db } from "@/firebase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -107,6 +107,7 @@ export default function TaskDetail() {
   const [sending, setSending] = useState(false);
   const [newComment, setNewComment] = useState("");
   const [addingComment, setAddingComment] = useState(false);
+  const [commentMentionQuery, setCommentMentionQuery] = useState<string | null>(null);
   const { isAdmin, userDoc } = useAuth();
   const { t } = useLang();
   const { members } = useMembers();
@@ -216,13 +217,62 @@ export default function TaskDetail() {
     finally { setSending(false); }
   };
 
+  const parseMentionIds = (txt: string): string[] => {
+    const regex = /@(\S+)/g;
+    const ids: string[] = [];
+    let m;
+    while ((m = regex.exec(txt)) !== null) {
+      const q = m[1].toLowerCase().replace(/[.,!?]+$/, "");
+      const found = spaceMembers.find(mb =>
+        (mb.displayName || mb.email || "").toLowerCase().startsWith(q)
+      );
+      if (found && found.id !== (userDoc?.id || "")) ids.push(found.id);
+    }
+    return [...new Set(ids)];
+  };
+
+  const handleCommentTextChange = (val: string) => {
+    setNewComment(val);
+    const words = val.split(/\s/);
+    const last = words[words.length - 1];
+    if (last.startsWith("@") && last.length >= 1) {
+      setCommentMentionQuery(last.slice(1));
+    } else {
+      setCommentMentionQuery(null);
+    }
+  };
+
+  const insertCommentMention = (m: { id: string; displayName?: string; email?: string }) => {
+    const name = m.displayName || m.email || "User";
+    const parts = newComment.split(/(\s+)/);
+    for (let i = parts.length - 1; i >= 0; i--) {
+      if (parts[i].startsWith("@")) { parts[i] = `@${name}`; break; }
+    }
+    setNewComment(parts.join("") + " ");
+    setCommentMentionQuery(null);
+  };
+
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newComment.trim() || !taskId || !userDoc) return;
+    if (!newComment.trim() || !taskId || !userDoc || !task) return;
     setAddingComment(true);
+    const mentions = parseMentionIds(newComment);
     try {
       await updateDoc(doc(db, "tasks", taskId), { activityLog: arrayUnion({ type: "comment", source: "manual", text: newComment.trim(), timestamp: Date.now(), sender: userDoc.displayName || userDoc.email || "Unknown" }) });
+      for (const uid of mentions) {
+        addDoc(collection(db, "notifications"), {
+          userId: uid,
+          type: "mention",
+          title: `${userDoc.displayName || "Someone"} mentioned you in a task`,
+          body: `In "${task.title}": ${newComment.trim().slice(0, 100)}`,
+          taskId,
+          spaceId: task.spaceId || null,
+          read: false,
+          createdAt: serverTimestamp(),
+        }).catch(() => {});
+      }
       setNewComment("");
+      setCommentMentionQuery(null);
     } catch { toast.error("Failed to add comment"); }
     finally { setAddingComment(false); }
   };
@@ -405,23 +455,6 @@ export default function TaskDetail() {
             onBlur={e => { const v = e.currentTarget.textContent?.trim(); if (v && v !== task.title) updateTask({ title: v }); }}
             className="text-2xl font-bold text-foreground outline-none focus:ring-2 focus:ring-primary/30 rounded-lg px-1 -mx-1 cursor-text">{task.title}</h1>
 
-          {/* Tags row */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {(task.tags || []).map(tag => (
-              <span key={tag} className="flex items-center gap-1 text-xs px-2 py-1 bg-primary/10 text-primary rounded-full">
-                <Hash className="w-3 h-3" />{tag}
-                <button onClick={() => removeTag(tag)} className="hover:text-destructive"><X className="w-3 h-3" /></button>
-              </span>
-            ))}
-            {showTagInput ? (
-              <input autoFocus value={tagInput} onChange={e => setTagInput(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter") { addTag(tagInput); } if (e.key === "Escape") setShowTagInput(false); }}
-                onBlur={() => { if (tagInput) addTag(tagInput); else setShowTagInput(false); }}
-                placeholder={t.addTag} className="text-xs px-2 py-1 bg-background border border-input rounded-full focus:outline-none focus:ring-1 focus:ring-primary/30 w-24" />
-            ) : (
-              <button onClick={() => setShowTagInput(true)} className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 border border-dashed border-border rounded-full transition-colors">+ {t.addTag}</button>
-            )}
-          </div>
 
           {/* Description */}
           <div>
@@ -543,8 +576,23 @@ export default function TaskDetail() {
               <h3 className="text-sm font-semibold text-foreground">{t.activity}</h3>
               {sortedActivity.length > 0 && <span className="text-xs bg-muted text-muted-foreground rounded-full px-2 py-0.5 ms-auto">{sortedActivity.length}</span>}
             </div>
-            <form onSubmit={handleAddComment} className="flex gap-2 mb-4">
-              <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder={t.writeComment}
+            <form onSubmit={handleAddComment} className="flex gap-2 mb-4 relative">
+              {commentMentionQuery !== null && spaceMembers.filter(m => (m.displayName || m.email || "").toLowerCase().includes(commentMentionQuery.toLowerCase())).slice(0, 5).length > 0 && (
+                <div className="absolute bottom-full left-0 right-0 mb-1 bg-card border border-border rounded-xl shadow-xl overflow-hidden z-50">
+                  {spaceMembers.filter(m => (m.displayName || m.email || "").toLowerCase().includes(commentMentionQuery.toLowerCase())).slice(0, 5).map(m => (
+                    <button key={m.id} type="button" onClick={() => insertCommentMention(m)}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors text-left border-b border-border/50 last:border-0">
+                      <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary shrink-0">
+                        {(m.displayName || m.email || "U")[0].toUpperCase()}
+                      </div>
+                      <span className="font-medium">{m.displayName || m.email}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <input value={newComment} onChange={e => handleCommentTextChange(e.target.value)}
+                onKeyDown={e => { if (e.key === "Escape") setCommentMentionQuery(null); }}
+                placeholder={`${t.writeComment} — use @ to mention someone`}
                 className="flex-1 px-3 py-2 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all" />
               <button type="submit" disabled={addingComment || !newComment.trim()} className="px-3 py-2 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 disabled:opacity-50 transition-all">
                 <Send className="w-4 h-4" />
@@ -719,30 +767,6 @@ export default function TaskDetail() {
             </div>
           </div>
 
-          {/* Tags */}
-          <div className="bg-card border border-border rounded-xl p-4">
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                <Tag className="w-3.5 h-3.5" /> {t.tags}
-              </label>
-              <button onClick={() => setShowTagInput(v => !v)} className="text-xs text-primary hover:text-primary/80 font-medium">+ {t.addTag}</button>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {(task.tags || []).map(tag => (
-                <span key={tag} className="flex items-center gap-1 text-xs px-2 py-1 bg-primary/10 text-primary rounded-full">
-                  #{tag}
-                  <button onClick={() => removeTag(tag)} className="hover:text-destructive"><X className="w-2.5 h-2.5" /></button>
-                </span>
-              ))}
-              {showTagInput && (
-                <input autoFocus value={tagInput} onChange={e => setTagInput(e.target.value)}
-                  onKeyDown={e => { if (e.key === "Enter") { addTag(tagInput); } if (e.key === "Escape") setShowTagInput(false); }}
-                  onBlur={() => { if (tagInput) addTag(tagInput); else setShowTagInput(false); }}
-                  placeholder={t.addTag} className="text-xs px-2 py-1 bg-background border border-input rounded-full focus:outline-none w-20" />
-              )}
-              {(task.tags || []).length === 0 && !showTagInput && <p className="text-xs text-muted-foreground">No tags</p>}
-            </div>
-          </div>
 
           {/* Dependencies */}
           <div className="bg-card border border-border rounded-xl p-4">

@@ -63,19 +63,23 @@ export default function SpaceDetail() {
   const { t } = useLang();
   const [, navigate] = useLocation();
 
-  // Space chat channel
-  const [spaceChatId, setSpaceChatId] = useState<string | null>(null);
+  // Space chat channels
+  const [spaceChannels, setSpaceChannels] = useState<{ id: string; name: string }[]>([]);
+  const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
+  const [showCreateChannel, setShowCreateChannel] = useState(false);
+  const [newChannelName, setNewChannelName] = useState("");
+  const [creatingChannel, setCreatingChannel] = useState(false);
 
   useEffect(() => {
     if (!spaceId) return;
     const q = query(collection(db, "chatChannels"), where("spaceId", "==", spaceId));
     const unsub = onSnapshot(q, async (snap) => {
-      if (!snap.empty) {
-        setSpaceChatId(snap.docs[0].id);
-      } else if (activeTab === "chat") {
+      const channels = snap.docs.map(d => ({ id: d.id, name: (d.data().name as string) || "channel" }));
+      setSpaceChannels(channels);
+      if (channels.length === 0 && activeTab === "chat") {
         try {
           const ref = await addDoc(collection(db, "chatChannels"), {
-            name: "space-chat",
+            name: "general",
             description: "Space discussion",
             spaceId,
             isPrivate: false,
@@ -83,12 +87,34 @@ export default function SpaceDetail() {
             createdBy: userDoc?.id || "",
             createdAt: serverTimestamp(),
           });
-          setSpaceChatId(ref.id);
+          setSelectedChannelId(ref.id);
         } catch { }
+      } else if (channels.length > 0 && !selectedChannelId) {
+        setSelectedChannelId(channels[0].id);
       }
     }, () => { });
     return () => unsub();
   }, [spaceId, activeTab, userDoc?.id]);
+
+  const handleCreateChannel = async () => {
+    if (!newChannelName.trim() || !spaceId) return;
+    setCreatingChannel(true);
+    try {
+      const ref = await addDoc(collection(db, "chatChannels"), {
+        name: newChannelName.trim().toLowerCase().replace(/\s+/g, "-"),
+        description: "",
+        spaceId,
+        isPrivate: false,
+        memberIds: [],
+        createdBy: userDoc?.id || "",
+        createdAt: serverTimestamp(),
+      });
+      setSelectedChannelId(ref.id);
+      setNewChannelName("");
+      setShowCreateChannel(false);
+    } catch { toast.error("Failed to create channel"); }
+    finally { setCreatingChannel(false); }
+  };
 
   // Sub-spaces
   const [subSpaces, setSubSpaces] = useState<Space[]>([]);
@@ -1093,20 +1119,59 @@ export default function SpaceDetail() {
           {/* ─── CHAT ─── */}
           {activeTab === "chat" && (
             <motion.div key="chat" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="h-full flex flex-col">
-              {spaceChatId ? (
-                <ChatPanel
-                  channelId={spaceChatId}
-                  spaceId={spaceId}
-                  spaceMembers={spaceMembers.map(m => ({ id: m.id, displayName: m.displayName, email: m.email }))}
-                  className="flex-1 min-h-0 h-[calc(100vh-12rem)]"
-                />
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full py-20 text-muted-foreground">
-                  <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mb-3" />
-                  <p className="text-sm">Loading chat...</p>
+              className="h-full flex min-h-0">
+              {/* Channels sidebar */}
+              <div className="w-44 shrink-0 border-r border-border flex flex-col bg-muted/20">
+                <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Channels</span>
+                  {isAdmin && (
+                    <button onClick={() => setShowCreateChannel(v => !v)} className="text-muted-foreground hover:text-primary transition-colors" title="Add channel">
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
-              )}
+                {showCreateChannel && (
+                  <div className="px-2 py-2 border-b border-border space-y-1.5">
+                    <input autoFocus value={newChannelName} onChange={e => setNewChannelName(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") handleCreateChannel(); if (e.key === "Escape") setShowCreateChannel(false); }}
+                      placeholder="channel-name" className="w-full px-2 py-1 text-xs bg-background border border-input rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/30" />
+                    <button onClick={handleCreateChannel} disabled={creatingChannel || !newChannelName.trim()}
+                      className="w-full py-1 text-xs bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50">
+                      {creatingChannel ? "Creating..." : "Create"}
+                    </button>
+                  </div>
+                )}
+                <div className="flex-1 overflow-y-auto py-1">
+                  {spaceChannels.map(ch => (
+                    <button key={ch.id} onClick={() => setSelectedChannelId(ch.id)}
+                      className={cn("w-full text-left px-3 py-1.5 text-xs transition-colors rounded-md mx-1 my-0.5",
+                        selectedChannelId === ch.id ? "bg-primary/15 text-primary font-medium" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                      )}>
+                      # {ch.name}
+                    </button>
+                  ))}
+                  {spaceChannels.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-4">No channels yet</p>
+                  )}
+                </div>
+              </div>
+              {/* Chat panel */}
+              <div className="flex-1 min-w-0 flex flex-col">
+                {selectedChannelId ? (
+                  <ChatPanel
+                    channelId={selectedChannelId}
+                    channelName={spaceChannels.find(c => c.id === selectedChannelId)?.name}
+                    spaceId={spaceId}
+                    spaceMembers={spaceMembers.map(m => ({ id: m.id, displayName: m.displayName, email: m.email }))}
+                    className="flex-1 min-h-0 h-[calc(100vh-12rem)]"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full py-20 text-muted-foreground">
+                    <MessageCircle className="w-8 h-8 opacity-20 mb-2" />
+                    <p className="text-sm">Select a channel to start chatting</p>
+                  </div>
+                )}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -1227,7 +1292,6 @@ function TableView({ tasks, members, spaceId, onNavigate }: { tasks: Task[]; mem
               <th className="text-start px-3 py-2.5 hidden md:table-cell"><SortBtn field="deadline" label="Deadline" /></th>
               <th className="text-start px-3 py-2.5 hidden lg:table-cell">Assignees</th>
               <th className="text-start px-3 py-2.5 hidden lg:table-cell"><SortBtn field="progress" label="%" /></th>
-              <th className="text-start px-3 py-2.5 hidden xl:table-cell">Tags</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -1264,13 +1328,6 @@ function TableView({ tasks, members, spaceId, onNavigate }: { tasks: Task[]; mem
                         <div className="h-full bg-primary rounded-full" style={{ width: `${task.progress}%` }} />
                       </div>
                       <span className="text-xs text-muted-foreground">{task.progress}%</span>
-                    </div>
-                  </td>
-                  <td className="px-3 py-2.5 hidden xl:table-cell">
-                    <div className="flex gap-1 flex-wrap">
-                      {(task.tags || []).slice(0, 2).map(tag => (
-                        <span key={tag} className="text-[10px] px-1.5 py-0.5 bg-primary/10 text-primary rounded-full">#{tag}</span>
-                      ))}
                     </div>
                   </td>
                 </tr>
