@@ -11,6 +11,7 @@ import {
 } from "recharts";
 import { useAllTasks } from "@/hooks/useTasks";
 import { useSpaces } from "@/hooks/useSpaces";
+import { useSpaceFilter } from "@/hooks/useSpaceFilter";
 import { useMembers } from "@/hooks/useMembers";
 import { DashboardStatSkeleton } from "@/components/shared/SkeletonLoader";
 import { TaskStatusBadge } from "@/components/tasks/TaskStatusBadge";
@@ -48,7 +49,9 @@ type DashView = "overview" | "kanban";
 
 export default function Dashboard() {
   const { tasks, loading: tasksLoading } = useAllTasks();
-  const { spaces, loading: spacesLoading } = useSpaces();
+  const { spaces: allSpaces, loading: spacesLoading } = useSpaces();
+  const { filterSpaces } = useSpaceFilter();
+  const spaces = filterSpaces(allSpaces);
   const { members } = useMembers();
   const [, navigate] = useLocation();
   const { t } = useLang();

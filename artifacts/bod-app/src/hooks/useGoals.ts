@@ -15,6 +15,7 @@ export interface Goal {
   currency?: string;
   status: GoalStatus;
   folder?: string;
+  spaceId?: string;
   linkedTaskIds: string[];
   createdBy: string;
   createdAt: Date;
@@ -50,18 +51,19 @@ function mapGoal(doc: { id: string; data: () => Record<string, unknown> }): Goal
   } as Goal;
 }
 
-export const useGoals = () => {
+export const useGoals = (spaceId?: string) => {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const q = query(collection(db, "goals"), orderBy("createdAt", "desc"));
     const unsub = onSnapshot(q, (snap) => {
-      setGoals(snap.docs.map(mapGoal));
+      const all = snap.docs.map(mapGoal);
+      setGoals(spaceId ? all.filter(g => g.spaceId === spaceId) : all);
       setLoading(false);
     });
     return () => unsub();
-  }, []);
+  }, [spaceId]);
 
   return { goals, loading };
 };

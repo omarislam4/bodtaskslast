@@ -26,6 +26,8 @@ import { TaskCardSkeleton } from "@/components/shared/SkeletonLoader";
 import { Space } from "@/hooks/useSpaces";
 import { UserDoc } from "@/contexts/AuthContext";
 import { ChatPanel } from "@/components/chat/ChatPanel";
+import { SpaceGoalsTab } from "@/components/spaces/SpaceGoalsTab";
+import { SpaceSprintsTab } from "@/components/spaces/SpaceSprintsTab";
 import { toast } from "sonner";
 import { format, isWithinInterval, addDays, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -41,7 +43,7 @@ function toDate(val: unknown): Date {
   return new Date();
 }
 
-type Tab = "overview" | "tasks" | "bugs" | "kanban" | "timeline" | "members" | "data" | "subspaces" | "calendar" | "workload" | "table" | "gantt" | "chat";
+type Tab = "overview" | "tasks" | "bugs" | "kanban" | "timeline" | "members" | "data" | "subspaces" | "calendar" | "workload" | "table" | "gantt" | "chat" | "goals" | "sprints";
 
 const SEVERITY_CONFIG: Record<BugSeverity, { label: string; color: string; bg: string; border: string }> = {
   critical: { label: "Critical", color: "text-red-500", bg: "bg-red-500/10", border: "border-red-500/30" },
@@ -347,6 +349,8 @@ export default function SpaceDetail() {
     { id: "gantt",     label: t.ganttView,    icon: Layers },
     { id: "workload",  label: t.workloadView, icon: Users },
     { id: "timeline",  label: t.timelineTab,  icon: Calendar },
+    { id: "goals",     label: t.goals,        icon: ChevronRight },
+    { id: "sprints",   label: t.sprints,      icon: ChevronRight },
     { id: "members",   label: t.membersTab,   icon: Users },
     { id: "data",      label: t.data,         icon: FolderOpen },
     { id: "subspaces", label: t.subspacesTab, icon: Layers },
@@ -1173,6 +1177,20 @@ export default function SpaceDetail() {
                   </div>
                 )}
               </div>
+            </motion.div>
+          )}
+
+          {/* ─── GOALS ─── */}
+          {activeTab === "goals" && (
+            <motion.div key="goals" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+              <SpaceGoalsTab spaceId={spaceId!} />
+            </motion.div>
+          )}
+
+          {/* ─── SPRINTS ─── */}
+          {activeTab === "sprints" && (
+            <motion.div key="sprints" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+              <SpaceSprintsTab spaceId={spaceId!} />
             </motion.div>
           )}
         </AnimatePresence>

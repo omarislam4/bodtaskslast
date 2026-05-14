@@ -1,18 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, Layers, Calendar, Users, Send,
   History, Settings, ChevronRight, Sun,
   Moon, LogOut, ChevronDown, Menu, X, CornerDownRight,
-  ClipboardCheck, FileText, Bug, CheckSquare, Target, Zap,
-  BarChart2, MessageCircle,
+  ClipboardCheck, FileText, Bug, CheckSquare,
+  BarChart2, MessageCircle, SlidersHorizontal, Eye, EyeOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useLang } from "@/contexts/LangContext";
 import { useSpaces, Space } from "@/hooks/useSpaces";
+import { useSpaceFilter } from "@/hooks/useSpaceFilter";
 import { signOut } from "firebase/auth";
 import { auth } from "@/firebase";
 import bodLogo from "@assets/bod-logo.png";
@@ -26,52 +27,54 @@ interface SidebarProps {
 export const Sidebar = ({ onClose }: SidebarProps) => {
   const [collapsed, setCollapsed] = useState(false);
   const [spacesOpen, setSpacesOpen] = useState(true);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const filterRef = useRef<HTMLDivElement>(null);
   const [location] = useLocation();
   const { userDoc, isAdmin } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { lang, setLang, t } = useLang();
   const { spaces } = useSpaces();
+  const { hiddenSpaceIds, toggleSpaceVisibility, filterSpaces } = useSpaceFilter();
   const [subSpacesMap, setSubSpacesMap] = useState<Record<string, Space[]>>({});
 
   const handleLogout = () => signOut(auth);
 
-  // Detect current space from URL
   const spaceMatch = location.match(/^\/spaces\/([^/]+)/);
   const currentSpaceId = spaceMatch ? spaceMatch[1] : null;
 
-  // Top-level (non-sub) spaces
   const topSpaces = spaces.filter((s) => !(s as Space & { parentSpaceId?: string }).parentSpaceId);
+  const visibleTopSpaces = isAdmin ? filterSpaces(topSpaces) : topSpaces;
 
-  // Load sub-spaces for the currently active space (sort client-side)
   useEffect(() => {
     if (!currentSpaceId) return;
-    const q = query(
-      collection(db, "spaces"),
-      where("parentSpaceId", "==", currentSpaceId)
-    );
+    const q = query(collection(db, "spaces"), where("parentSpaceId", "==", currentSpaceId));
     const unsub = onSnapshot(q, (snap) => {
-     const subs = snap.docs.map((d) => ({
-  name: "",
-  description: "",
-  color: "#6366f1",
-  icon: "",
-  memberIds: [],
-  createdBy: "",
-  createdAt: new Date(),
-  ...d.data(),
-  id: d.id,
-})) as Space[];
+      const subs = snap.docs.map((d) => ({
+        name: "", description: "", color: "#6366f1", icon: "",
+        memberIds: [], createdBy: "", createdAt: new Date(),
+        ...d.data(), id: d.id,
+      })) as Space[];
       setSubSpacesMap((prev) => ({ ...prev, [currentSpaceId]: subs }));
     });
     return () => unsub();
   }, [currentSpaceId]);
 
+  // Close filter dropdown on outside click
+  useEffect(() => {
+    if (!filterOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
+        setFilterOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [filterOpen]);
+
   const navItems = [
     { icon: LayoutDashboard, label: t.dashboard,    href: "/" },
     { icon: Layers,          label: t.spaces,       href: "/spaces" },
     { icon: CheckSquare,     label: t.myTasks,      href: "/my-tasks" },
-    { icon: Target,          label: t.goals,        href: "/goals" },
-    { icon: Zap,             label: t.sprints,      href: "/sprints" },
     { icon: BarChart2,       label: t.portfolio,    href: "/portfolio" },
     { icon: MessageCircle,   label: t.chat,         href: "/chat" },
     { icon: Bug,             label: t.bugTracker,   href: "/bugs",           adminOnly: true },
@@ -112,17 +115,13 @@ export const Sidebar = ({ onClose }: SidebarProps) => {
         </AnimatePresence>
         <div className="flex items-center gap-1 ml-auto">
           {onClose && (
-            <button
-              onClick={onClose}
-              className="lg:hidden flex items-center justify-center w-7 h-7 rounded-lg text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-white/10 transition-all duration-150"
-            >
+            <button onClick={onClose}
+              className="lg:hidden flex items-center justify-center w-7 h-7 rounded-lg text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-white/10 transition-all duration-150">
               <X className="w-4 h-4" />
             </button>
           )}
-          <button
-            onClick={() => setCollapsed((v) => !v)}
-            className="hidden lg:flex items-center justify-center w-7 h-7 rounded-lg text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-white/10 transition-all duration-150"
-          >
+          <button onClick={() => setCollapsed((v) => !v)}
+            className="hidden lg:flex items-center justify-center w-7 h-7 rounded-lg text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-white/10 transition-all duration-150">
             {collapsed ? <ChevronRight className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
           </button>
         </div>
@@ -136,11 +135,7 @@ export const Sidebar = ({ onClose }: SidebarProps) => {
           </div>
           <AnimatePresence>
             {!collapsed && (
-              <motion.div
-                initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }}
-                transition={{ duration: 0.15 }}
-                className="min-w-0"
-              >
+              <motion.div initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }} transition={{ duration: 0.15 }} className="min-w-0">
                 <span className="text-sm font-bold text-sidebar-foreground block truncate">Birth Of Dream</span>
                 <span className="text-xs text-sidebar-foreground/50 block truncate">{t.workspace}</span>
               </motion.div>
@@ -154,30 +149,18 @@ export const Sidebar = ({ onClose }: SidebarProps) => {
         {visibleNav.map((item, i) => {
           const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
           return (
-            <motion.div
-              key={item.href}
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.2, delay: i * 0.04 }}
-            >
+            <motion.div key={item.href} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.2, delay: i * 0.04 }}>
               <Link href={item.href}>
-                <div
-                  onClick={handleNavClick}
+                <div onClick={handleNavClick}
                   className={cn(
                     "flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all duration-150 group",
-                    isActive
-                      ? "bg-primary/15 text-primary"
-                      : "text-sidebar-foreground hover:bg-white/10 hover:text-sidebar-foreground"
-                  )}
-                >
+                    isActive ? "bg-primary/15 text-primary" : "text-sidebar-foreground hover:bg-white/10 hover:text-sidebar-foreground"
+                  )}>
                   <item.icon className={cn("w-4 h-4 shrink-0", isActive ? "text-primary" : "text-sidebar-foreground/70")} />
                   <AnimatePresence>
                     {!collapsed && (
-                      <motion.span
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        transition={{ duration: 0.15 }}
-                        className="text-sm font-medium truncate"
-                      >
+                      <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
+                        className="text-sm font-medium truncate">
                         {item.label}
                       </motion.span>
                     )}
@@ -191,13 +174,82 @@ export const Sidebar = ({ onClose }: SidebarProps) => {
               {/* Spaces submenu */}
               {item.href === "/spaces" && !collapsed && topSpaces.length > 0 && (
                 <div className="mt-0.5">
-                  <button
-                    onClick={() => setSpacesOpen((v) => !v)}
-                    className="flex items-center gap-1.5 px-3 py-1 text-xs text-sidebar-foreground/50 w-full hover:text-sidebar-foreground transition-colors"
-                  >
-                    <ChevronDown className={cn("w-3 h-3 transition-transform duration-200", !spacesOpen && "-rotate-90")} />
-                    <span>{t.mySpaces}</span>
-                  </button>
+                  <div className="flex items-center gap-1 px-3 py-1">
+                    <button onClick={() => setSpacesOpen((v) => !v)}
+                      className="flex items-center gap-1.5 text-xs text-sidebar-foreground/50 flex-1 hover:text-sidebar-foreground transition-colors">
+                      <ChevronDown className={cn("w-3 h-3 transition-transform duration-200", !spacesOpen && "-rotate-90")} />
+                      <span>{t.mySpaces}</span>
+                      {isAdmin && hiddenSpaceIds.length > 0 && (
+                        <span className="text-[10px] px-1.5 py-0.5 bg-primary/20 text-primary rounded-full font-semibold">
+                          {topSpaces.length - visibleTopSpaces.length} hidden
+                        </span>
+                      )}
+                    </button>
+                    {/* Admin space filter button */}
+                    {isAdmin && (
+                      <div className="relative" ref={filterRef}>
+                        <button onClick={() => setFilterOpen(v => !v)}
+                          className={cn(
+                            "p-1 rounded transition-colors",
+                            filterOpen ? "text-primary bg-primary/10" : "text-sidebar-foreground/40 hover:text-sidebar-foreground hover:bg-white/10"
+                          )}
+                          title="Filter visible spaces">
+                          <SlidersHorizontal className="w-3 h-3" />
+                        </button>
+                        <AnimatePresence>
+                          {filterOpen && (
+                            <motion.div
+                              initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                              animate={{ opacity: 1, scale: 1, y: 0 }}
+                              exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                              transition={{ duration: 0.15 }}
+                              className="absolute left-0 top-7 z-50 w-56 bg-popover border border-border rounded-xl shadow-xl overflow-hidden"
+                            >
+                              <div className="px-3 py-2 border-b border-border">
+                                <p className="text-xs font-semibold text-foreground">Visible Spaces</p>
+                                <p className="text-[10px] text-muted-foreground mt-0.5">Choose which spaces to show</p>
+                              </div>
+                              <div className="max-h-52 overflow-y-auto py-1">
+                                {topSpaces.length === 0 ? (
+                                  <p className="text-xs text-muted-foreground px-3 py-2">No spaces yet</p>
+                                ) : (
+                                  topSpaces.map(space => {
+                                    const visible = !hiddenSpaceIds.includes(space.id);
+                                    return (
+                                      <button key={space.id}
+                                        onClick={() => toggleSpaceVisibility(space.id)}
+                                        className="flex items-center gap-2.5 w-full px-3 py-2 hover:bg-muted/50 transition-colors text-left">
+                                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: space.color || "#6366f1" }} />
+                                        <span className={cn("text-xs flex-1 truncate", visible ? "text-foreground" : "text-muted-foreground line-through")}>{space.name}</span>
+                                        {visible
+                                          ? <Eye className="w-3 h-3 text-emerald-500 shrink-0" />
+                                          : <EyeOff className="w-3 h-3 text-muted-foreground shrink-0" />
+                                        }
+                                      </button>
+                                    );
+                                  })
+                                )}
+                              </div>
+                              {hiddenSpaceIds.length > 0 && (
+                                <div className="border-t border-border px-3 py-2">
+                                  <button
+                                    onClick={() => {
+                                      if (userDoc?.id) {
+                                        try { localStorage.removeItem(`spaceFilter_hidden_${userDoc.id}`); } catch {}
+                                      }
+                                      window.location.reload();
+                                    }}
+                                    className="text-[11px] text-primary hover:underline font-medium">
+                                    Show all spaces
+                                  </button>
+                                </div>
+                              )}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    )}
+                  </div>
                   <AnimatePresence>
                     {spacesOpen && (
                       <motion.div
@@ -205,7 +257,7 @@ export const Sidebar = ({ onClose }: SidebarProps) => {
                         transition={{ duration: 0.2 }}
                         className="overflow-hidden pl-3"
                       >
-                        {topSpaces.map((space) => {
+                        {visibleTopSpaces.map((space) => {
                           const isSpaceActive = location.startsWith(`/spaces/${space.id}`);
                           const spaceSubs = subSpacesMap[space.id] || [];
                           const showSubs = isSpaceActive && spaceSubs.length > 0 && currentSpaceId === space.id;
@@ -213,41 +265,31 @@ export const Sidebar = ({ onClose }: SidebarProps) => {
                           return (
                             <div key={space.id}>
                               <Link href={`/spaces/${space.id}`}>
-                                <div
-                                  onClick={handleNavClick}
+                                <div onClick={handleNavClick}
                                   className={cn(
                                     "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs cursor-pointer transition-all duration-150",
-                                    isSpaceActive
-                                      ? "bg-primary/15 text-primary"
-                                      : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-white/10"
-                                  )}
-                                >
+                                    isSpaceActive ? "bg-primary/15 text-primary" : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-white/10"
+                                  )}>
                                   <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: space.color || "#6366f1" }} />
                                   <span className="truncate flex-1">{space.name}</span>
                                 </div>
                               </Link>
-
-                              {/* Sub-spaces shown indented when inside this space */}
                               <AnimatePresence>
                                 {showSubs && (
                                   <motion.div
-                                    initial={{ height: 0, opacity: 0 }}
-                                    animate={{ height: "auto", opacity: 1 }}
-                                    exit={{ height: 0, opacity: 0 }}
+                                    initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
                                     transition={{ duration: 0.18 }}
                                     className="overflow-hidden pl-3 mt-0.5 mb-0.5"
                                   >
                                     {spaceSubs.map((sub) => (
                                       <Link key={sub.id} href={`/spaces/${sub.id}`}>
-                                        <div
-                                          onClick={handleNavClick}
+                                        <div onClick={handleNavClick}
                                           className={cn(
                                             "flex items-center gap-2 px-2 py-1.5 rounded-md text-[11px] cursor-pointer transition-all duration-150",
                                             location === `/spaces/${sub.id}` || location.startsWith(`/spaces/${sub.id}/`)
                                               ? "bg-primary/10 text-primary"
                                               : "text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-white/8"
-                                          )}
-                                        >
+                                          )}>
                                           <CornerDownRight className="w-3 h-3 shrink-0 opacity-50" />
                                           <span className="w-1.5 h-1.5 rounded-full shrink-0 opacity-70" style={{ backgroundColor: sub.color || "#6366f1" }} />
                                           <span className="truncate">{sub.name}</span>
@@ -274,34 +316,22 @@ export const Sidebar = ({ onClose }: SidebarProps) => {
       <div className="border-t border-sidebar-border px-2 py-3 space-y-1">
         <AnimatePresence>
           {!collapsed && (
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg"
-            >
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg">
               <span className="text-xs text-sidebar-foreground/40 mr-1 shrink-0">🌐</span>
-              <button
-                onClick={() => setLang("en")}
-                className={cn(
-                  "text-xs font-semibold px-2 py-0.5 rounded transition-all",
-                  lang === "en" ? "bg-primary/20 text-primary" : "text-sidebar-foreground/40 hover:text-sidebar-foreground"
-                )}
-              >EN</button>
+              <button onClick={() => setLang("en")}
+                className={cn("text-xs font-semibold px-2 py-0.5 rounded transition-all",
+                  lang === "en" ? "bg-primary/20 text-primary" : "text-sidebar-foreground/40 hover:text-sidebar-foreground")}>EN</button>
               <span className="text-sidebar-foreground/20 text-xs">|</span>
-              <button
-                onClick={() => setLang("ar")}
-                className={cn(
-                  "text-xs font-semibold px-2 py-0.5 rounded transition-all",
-                  lang === "ar" ? "bg-primary/20 text-primary" : "text-sidebar-foreground/40 hover:text-sidebar-foreground"
-                )}
-              >AR</button>
+              <button onClick={() => setLang("ar")}
+                className={cn("text-xs font-semibold px-2 py-0.5 rounded transition-all",
+                  lang === "ar" ? "bg-primary/20 text-primary" : "text-sidebar-foreground/40 hover:text-sidebar-foreground")}>AR</button>
             </motion.div>
           )}
         </AnimatePresence>
 
-        <button
-          onClick={toggleTheme}
-          className="flex items-center gap-3 px-3 py-2 rounded-lg w-full text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-white/10 transition-all duration-150"
-        >
+        <button onClick={toggleTheme}
+          className="flex items-center gap-3 px-3 py-2 rounded-lg w-full text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-white/10 transition-all duration-150">
           {theme === "dark" ? <Sun className="w-4 h-4 shrink-0" /> : <Moon className="w-4 h-4 shrink-0" />}
           <AnimatePresence>
             {!collapsed && (
