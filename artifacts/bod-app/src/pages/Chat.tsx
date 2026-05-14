@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, Plus, Hash, X, Trash2, AlertCircle } from "lucide-react";
+import { MessageCircle, Plus, Hash, X, Trash2, AlertCircle, ArrowLeft } from "lucide-react";
 import {
   collection, addDoc, serverTimestamp, deleteDoc, doc, query,
   where, getDocs,
@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 
 export default function Chat() {
   const { userDoc, isAdmin } = useAuth();
-  const { t } = useLang();
+  const { t, isRTL } = useLang();
   const { channels, loading: channelsLoading } = useChannels();
   const { members } = useMembers();
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
@@ -85,10 +85,17 @@ export default function Chat() {
     }
   }, [channelsLoading, globalChannels.length, userDoc]);
 
+  // On mobile, show either the channel list or the chat panel
+  const mobileShowChat = !!selectedChannelId;
+
   return (
-    <div className="flex h-[calc(100vh-4rem)] bg-background">
-      {/* Channel sidebar */}
-      <div className="w-56 bg-sidebar border-r border-sidebar-border flex flex-col shrink-0">
+    <div className="flex h-[calc(100vh-4rem)] bg-background overflow-hidden">
+      {/* Channel sidebar — full width on mobile when no channel selected */}
+      <div className={cn(
+        "bg-sidebar border-border flex flex-col shrink-0",
+        "w-full md:w-56 md:border-r md:flex",
+        mobileShowChat ? "hidden md:flex" : "flex border-r"
+      )}>
         <div className="flex items-center justify-between p-3 border-b border-sidebar-border/50">
           <span className="text-xs font-semibold uppercase tracking-wide text-sidebar-foreground/60">{t.channels}</span>
           <button onClick={() => setShowNewChannel(v => !v)} className="p-1 text-sidebar-foreground/40 hover:text-sidebar-foreground transition-colors">
@@ -103,14 +110,14 @@ export default function Chat() {
             globalChannels.map(ch => (
               <div key={ch.id} className="group relative flex items-center">
                 <button onClick={() => setSelectedChannelId(ch.id)}
-                  className={cn("flex items-center gap-2 flex-1 min-w-0 px-3 py-1.5 rounded-lg text-sm transition-all text-start",
+                  className={cn("flex items-center gap-2 flex-1 min-w-0 px-3 py-2 rounded-lg text-sm transition-all text-start",
                     selectedChannelId === ch.id ? "bg-primary/20 text-primary" : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-white/10")}>
                   <Hash className="w-3.5 h-3.5 shrink-0" />
                   <span className="truncate">{ch.name}</span>
                 </button>
                 {isAdmin && (
                   <button onClick={() => setShowDeleteConfirm(ch.id)}
-                    className="opacity-0 group-hover:opacity-100 p-1 mr-1 text-sidebar-foreground/40 hover:text-red-400 transition-all shrink-0">
+                    className="opacity-0 group-hover:opacity-100 p-1 me-1 text-sidebar-foreground/40 hover:text-red-400 transition-all shrink-0">
                     <Trash2 className="w-3 h-3" />
                   </button>
                 )}
@@ -143,13 +150,23 @@ export default function Chat() {
         </AnimatePresence>
       </div>
 
-      {/* Main chat area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      {/* Main chat area — full width on mobile when channel selected */}
+      <div className={cn(
+        "flex-1 flex flex-col min-w-0",
+        mobileShowChat ? "flex" : "hidden md:flex"
+      )}>
         {selectedChannel ? (
           <>
             {/* Channel header */}
-            <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-border shrink-0">
+            <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border shrink-0">
               <div className="flex items-center gap-2 min-w-0">
+                {/* Back button — mobile only */}
+                <button
+                  onClick={() => setSelectedChannelId(null)}
+                  className="md:hidden p-1.5 -ms-1 text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-muted"
+                >
+                  <ArrowLeft className={cn("w-4 h-4", isRTL && "rotate-180")} />
+                </button>
                 <Hash className="w-4 h-4 text-muted-foreground shrink-0" />
                 <h2 className="font-semibold text-foreground truncate">{selectedChannel.name}</h2>
                 {selectedChannel.description && (
@@ -159,7 +176,8 @@ export default function Chat() {
               {isAdmin && (
                 <button onClick={() => setShowDeleteConfirm(selectedChannel.id)}
                   className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive transition-colors shrink-0 px-2 py-1 rounded-lg hover:bg-destructive/10">
-                  <Trash2 className="w-3.5 h-3.5" /> Delete channel
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Delete channel</span>
                 </button>
               )}
             </div>

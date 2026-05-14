@@ -65,7 +65,10 @@ export const Sidebar = ({ onClose }: SidebarProps) => {
   const openFilter = useCallback(() => {
     if (filterBtnRef.current) {
       const rect = filterBtnRef.current.getBoundingClientRect();
-      setDropdownPos({ top: rect.bottom + 6, left: rect.left });
+      const dropdownWidth = 240;
+      // Align right edge of dropdown with right edge of button, clamped to screen
+      const left = Math.max(8, Math.min(rect.right - dropdownWidth, window.innerWidth - dropdownWidth - 8));
+      setDropdownPos({ top: rect.bottom + 6, left });
     }
     setFilterOpen(true);
   }, []);

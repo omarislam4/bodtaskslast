@@ -4,6 +4,7 @@ import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { Toaster } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLang } from "@/contexts/LangContext";
 import { useWebhookSettings } from "@/hooks/useWebhook";
 import { useShiftReminder } from "@/hooks/useShiftReminder";
 
@@ -26,6 +27,7 @@ function ShiftReminderRunner() {
 
 export const AppLayout = ({ children }: AppLayoutProps) => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const { isRTL } = useLang();
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -37,12 +39,18 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
         />
       )}
 
-      {/* Sidebar — hidden on mobile unless open */}
+      {/* Sidebar — hidden on mobile unless open, RTL-aware */}
       <div
         className={`
-          fixed inset-y-0 left-0 z-50 lg:relative lg:z-auto lg:flex
+          fixed inset-y-0 z-50 lg:relative lg:z-auto lg:flex
           transition-transform duration-300 ease-in-out
-          ${mobileSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+          ${isRTL ? "right-0" : "left-0"}
+          ${mobileSidebarOpen
+            ? "translate-x-0"
+            : isRTL
+              ? "translate-x-full lg:translate-x-0"
+              : "-translate-x-full lg:translate-x-0"
+          }
         `}
       >
         <Sidebar onClose={() => setMobileSidebarOpen(false)} />

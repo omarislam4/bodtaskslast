@@ -1124,10 +1124,14 @@ export default function SpaceDetail() {
           {/* ─── CHAT ─── */}
           {activeTab === "chat" && (
             <motion.div key="chat" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="h-full flex min-h-0">
-              {/* Channels sidebar */}
-              <div className="w-44 shrink-0 border-r border-border flex flex-col bg-muted/20">
-                <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+              className="h-full flex min-h-0 overflow-hidden">
+              {/* Channels sidebar — full width on mobile when no channel selected */}
+              <div className={cn(
+                "shrink-0 border-r border-border flex flex-col bg-muted/20",
+                "w-full md:w-44 md:flex",
+                selectedChannelId ? "hidden md:flex" : "flex"
+              )}>
+                <div className="flex items-center justify-between px-3 py-2.5 border-b border-border">
                   <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Channels</span>
                   {isAdmin && (
                     <button onClick={() => setShowCreateChannel(v => !v)} className="text-muted-foreground hover:text-primary transition-colors" title="Add channel">
@@ -1149,27 +1153,42 @@ export default function SpaceDetail() {
                 <div className="flex-1 overflow-y-auto py-1">
                   {spaceChannels.map(ch => (
                     <button key={ch.id} onClick={() => setSelectedChannelId(ch.id)}
-                      className={cn("w-full text-left px-3 py-1.5 text-xs transition-colors rounded-md mx-1 my-0.5",
+                      className={cn("w-full text-start px-3 py-2 text-sm md:text-xs transition-colors rounded-md mx-1 my-0.5",
                         selectedChannelId === ch.id ? "bg-primary/15 text-primary font-medium" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                       )}>
                       # {ch.name}
                     </button>
                   ))}
                   {spaceChannels.length === 0 && (
-                    <p className="text-xs text-muted-foreground text-center py-4">No channels yet</p>
+                    <p className="text-xs text-muted-foreground text-center py-8">No channels yet</p>
                   )}
                 </div>
               </div>
-              {/* Chat panel */}
-              <div className="flex-1 min-w-0 flex flex-col">
+              {/* Chat panel — full width on mobile when channel selected */}
+              <div className={cn(
+                "flex-1 min-w-0 flex flex-col",
+                selectedChannelId ? "flex" : "hidden md:flex"
+              )}>
                 {selectedChannelId ? (
-                  <ChatPanel
-                    channelId={selectedChannelId}
-                    channelName={spaceChannels.find(c => c.id === selectedChannelId)?.name}
-                    spaceId={spaceId}
-                    spaceMembers={spaceMembers.map(m => ({ id: m.id, displayName: m.displayName, email: m.email }))}
-                    className="flex-1 min-h-0 h-[calc(100vh-12rem)]"
-                  />
+                  <>
+                    {/* Mobile back button */}
+                    <div className="md:hidden flex items-center gap-2 px-3 py-2 border-b border-border shrink-0">
+                      <button onClick={() => setSelectedChannelId(null)}
+                        className="p-1.5 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted transition-colors">
+                        <ArrowLeft className="w-4 h-4" />
+                      </button>
+                      <span className="text-sm font-medium text-foreground">
+                        # {spaceChannels.find(c => c.id === selectedChannelId)?.name}
+                      </span>
+                    </div>
+                    <ChatPanel
+                      channelId={selectedChannelId}
+                      channelName={spaceChannels.find(c => c.id === selectedChannelId)?.name}
+                      spaceId={spaceId}
+                      spaceMembers={spaceMembers.map(m => ({ id: m.id, displayName: m.displayName, email: m.email }))}
+                      className="flex-1 min-h-0"
+                    />
+                  </>
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full py-20 text-muted-foreground">
                     <MessageCircle className="w-8 h-8 opacity-20 mb-2" />
