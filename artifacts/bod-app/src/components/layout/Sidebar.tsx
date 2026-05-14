@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -28,7 +29,9 @@ export const Sidebar = ({ onClose }: SidebarProps) => {
   const [collapsed, setCollapsed] = useState(false);
   const [spacesOpen, setSpacesOpen] = useState(true);
   const [filterOpen, setFilterOpen] = useState(false);
+  const filterBtnRef = useRef<HTMLButtonElement>(null);
   const filterRef = useRef<HTMLDivElement>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
   const [location] = useLocation();
   const { userDoc, isAdmin } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -59,11 +62,22 @@ export const Sidebar = ({ onClose }: SidebarProps) => {
     return () => unsub();
   }, [currentSpaceId]);
 
+  const openFilter = useCallback(() => {
+    if (filterBtnRef.current) {
+      const rect = filterBtnRef.current.getBoundingClientRect();
+      setDropdownPos({ top: rect.bottom + 6, left: rect.left });
+    }
+    setFilterOpen(true);
+  }, []);
+
   // Close filter dropdown on outside click
   useEffect(() => {
     if (!filterOpen) return;
     const handler = (e: MouseEvent) => {
-      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
+      if (
+        filterRef.current && !filterRef.current.contains(e.target as Node) &&
+        filterBtnRef.current && !filterBtnRef.current.contains(e.target as Node)
+      ) {
         setFilterOpen(false);
       }
     };
@@ -94,6 +108,7 @@ export const Sidebar = ({ onClose }: SidebarProps) => {
   };
 
   return (
+    <>
     <motion.aside
       initial={false}
       animate={{ width: collapsed ? 64 : 240 }}
@@ -187,67 +202,17 @@ export const Sidebar = ({ onClose }: SidebarProps) => {
                     </button>
                     {/* Admin space filter button */}
                     {isAdmin && (
-                      <div className="relative" ref={filterRef}>
-                        <button onClick={() => setFilterOpen(v => !v)}
-                          className={cn(
-                            "p-1 rounded transition-colors",
-                            filterOpen ? "text-primary bg-primary/10" : "text-sidebar-foreground/40 hover:text-sidebar-foreground hover:bg-white/10"
-                          )}
-                          title="Filter visible spaces">
-                          <SlidersHorizontal className="w-3 h-3" />
-                        </button>
-                        <AnimatePresence>
-                          {filterOpen && (
-                            <motion.div
-                              initial={{ opacity: 0, scale: 0.95, y: -4 }}
-                              animate={{ opacity: 1, scale: 1, y: 0 }}
-                              exit={{ opacity: 0, scale: 0.95, y: -4 }}
-                              transition={{ duration: 0.15 }}
-                              className="absolute left-0 top-7 z-50 w-56 bg-popover border border-border rounded-xl shadow-xl overflow-hidden"
-                            >
-                              <div className="px-3 py-2 border-b border-border">
-                                <p className="text-xs font-semibold text-foreground">Visible Spaces</p>
-                                <p className="text-[10px] text-muted-foreground mt-0.5">Choose which spaces to show</p>
-                              </div>
-                              <div className="max-h-52 overflow-y-auto py-1">
-                                {topSpaces.length === 0 ? (
-                                  <p className="text-xs text-muted-foreground px-3 py-2">No spaces yet</p>
-                                ) : (
-                                  topSpaces.map(space => {
-                                    const visible = !hiddenSpaceIds.includes(space.id);
-                                    return (
-                                      <button key={space.id}
-                                        onClick={() => toggleSpaceVisibility(space.id)}
-                                        className="flex items-center gap-2.5 w-full px-3 py-2 hover:bg-muted/50 transition-colors text-left">
-                                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: space.color || "#6366f1" }} />
-                                        <span className={cn("text-xs flex-1 truncate", visible ? "text-foreground" : "text-muted-foreground line-through")}>{space.name}</span>
-                                        {visible
-                                          ? <Eye className="w-3 h-3 text-emerald-500 shrink-0" />
-                                          : <EyeOff className="w-3 h-3 text-muted-foreground shrink-0" />
-                                        }
-                                      </button>
-                                    );
-                                  })
-                                )}
-                              </div>
-                              {hiddenSpaceIds.length > 0 && (
-                                <div className="border-t border-border px-3 py-2">
-                                  <button
-                                    onClick={() => {
-                                      if (userDoc?.id) {
-                                        try { localStorage.removeItem(`spaceFilter_hidden_${userDoc.id}`); } catch {}
-                                      }
-                                      window.location.reload();
-                                    }}
-                                    className="text-[11px] text-primary hover:underline font-medium">
-                                    Show all spaces
-                                  </button>
-                                </div>
-                              )}
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
+                      <button
+                        ref={filterBtnRef}
+                        onClick={() => filterOpen ? setFilterOpen(false) : openFilter()}
+                        className={cn(
+                          "p-1 rounded transition-colors shrink-0",
+                          filterOpen ? "text-primary bg-primary/10" : "text-sidebar-foreground/40 hover:text-sidebar-foreground hover:bg-white/10"
+                        )}
+                        title="Filter visible spaces"
+                      >
+                        <SlidersHorizontal className="w-3 h-3" />
+                      </button>
                     )}
                   </div>
                   <AnimatePresence>
@@ -364,5 +329,65 @@ export const Sidebar = ({ onClose }: SidebarProps) => {
         )}
       </div>
     </motion.aside>
+
+    {/* Fixed-position dropdown portal — outside overflow-hidden aside */}
+    {isAdmin && filterOpen && dropdownPos && createPortal(
+      <AnimatePresence>
+        <motion.div
+          ref={filterRef}
+          initial={{ opacity: 0, scale: 0.95, y: -4 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: -4 }}
+          transition={{ duration: 0.15 }}
+          style={{ position: "fixed", top: dropdownPos.top, left: dropdownPos.left, zIndex: 9999 }}
+          className="w-60 bg-popover border border-border rounded-xl shadow-2xl overflow-hidden"
+        >
+          <div className="px-3 py-2.5 border-b border-border">
+            <p className="text-xs font-semibold text-foreground">Visible Spaces</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Choose which spaces to show in your dashboard</p>
+          </div>
+          <div className="max-h-60 overflow-y-auto py-1">
+            {topSpaces.length === 0 ? (
+              <p className="text-xs text-muted-foreground px-3 py-2">No spaces yet</p>
+            ) : (
+              topSpaces.map(space => {
+                const visible = !hiddenSpaceIds.includes(space.id);
+                return (
+                  <button key={space.id}
+                    onClick={() => toggleSpaceVisibility(space.id)}
+                    className="flex items-center gap-2.5 w-full px-3 py-2 hover:bg-muted/50 transition-colors text-left">
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: space.color || "#6366f1" }} />
+                    <span className={cn("text-xs flex-1 truncate", visible ? "text-foreground" : "text-muted-foreground line-through")}>
+                      {space.name}
+                    </span>
+                    {visible
+                      ? <Eye className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                      : <EyeOff className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                    }
+                  </button>
+                );
+              })
+            )}
+          </div>
+          {hiddenSpaceIds.length > 0 && (
+            <div className="border-t border-border px-3 py-2">
+              <button
+                onClick={() => {
+                  if (userDoc?.id) {
+                    try { localStorage.removeItem(`spaceFilter_hidden_${userDoc.id}`); } catch {}
+                  }
+                  setFilterOpen(false);
+                  window.location.reload();
+                }}
+                className="text-[11px] text-primary hover:underline font-medium">
+                Show all spaces
+              </button>
+            </div>
+          )}
+        </motion.div>
+      </AnimatePresence>,
+      document.body
+    )}
+    </>
   );
 };

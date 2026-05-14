@@ -48,10 +48,12 @@ const cardVariants: Variants = {
 type DashView = "overview" | "kanban";
 
 export default function Dashboard() {
-  const { tasks, loading: tasksLoading } = useAllTasks();
+  const { tasks: allTasks, loading: tasksLoading } = useAllTasks();
   const { spaces: allSpaces, loading: spacesLoading } = useSpaces();
   const { filterSpaces } = useSpaceFilter();
   const spaces = filterSpaces(allSpaces);
+  const visibleSpaceIds = new Set(spaces.map(s => s.id));
+  const tasks = allTasks.filter(tk => !tk.spaceId || visibleSpaceIds.has(tk.spaceId));
   const { members } = useMembers();
   const [, navigate] = useLocation();
   const { t } = useLang();
