@@ -23,6 +23,10 @@ const TYPE_CONFIG: Record<NotificationType, { icon: typeof Bell; color: string }
 
 export default function Inbox() {
   const { userDoc } = useAuth();
+
+// أضف دي مباشرةً بعدها
+console.log("userDoc:", userDoc);
+console.log("userDoc.id:", userDoc?.id);
   const { t } = useLang();
   const { notifications, loading, unreadCount } = useNotifications(userDoc?.id);
   const [, navigate] = useLocation();
