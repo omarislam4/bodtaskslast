@@ -48,6 +48,7 @@ export const useNotifications = (userId?: string) => {
 
   useEffect(() => {
     if (!userId) { setLoading(false); return; }
+    console.log("Hook running, userId:", userId);
     const q = query(
       collection(db, "notifications"),
       where("userId", "==", userId),
