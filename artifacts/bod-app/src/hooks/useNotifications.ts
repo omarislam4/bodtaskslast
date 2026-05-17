@@ -53,10 +53,21 @@ export const useNotifications = (userId?: string) => {
       where("userId", "==", userId),
       orderBy("createdAt", "desc")
     );
-    const unsub = onSnapshot(q, (snap) => {
-      setNotifications(snap.docs.map(mapNotif));
-      setLoading(false);
-    });
+
+    // ↓ بدّل الـ onSnapshot القديم بده
+    const unsub = onSnapshot(q, 
+      (snap) => {
+        console.log("Notifications count:", snap.docs.length);
+        console.log("Notifications data:", snap.docs.map(d => d.data()));
+        setNotifications(snap.docs.map(mapNotif));
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Firestore error:", error);
+        setLoading(false);
+      }
+    );
+
     return () => unsub();
   }, [userId]);
 
