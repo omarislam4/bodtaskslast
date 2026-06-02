@@ -1,0 +1,42 @@
+import type { SpacesKeys } from "../en/spaces";
+import type { TranslationValue } from "..";
+
+const spaces: Record<SpacesKeys, TranslationValue> = {
+  newSpace: "مساحة جديدة",
+  searchSpaces: "ابحث عن مساحة...",
+  createSpace: "إنشاء مساحة",
+  spaceName: "الاسم",
+  spaceDesc: "الوصف",
+  spaceColor: "اللون",
+  noSpacesFound: "لا توجد مساحات",
+  createFirstSpace: "أنشئ مساحتك الأولى لتبدأ تنظيم المهام.",
+  notInAnySpace: "لم تُضف إلى أي مساحة بعد.",
+  tasks: "مهام",
+  membersLabel: "أعضاء",
+  overview: "نظرة عامة",
+  tasksTab: "المهام",
+  timelineTab: "الجدول",
+  membersTab: "الأعضاء",
+  data: "الملفات",
+  filesLinks: "الملفات والروابط",
+  newFolder: "مجلد جديد",
+  addLink: "إضافة رابط",
+  createFolder: "إنشاء مجلد",
+  emptyFolder: "مجلد فارغ",
+  noFilesYet: "لا توجد ملفات أو روابط",
+  noFilesDesc: "أنشئ مجلدات وأضف روابط لتنظيم موارد مساحتك.",
+  noFilesAdded: "لم تُضف أي ملفات أو روابط بعد.",
+  deleteSpace: "حذف المساحة",
+  addMember: "إضافة عضو",
+  removeMember: "إزالة",
+  selectMember: "اختر عضواً...",
+  spaceMembersTitle: "أعضاء المساحة",
+  noMembersInSpace: "لا يوجد أعضاء في هذه المساحة",
+  noMembersSpace: "لم يُضف أي أعضاء لهذه المساحة.",
+  noMembersYet: "لم يُضف أعضاء بعد",
+  makeAdmin: "تعيين مسؤولاً",
+  removeAdminRole: "إزالة كمسؤول",
+  subspacesTab: "المساحات الفرعية",
+};
+
+export default spaces;

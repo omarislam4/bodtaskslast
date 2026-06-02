@@ -1,0 +1,40 @@
+import type { CommonKeys } from "../en/common";
+import type { TranslationValue } from "..";
+
+const common: Record<CommonKeys, TranslationValue> = {
+  cancel: "إلغاء",
+  creating: "جاري الإنشاء...",
+  saving: "جاري الحفظ...",
+  loading: "جاري التحميل...",
+  delete: "حذف",
+  edit: "تعديل",
+  add: "إضافة",
+  save: "حفظ",
+  saveChanges: "حفظ التغييرات",
+  search: "بحث...",
+  noResults: "لا توجد نتائج",
+  manage: "إدارة",
+  adding: "جاري الإضافة...",
+  allFilter: "الكل",
+  name: "الاسم",
+  description: "الوصف (اختياري)",
+  notes: "ملاحظات (اختياري)",
+  url: "الرابط",
+  addToFolder: "إضافة إلى مجلد (اختياري)",
+  rootFolder: "الرئيسي (بدون مجلد)",
+  searchTasksSpaces: "ابحث في المهام والمساحات...",
+  typeToSearch: "اكتب للبحث في المهام والمساحات...",
+  noResultsFor: "لا نتائج لـ",
+  profileSettings: "إعدادات الملف الشخصي",
+  webhookSettings: "إعدادات Webhook",
+  close: "إغلاق",
+  confirm: "تأكيد",
+  none: "لا شيء",
+  type: "النوع",
+  value: "القيمة",
+  of: "من",
+  from: "من",
+  all: "الكل",
+};
+
+export default common;

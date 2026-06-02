@@ -58,11 +58,7 @@ import type {
   DependencyType,
   RecurrenceFrequency,
 } from "@/types";
-import {
-  TaskStatusBadge,
-  statusOptions,
-  statusConfig,
-} from "@/components/tasks/TaskStatusBadge";
+import { TaskStatusBadge } from "@/components/tasks/TaskStatusBadge";
 import {
   TaskPriorityBadge,
   priorityOptions,
@@ -72,6 +68,7 @@ import { ProgressBar } from "@/components/shared/ProgressBar";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { taskStatusConfig } from "@/config/status-config";
 
 const DEP_TYPE_CONFIG: Record<
   DependencyType,
@@ -93,6 +90,7 @@ export default function TaskDetail() {
   const { data: allTasks = [] } = useAllTasksQuery();
   const [, navigate] = useLocation();
   const editTitleRef = useRef<HTMLHeadingElement>(null);
+  const statusConfig = taskStatusConfig(t);
 
   const { data: task, isLoading } = useTaskQuery(taskId ?? "");
   const { data: spaceMembers = [] } = useSpaceMembers(spaceId);
@@ -925,9 +923,9 @@ export default function TaskDetail() {
               }
               className="w-full px-3 py-2 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
             >
-              {statusOptions.map((s) => (
+              {Object.keys(statusConfig).map((s) => (
                 <option key={s} value={s}>
-                  {statusConfig[s].label}
+                  {statusConfig[s as TaskStatus].label}
                 </option>
               ))}
             </select>

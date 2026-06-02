@@ -54,3 +54,6 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Admin local
+admin.txt

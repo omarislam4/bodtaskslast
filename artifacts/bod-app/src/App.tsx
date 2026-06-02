@@ -56,24 +56,6 @@ function LoadingScreen() {
   );
 }
 
-function ProtectedRoute({
-  component: Component,
-  adminOnly,
-}: {
-  component: () => React.ReactElement;
-  adminOnly?: boolean;
-}) {
-  const { userDoc, loading, isAdmin } = useAuth();
-  if (loading) return <LoadingScreen />;
-  if (!userDoc) return <Redirect to="/login" />;
-  if (adminOnly && !isAdmin) return <Redirect to="/" />;
-  return (
-    <AppLayout>
-      <Component />
-    </AppLayout>
-  );
-}
-
 function PublicRoute({ component: Component }: { component: () => React.ReactElement }) {
   const { userDoc, loading } = useAuth();
   if (loading) return <LoadingScreen />;
@@ -81,13 +63,40 @@ function PublicRoute({ component: Component }: { component: () => React.ReactEle
   return <Component />;
 }
 
-function HomeRoute() {
+/**
+ * Renders AppLayout once for all protected routes so the Sidebar is never
+ * unmounted on navigation (prevents sidebar animations from replaying).
+ */
+function ProtectedSwitch() {
   const { userDoc, loading, isAdmin } = useAuth();
   if (loading) return <LoadingScreen />;
   if (!userDoc) return <Redirect to="/login" />;
+
   return (
     <AppLayout>
-      {isAdmin ? <Dashboard /> : <MemberDashboard />}
+      <Switch>
+        <Route path="/" component={() => isAdmin ? <Dashboard /> : <MemberDashboard />} />
+        <Route path="/spaces" component={Spaces} />
+        <Route path="/spaces/:spaceId" component={SpaceDetail} />
+        <Route path="/spaces/:spaceId/tasks/:taskId" component={TaskDetail} />
+        <Route path="/timeline" component={() => isAdmin ? <Timeline /> : <Redirect to="/" />} />
+        <Route path="/members" component={() => isAdmin ? <Members /> : <Redirect to="/" />} />
+        <Route path="/senders" component={() => isAdmin ? <Senders /> : <Redirect to="/" />} />
+        <Route path="/history" component={() => isAdmin ? <History /> : <Redirect to="/" />} />
+        <Route path="/settings" component={Settings} />
+        <Route path="/attendance" component={Attendance} />
+        <Route path="/weekly-report" component={WeeklyReport} />
+        <Route path="/bugs" component={() => isAdmin ? <Bugs /> : <Redirect to="/" />} />
+        <Route path="/goals" component={Goals} />
+        <Route path="/my-tasks" component={MyTasks} />
+        <Route path="/sprints" component={Sprints} />
+        <Route path="/inbox" component={Inbox} />
+        <Route path="/portfolio" component={Portfolio} />
+        <Route path="/chat" component={Chat} />
+        <Route path="/forms" component={() => isAdmin ? <Forms /> : <Redirect to="/" />} />
+        <Route path="/automations" component={() => isAdmin ? <Automations /> : <Redirect to="/" />} />
+        <Route component={NotFound} />
+      </Switch>
     </AppLayout>
   );
 }
@@ -97,29 +106,8 @@ function Router() {
     <Switch>
       <Route path="/login" component={() => <PublicRoute component={Login} />} />
       <Route path="/signup" component={() => <PublicRoute component={Signup} />} />
-      <Route path="/" component={HomeRoute} />
-      <Route path="/spaces" component={() => <ProtectedRoute component={Spaces} />} />
-      <Route path="/spaces/:spaceId" component={() => <ProtectedRoute component={SpaceDetail} />} />
-      <Route path="/spaces/:spaceId/tasks/:taskId" component={() => <ProtectedRoute component={TaskDetail} />} />
-      <Route path="/timeline" component={() => <ProtectedRoute component={Timeline} adminOnly />} />
-      <Route path="/members" component={() => <ProtectedRoute component={Members} adminOnly />} />
-      <Route path="/senders" component={() => <ProtectedRoute component={Senders} adminOnly />} />
-      <Route path="/history" component={() => <ProtectedRoute component={History} adminOnly />} />
-      <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
-      <Route path="/attendance" component={() => <ProtectedRoute component={Attendance} />} />
-      <Route path="/weekly-report" component={() => <ProtectedRoute component={WeeklyReport} />} />
-      <Route path="/bugs" component={() => <ProtectedRoute component={Bugs} adminOnly />} />
-      {/* ── New ClickUp-like features ── */}
-      <Route path="/goals" component={() => <ProtectedRoute component={Goals} />} />
-      <Route path="/my-tasks" component={() => <ProtectedRoute component={MyTasks} />} />
-      <Route path="/sprints" component={() => <ProtectedRoute component={Sprints} />} />
-      <Route path="/inbox" component={() => <ProtectedRoute component={Inbox} />} />
-      <Route path="/portfolio" component={() => <ProtectedRoute component={Portfolio} />} />
-      <Route path="/chat" component={() => <ProtectedRoute component={Chat} />} />
-      <Route path="/forms" component={() => <ProtectedRoute component={Forms} adminOnly />} />
-      <Route path="/automations" component={() => <ProtectedRoute component={Automations} adminOnly />} />
       <Route path="/form/:formId" component={PublicForm} />
-      <Route component={NotFound} />
+      <Route component={ProtectedSwitch} />
     </Switch>
   );
 }
