@@ -890,7 +890,7 @@ export default function TaskDetail() {
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-foreground mt-0.5 bg-muted rounded-lg px-3 py-1.5 break-words">
+                      <p className="text-xs text-foreground mt-0.5 bg-muted rounded-lg px-3 py-1.5 wrap-break-word">
                         {a.text}
                       </p>
                       <span className="text-xs text-muted-foreground/60">

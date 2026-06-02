@@ -23,7 +23,7 @@ export function KanbanBoard({ tasks, members, spaceId }: KanbanBoardProps) {
   const [, navigate] = useLocation();
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-4 min-h-[400px]">
+    <div className="flex gap-4 overflow-x-auto pb-4 min-h-100">
       {COLUMNS.map((col) => {
         const colTasks = tasks.filter((t) => t.status === col.id);
         return (
