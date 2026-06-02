@@ -6,6 +6,7 @@ import { useLang } from "@/contexts/LangContext";
 import { useSpaceChannels, useCreateChannel, useDeleteChannel } from "@/hooks/useChatQueries";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { useMembers } from "@/hooks/useMembers";
+import { useLocation, useSearch } from "wouter";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -23,14 +24,21 @@ export default function Chat() {
   const createChannel = useCreateChannel();
   const deleteChannel = useDeleteChannel();
 
+  const search = useSearch();
+  const [, navigate] = useLocation();
   const globalChannels = channels.filter(c => !c.spaceId);
   const selectedChannel = globalChannels.find(c => c.id === selectedChannelId);
 
   useEffect(() => {
-    if (globalChannels.length > 0 && !selectedChannelId) {
+    const params = new URLSearchParams(search);
+    const channelFromUrl = params.get("channel");
+    if (channelFromUrl && globalChannels.some((c) => c.id === channelFromUrl)) {
+      setSelectedChannelId(channelFromUrl);
+      navigate("/chat", { replace: true });
+    } else if (globalChannels.length > 0 && !selectedChannelId) {
       setSelectedChannelId(globalChannels[0].id);
     }
-  }, [globalChannels, selectedChannelId]);
+  }, [search, globalChannels]);
 
   useEffect(() => {
     if (!channelsLoading && globalChannels.length === 0) {

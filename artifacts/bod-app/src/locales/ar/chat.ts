@@ -11,6 +11,7 @@ const chat: Record<ChatKeys, TranslationValue> = {
   noMessages: "لا توجد رسائل",
   noMessagesDesc: "ابدأ المحادثة!",
   generalChannel: "عام",
+  mentionedYou: (name: string) => `${name} ذكرك`,
 };
 
 export default chat;

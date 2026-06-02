@@ -11,9 +11,10 @@ interface Props {
   spaceId: string;
   isAdmin: boolean;
   userId: string;
+  initialChannelId?: string;
 }
 
-export function SpaceChatTab({ spaceId, isAdmin, userId }: Props) {
+export function SpaceChatTab({ spaceId, isAdmin, userId, initialChannelId }: Props) {
   const { t } = useLang();
   const { data: spaceMembers = [] } = useSpaceMembers(spaceId);
   const { data: spaceChannels = [], isLoading: channelsLoading } = useSpaceChannels(spaceId);
@@ -30,10 +31,12 @@ export function SpaceChatTab({ spaceId, isAdmin, userId }: Props) {
         { name: "general", description: "Space discussion", spaceId, isPrivate: false, memberIds: [] },
         { onSuccess: (ch) => setSelectedChannelId(ch.id) },
       );
+    } else if (initialChannelId && spaceChannels.some((c) => c.id === initialChannelId)) {
+      setSelectedChannelId(initialChannelId);
     } else if (!selectedChannelId) {
       setSelectedChannelId(spaceChannels[0].id);
     }
-  }, [spaceChannels, channelsLoading]);
+  }, [spaceChannels, channelsLoading, initialChannelId]);
 
   const handleCreateChannel = () => {
     if (!newChannelName.trim()) return;

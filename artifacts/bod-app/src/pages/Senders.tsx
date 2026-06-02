@@ -102,7 +102,7 @@ export default function Senders() {
           {Array(4).fill(0).map((_, i) => <div key={i} className="h-20 bg-muted rounded-xl animate-pulse" />)}
         </div>
       ) : senders.length === 0 ? (
-        <EmptyState icon={Send} title={t.noSendersYet} description={t.sendersDesc} action={{ label: t.addSenderTitle, onClick: () => setShowCreate(true) }} />
+        <EmptyState icon={Mail} title={t.noSendersYet} description={t.sendersDesc} action={{ label: t.addSenderTitle, onClick: () => setShowCreate(true) }} />
       ) : (
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           {senders.map((sender, i) => (

@@ -72,7 +72,7 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
         </main>
       </div>
 
-      <Toaster position="bottom-right" richColors />
+      <Toaster position="bottom-right" richColors visibleToasts={5} expand />
       <ShiftReminderRunner />
     </div>
   );

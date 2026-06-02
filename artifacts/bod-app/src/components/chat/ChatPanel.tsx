@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, Send, Reply, Pencil, Trash2, X, Smile, Check } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChannelMessages, useSendMessage, useEditMessage, useDeleteMessage, useToggleReaction } from "@/hooks/useChatQueries";
+import { useChatRealtime } from "@/hooks/useChatRealtime";
 import type { ChatMessage } from "@/types";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -29,6 +30,8 @@ export function ChatPanel({ channelId, channelName, spaceId, spaceMembers = [], 
   const deleteMessage = useDeleteMessage(channelId);
   const toggleReaction = useToggleReaction(channelId);
 
+  useChatRealtime(channelId);
+
   const [text, setText] = useState("");
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -52,10 +55,13 @@ export function ChatPanel({ channelId, channelName, spaceId, spaceMembers = [], 
 
   const handleTextChange = (val: string) => {
     setText(val);
-    const words = val.split(/\s/);
-    const last = words[words.length - 1];
-    if (last.startsWith("@") && last.length >= 1) {
-      setMentionQuery(last.slice(1));
+    // detect @[partial... (bracket mention in progress) or @word at end of input
+    const bracketMatch = val.match(/@\[([^\]]*)$/);
+    const wordMatch = val.match(/@(\S*)$/);
+    if (bracketMatch) {
+      setMentionQuery(bracketMatch[1]);
+    } else if (wordMatch) {
+      setMentionQuery(wordMatch[1]);
     } else {
       setMentionQuery(null);
     }
@@ -63,22 +69,60 @@ export function ChatPanel({ channelId, channelName, spaceId, spaceMembers = [], 
 
   const insertMention = (m: Member) => {
     const name = m.displayName || m.email || "User";
-    const parts = text.split(/(\s+)/);
-    for (let i = parts.length - 1; i >= 0; i--) {
-      if (parts[i].startsWith("@")) { parts[i] = `@${name}`; break; }
-    }
-    setText(parts.join("") + " ");
+    const token = name.includes(" ") ? `@[${name}]` : `@${name}`;
+    // replace the trailing @... or @[... fragment with the full token
+    const newText = text.replace(/@\[?[^\]]*$/, token + " ");
+    setText(newText);
     setMentionQuery(null);
     setTimeout(() => inputRef.current?.focus(), 0);
   };
 
+  const renderMessageText = (msg: ChatMessage, isMe: boolean) => {
+    const mentionedMembers = (msg.mentions || [])
+      .map(id => spaceMembers.find(m => m.id === id))
+      .filter(Boolean) as Member[];
+
+    // split on @[Name with spaces] or @word
+    const parts = msg.text.split(/((?:@\[[^\]]+\])|(?:@\S+))/g);
+    return parts.map((part, idx) => {
+      if (!part.startsWith("@")) return <span key={idx}>{part}</span>;
+
+      let display: string;
+      let lookup: string;
+      if (part.startsWith("@[") && part.endsWith("]")) {
+        lookup = part.slice(2, -1);
+        display = "@" + lookup;
+      } else {
+        lookup = part.slice(1).replace(/[.,!?]+$/, "");
+        display = part;
+      }
+
+      const matched = mentionedMembers.find(
+        m => (m.displayName || m.email || "").toLowerCase() === lookup.toLowerCase()
+      );
+      if (!matched) return <span key={idx} className="font-semibold opacity-80">{display}</span>;
+      const isSelf = matched.id === userDoc?.id;
+      return (
+        <span key={idx} className={cn(
+          "rounded px-0.5 font-semibold",
+          isSelf
+            ? isMe ? "bg-white/25 text-white" : "bg-primary/20 text-primary"
+            : isMe ? "bg-white/15 text-white/90" : "bg-muted text-foreground"
+        )}>
+          {display}
+        </span>
+      );
+    });
+  };
+
   const parseMentionIds = (txt: string): string[] => {
-    const regex = /@(\S+)/g;
+    const regex = /@\[([^\]]+)\]|@(\S+)/g;
     const ids: string[] = [];
     let m;
     while ((m = regex.exec(txt)) !== null) {
-      const q = m[1].toLowerCase().replace(/[.,!?]+$/, "");
+      const q = (m[1] || m[2]).toLowerCase().replace(/[.,!?]+$/, "");
       const found = spaceMembers.find(mb =>
+        (mb.displayName || mb.email || "").toLowerCase() === q ||
         (mb.displayName || mb.email || "").toLowerCase().startsWith(q)
       );
       if (found && found.id !== (userDoc?.id || "")) ids.push(found.id);
@@ -221,11 +265,7 @@ export function ChatPanel({ channelId, channelName, spaceId, spaceMembers = [], 
                             ? "bg-primary text-primary-foreground rounded-tr-sm"
                             : "bg-card border border-border text-foreground rounded-tl-sm"
                       )}>
-                        {msg.deleted ? "This message was deleted" : (
-                          <span dangerouslySetInnerHTML={{
-                            __html: msg.text.replace(/@(\S+)/g, '<strong class="opacity-80">@$1</strong>')
-                          }} />
-                        )}
+                        {msg.deleted ? "This message was deleted" : renderMessageText(msg, isMe)}
                         {msg.edited && !msg.deleted && <span className="ml-1 text-[10px] opacity-50">(edited)</span>}
                       </div>
                     )}

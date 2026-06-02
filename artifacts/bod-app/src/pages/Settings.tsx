@@ -40,7 +40,7 @@ export default function Settings() {
 
   const { data: appSettings } = useAppSettings(isAdmin);
   const updateAppSettings = useUpdateAppSettings();
-  const [webhookUrl, setWebhookUrl] = useState(appSettings?.webhookUrl || "https://n8n.bodhosting.com/webhook/manual-send-notification");
+  const [webhookUrl, setWebhookUrl] = useState(appSettings?.webhookUrl || "https://n8n.athar-riyada.com/webhook/manual-send-notification");
   const [reminderMinutes, setReminderMinutes] = useState(appSettings?.reminderMinutes || 30);
 
   const handleSaveProfile = () => {

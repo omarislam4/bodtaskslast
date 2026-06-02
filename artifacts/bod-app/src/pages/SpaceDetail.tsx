@@ -1,16 +1,31 @@
-import { useState } from "react";
-import { useParams, useLocation } from "wouter";
+import { useState, useRef, useEffect } from "react";
+import { useParams, useLocation, useSearch } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Plus, ArrowLeft, Trash2,
-  CheckCircle2, Users, LayoutDashboard, Calendar,
-  FolderOpen, Kanban, Layers, Bug, MessageCircle, ChevronRight,
+  Plus,
+  ArrowLeft,
+  Trash2,
+  CheckCircle2,
+  Users,
+  LayoutDashboard,
+  Calendar,
+  FolderOpen,
+  Kanban,
+  Layers,
+  Bug,
+  MessageCircle,
+  ChevronRight,
+  ChevronLeft,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
 import { useTasksBySpace } from "@/hooks/useTaskQueries";
 import type { TaskType } from "@/types";
-import { useSpaceQuery, useDeleteSpace, useSpaceMembers } from "@/hooks/useSpaces";
+import {
+  useSpaceQuery,
+  useDeleteSpace,
+  useSpaceMembers,
+} from "@/hooks/useSpaces";
 import { SpaceGoalsTab } from "@/components/spaces/SpaceGoalsTab";
 import { SpaceSprintsTab } from "@/components/spaces/SpaceSprintsTab";
 import { SpaceOverviewTab } from "@/components/spaces/SpaceOverviewTab";
@@ -30,18 +45,40 @@ import { useMembers } from "@/hooks/useMembers";
 import { cn } from "@/lib/utils";
 
 type Tab =
-  | "overview" | "tasks" | "bugs" | "kanban" | "timeline"
-  | "members" | "data" | "subspaces" | "calendar" | "workload"
-  | "table" | "gantt" | "chat" | "goals" | "sprints";
+  | "overview"
+  | "tasks"
+  | "bugs"
+  | "kanban"
+  | "timeline"
+  | "members"
+  | "data"
+  | "subspaces"
+  | "calendar"
+  | "workload"
+  | "table"
+  | "gantt"
+  | "chat"
+  | "goals"
+  | "sprints";
 
 export default function SpaceDetail() {
   const { spaceId } = useParams<{ spaceId: string }>();
   const [activeTab, setActiveTab] = useState<Tab>("tasks");
   const [showCreate, setShowCreate] = useState(false);
   const [createTaskType, setCreateTaskType] = useState<TaskType>("task");
+  const [initialChatChannelId, setInitialChatChannelId] = useState<string | undefined>();
+  const search = useSearch();
+
+  useEffect(() => {
+    const params = new URLSearchParams(search);
+    const tab = params.get("tab") as Tab | null;
+    const channel = params.get("channel") ?? undefined;
+    if (tab) setActiveTab(tab);
+    if (channel) setInitialChatChannelId(channel);
+  }, [search]);
 
   const { userDoc, isAdmin } = useAuth();
-  const { t } = useLang();
+  const { t, isRTL } = useLang();
   const [, navigate] = useLocation();
 
   const { data: space, isLoading: spaceLoading } = useSpaceQuery(spaceId);
@@ -50,7 +87,18 @@ export default function SpaceDetail() {
   const { members } = useMembers();
   const deleteSpace = useDeleteSpace();
 
-  const isInSpace = isAdmin || (userDoc != null && space?.memberIds?.includes(userDoc.id));
+  const isInSpace =
+    isAdmin || (userDoc != null && space?.memberIds?.includes(userDoc.id));
+
+  const tabNavRef = useRef<HTMLDivElement>(null);
+
+  const scrollTabs = (dir: "left" | "right") => {
+    const delta = dir === "left" ? -160 : 160;
+    tabNavRef.current?.scrollBy({
+      left: isRTL ? delta : -delta,
+      behavior: "smooth",
+    });
+  };
 
   const handleDeleteSpace = () => {
     if (!spaceId || !space) return;
@@ -75,22 +123,27 @@ export default function SpaceDetail() {
     );
   }
 
-  const tabs: { id: Tab; label: string; icon: typeof LayoutDashboard; adminOnly?: boolean }[] = [
-    { id: "overview",   label: t.overview,     icon: LayoutDashboard },
-    { id: "tasks",      label: t.tasksTab,     icon: CheckCircle2 },
-    { id: "bugs",       label: t.bugTab,       icon: Bug },
-    { id: "kanban",     label: t.kanbanView,   icon: Kanban },
-    { id: "calendar",   label: t.calendarView, icon: Calendar },
-    { id: "table",      label: t.tableView,    icon: LayoutDashboard },
-    { id: "gantt",      label: t.ganttView,    icon: Layers },
-    { id: "workload",   label: t.workloadView, icon: Users },
-    { id: "timeline",   label: t.timelineTab,  icon: Calendar },
-    { id: "goals",      label: t.goals,        icon: ChevronRight },
-    { id: "sprints",    label: t.sprints,      icon: ChevronRight },
-    { id: "members",    label: t.membersTab,   icon: Users },
-    { id: "data",       label: t.data,         icon: FolderOpen },
-    { id: "subspaces",  label: t.subspacesTab, icon: Layers },
-    { id: "chat",       label: "Chat",         icon: MessageCircle },
+  const tabs: {
+    id: Tab;
+    label: string;
+    icon: typeof LayoutDashboard;
+    adminOnly?: boolean;
+  }[] = [
+    { id: "overview", label: t.overview, icon: LayoutDashboard },
+    { id: "tasks", label: t.tasksTab, icon: CheckCircle2 },
+    { id: "bugs", label: t.bugTab, icon: Bug },
+    { id: "kanban", label: t.kanbanView, icon: Kanban },
+    { id: "calendar", label: t.calendarView, icon: Calendar },
+    { id: "table", label: t.tableView, icon: LayoutDashboard },
+    { id: "gantt", label: t.ganttView, icon: Layers },
+    { id: "workload", label: t.workloadView, icon: Users },
+    { id: "timeline", label: t.timelineTab, icon: Calendar },
+    { id: "goals", label: t.goals, icon: ChevronRight },
+    { id: "sprints", label: t.sprints, icon: ChevronRight },
+    { id: "members", label: t.membersTab, icon: Users },
+    { id: "data", label: t.data, icon: FolderOpen },
+    { id: "subspaces", label: t.subspacesTab, icon: Layers },
+    { id: "chat", label: "Chat", icon: MessageCircle },
   ];
 
   const visibleTabs = tabs.filter((tab) => !tab.adminOnly || isAdmin);
@@ -112,12 +165,19 @@ export default function SpaceDetail() {
                 className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center shrink-0"
                 style={{ backgroundColor: `${space.color || "#6366f1"}20` }}
               >
-                <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full" style={{ backgroundColor: space.color || "#6366f1" }} />
+                <div
+                  className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full"
+                  style={{ backgroundColor: space.color || "#6366f1" }}
+                />
               </div>
               <div className="min-w-0">
-                <h1 className="text-base sm:text-lg font-bold text-foreground truncate">{space.name}</h1>
+                <h1 className="text-base sm:text-lg font-bold text-foreground truncate">
+                  {space.name}
+                </h1>
                 {space.description && (
-                  <p className="text-xs text-muted-foreground truncate hidden sm:block">{space.description}</p>
+                  <p className="text-xs text-muted-foreground truncate hidden sm:block">
+                    {space.description}
+                  </p>
                 )}
               </div>
             </div>
@@ -155,7 +215,11 @@ export default function SpaceDetail() {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => { setCreateTaskType("task"); setActiveTab("tasks"); setShowCreate(true); }}
+                onClick={() => {
+                  setCreateTaskType("task");
+                  setActiveTab("tasks");
+                  setShowCreate(true);
+                }}
                 className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-primary text-primary-foreground text-xs sm:text-sm font-semibold rounded-xl hover:bg-primary/90 transition-colors shadow-sm"
               >
                 <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -167,28 +231,55 @@ export default function SpaceDetail() {
         </div>
 
         {/* Tab nav */}
-        <div className="flex gap-0.5 sm:gap-1 overflow-x-auto scrollbar-hide">
-          {visibleTabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                "flex items-center gap-1.5 px-2.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 transition-all duration-150",
-                activeTab === tab.id
-                  ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-border",
-              )}
-            >
-              <tab.icon className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
-              <span className="hidden sm:inline">{tab.label}</span>
-              <span className="sm:hidden">{tab.label.split(" ")[0]}</span>
-              {tab.id === "tasks" && tasks.length > 0 && (
-                <span className="text-xs bg-muted text-muted-foreground rounded-full px-1.5 py-0.5 leading-none hidden sm:inline">
-                  {tasks.length}
-                </span>
-              )}
-            </button>
-          ))}
+        <div className="flex items-center">
+          <button
+            onClick={() => scrollTabs("right")}
+            className="flex items-center justify-center shrink-0 px-1 pb-1 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {isRTL ? (
+              <ChevronRight className="w-4 h-4" />
+            ) : (
+              <ChevronLeft className="w-4 h-4" />
+            )}
+          </button>
+
+          <div
+            ref={tabNavRef}
+            className="flex gap-0.5 sm:gap-1 overflow-x-auto scrollbar-hide"
+          >
+            {visibleTabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  "flex items-center gap-1.5 px-2.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 transition-all duration-150",
+                  activeTab === tab.id
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-border",
+                )}
+              >
+                <tab.icon className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="sm:hidden">{tab.label.split(" ")[0]}</span>
+                {tab.id === "tasks" && tasks.length > 0 && (
+                  <span className="text-xs bg-muted text-muted-foreground rounded-full px-1.5 py-0.5 leading-none hidden sm:inline">
+                    {tasks.length}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={() => scrollTabs("left")}
+            className="flex items-center justify-center shrink-0 px-1 pb-1 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {isRTL ? (
+              <ChevronLeft className="w-4 h-4" />
+            ) : (
+              <ChevronRight className="w-4 h-4" />
+            )}
+          </button>
         </div>
       </div>
 
@@ -232,21 +323,49 @@ export default function SpaceDetail() {
               className="p-4 sm:p-6"
             >
               <div className="flex items-center justify-between mb-5">
-                <h2 className="text-sm font-semibold text-foreground">Kanban Board</h2>
-                <span className="text-xs text-muted-foreground">{tasks.length} total tasks</span>
+                <h2 className="text-sm font-semibold text-foreground">
+                  Kanban Board
+                </h2>
+                <span className="text-xs text-muted-foreground">
+                  {tasks.length} total tasks
+                </span>
               </div>
               <KanbanBoard tasks={tasks} members={members} spaceId={spaceId} />
             </motion.div>
           )}
 
-          {activeTab === "calendar"  && <SpaceCalendarTab  key="calendar"  spaceId={spaceId!} />}
-          {activeTab === "table"     && <SpaceTableTab     key="table"     spaceId={spaceId!} />}
-          {activeTab === "gantt"     && <SpaceGanttTab     key="gantt"     spaceId={spaceId!} />}
-          {activeTab === "workload"  && <SpaceWorkloadTab  key="workload"  spaceId={spaceId!} />}
-          {activeTab === "timeline"  && <SpaceTimelineTab  key="timeline"  spaceId={spaceId!} />}
-          {activeTab === "members"   && <SpaceMembersTab   key="members"   spaceId={spaceId!} isAdmin={isAdmin} />}
-          {activeTab === "data"      && <SpaceDataTab      key="data"      spaceId={spaceId!} isAdmin={isAdmin} />}
-          {activeTab === "subspaces" && <SpaceSubspacesTab key="subspaces" spaceId={spaceId!} isAdmin={isAdmin} />}
+          {activeTab === "calendar" && (
+            <SpaceCalendarTab key="calendar" spaceId={spaceId!} />
+          )}
+          {activeTab === "table" && (
+            <SpaceTableTab key="table" spaceId={spaceId!} />
+          )}
+          {activeTab === "gantt" && (
+            <SpaceGanttTab key="gantt" spaceId={spaceId!} />
+          )}
+          {activeTab === "workload" && (
+            <SpaceWorkloadTab key="workload" spaceId={spaceId!} />
+          )}
+          {activeTab === "timeline" && (
+            <SpaceTimelineTab key="timeline" spaceId={spaceId!} />
+          )}
+          {activeTab === "members" && (
+            <SpaceMembersTab
+              key="members"
+              spaceId={spaceId!}
+              isAdmin={isAdmin}
+            />
+          )}
+          {activeTab === "data" && (
+            <SpaceDataTab key="data" spaceId={spaceId!} isAdmin={isAdmin} />
+          )}
+          {activeTab === "subspaces" && (
+            <SpaceSubspacesTab
+              key="subspaces"
+              spaceId={spaceId!}
+              isAdmin={isAdmin}
+            />
+          )}
 
           {activeTab === "chat" && (
             <SpaceChatTab
@@ -254,17 +373,28 @@ export default function SpaceDetail() {
               spaceId={spaceId!}
               isAdmin={isAdmin}
               userId={userDoc?.id || ""}
+              initialChannelId={initialChatChannelId}
             />
           )}
 
           {activeTab === "goals" && (
-            <motion.div key="goals" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+            <motion.div
+              key="goals"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+            >
               <SpaceGoalsTab spaceId={spaceId!} />
             </motion.div>
           )}
 
           {activeTab === "sprints" && (
-            <motion.div key="sprints" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+            <motion.div
+              key="sprints"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+            >
               <SpaceSprintsTab spaceId={spaceId!} />
             </motion.div>
           )}

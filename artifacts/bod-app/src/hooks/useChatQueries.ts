@@ -14,7 +14,7 @@ export const useSpaceChannels = (spaceId?: string) =>
   useQuery({
     queryKey: chatKeys.channels(spaceId),
     queryFn: () => chatService.listChannels(spaceId),
-    enabled: !!spaceId,
+    enabled: spaceId === undefined || spaceId.length > 0,
   });
 
 export const useCreateChannel = () => {
@@ -37,7 +37,6 @@ export const useChannelMessages = (channelId: string) =>
     queryFn: () => chatService.listMessages(channelId),
     enabled: !!channelId,
     staleTime: 0,
-    refetchInterval: 5000,
   });
 
 export const useSendMessage = (channelId: string) => {

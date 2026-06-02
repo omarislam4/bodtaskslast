@@ -32,6 +32,7 @@ import Automations from "@/pages/Automations";
 import PublicForm from "@/pages/PublicForm";
 import NotFound from "@/pages/not-found";
 import { useActivityWatcher } from "@/hooks/useActivityWatcher";
+import { useChatNotifications } from "@/hooks/useChatNotifications";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -67,6 +68,11 @@ function PublicRoute({ component: Component }: { component: () => React.ReactEle
  * Renders AppLayout once for all protected routes so the Sidebar is never
  * unmounted on navigation (prevents sidebar animations from replaying).
  */
+function ChatNotificationsWatcher() {
+  useChatNotifications();
+  return null;
+}
+
 function ProtectedSwitch() {
   const { userDoc, loading, isAdmin } = useAuth();
   if (loading) return <LoadingScreen />;
@@ -74,6 +80,7 @@ function ProtectedSwitch() {
 
   return (
     <AppLayout>
+      <ChatNotificationsWatcher />
       <Switch>
         <Route path="/" component={() => isAdmin ? <Dashboard /> : <MemberDashboard />} />
         <Route path="/spaces" component={Spaces} />

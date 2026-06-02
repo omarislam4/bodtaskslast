@@ -8,6 +8,7 @@ const chat = {
   noMessages: "No messages yet",
   noMessagesDesc: "Start the conversation!",
   generalChannel: "general",
+  mentionedYou: (name: string) => `${name} mentioned you`,
 } as const;
 
 export type ChatKeys = keyof typeof chat;
