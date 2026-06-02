@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { TaskStatus } from "@/hooks/useTasks";
+import type { TaskStatus } from "@/types";
 
 const statusConfig: Record<TaskStatus, { label: string; className: string }> = {
   todo: { label: "To Do", className: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400" },

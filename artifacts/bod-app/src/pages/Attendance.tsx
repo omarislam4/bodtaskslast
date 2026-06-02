@@ -2,66 +2,72 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Clock, CheckCircle2, Send } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLang } from "@/contexts/LangContext";
+import { useLogAttendance } from "@/hooks/useAttendance";
 import { toast } from "sonner";
+import type { AttendanceType } from "@/types";
 
-async function fireWebhook(url: string, payload: Record<string, string>): Promise<void> {
-  try {
-    await fetch(url, {
-      method: "POST",
-      mode: "no-cors",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify(payload),
-    });
-  } catch {
-    throw new Error("Network error — check your connection");
-  }
+const N8N_URLS: Record<AttendanceType, string> = {
+  start: "https://n8n.athar-riyada.com/webhook/start-shift",
+  midday: "https://n8n.athar-riyada.com/webhook/mid-day-attendence",
+  end: "https://n8n.athar-riyada.com/webhook/end-shift",
+};
+
+const N8N_MESSAGES: Record<AttendanceType, (now: string) => string> = {
+  start: (now) => `Start Main Shift — ${now}`,
+  midday: (now) => `Mid Day Attendance — ${now}`,
+  end: (now) => `End Shift — ${now}`,
+};
+
+function fireN8nWebhook(
+  type: AttendanceType,
+  payload: Record<string, string>
+): void {
+  fetch(N8N_URLS[type], {
+    method: "POST",
+    mode: "no-cors",
+    headers: { "Content-Type": "text/plain" },
+    body: JSON.stringify(payload),
+  }).catch(() => {});
 }
 
 export default function Attendance() {
   const { userDoc } = useAuth();
+  const { t } = useLang();
+  const logAttendance = useLogAttendance();
   const [endShiftReport, setEndShiftReport] = useState("");
-  const [sendingAttendance, setSendingAttendance] = useState<string | null>(null);
 
-  const handleAttendance = async (type: "start" | "midday" | "end") => {
-    const urls: Record<string, string> = {
-      start: "https://n8n.athar-riyada.com/webhook/start-shift",
-      midday: "https://n8n.athar-riyada.com/webhook/mid-day-attendence",
-      end: "https://n8n.athar-riyada.com/webhook/end-shift",
-    };
+  const isLoading = (type: AttendanceType) =>
+    logAttendance.isPending && logAttendance.variables?.type === type;
+
+  const handleAttendance = (type: AttendanceType) => {
     if (type === "end" && !endShiftReport.trim()) {
-      toast.error("Please write a report before submitting");
+      toast.error(t.errNoReport);
       return;
     }
-    setSendingAttendance(type);
-    try {
-      const now = new Date().toISOString();
-      const payload: Record<string, string> = {
-        userId: userDoc?.id || "",
-        userName: userDoc?.displayName || userDoc?.email || "",
-        userEmail: userDoc?.email || "",
-        timestamp: now,
-        type,
-      };
-      if (type === "start") payload.message = `Start Main Shift — ${now}`;
-      if (type === "midday") payload.message = `Mid Day Attendance — ${now}`;
-      if (type === "end") {
-        payload.message = `End Shift — ${now}`;
-        payload.report = endShiftReport;
-      }
-      await fireWebhook(urls[type], payload);
-      if (type === "end") setEndShiftReport("");
-      toast.success(
-        type === "start" ? "Shift started!" :
-        type === "midday" ? "Mid-day attendance recorded!" :
-        "Shift ended & report sent!"
-      );
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to send. Please try again.");
-    } finally {
-      setSendingAttendance(null);
-    }
-  };
 
+    logAttendance.mutate(
+      {
+        type,
+        ...(type === "end" ? { report: endShiftReport } : {}),
+      },
+      {
+        onSuccess: () => {
+          const now = new Date().toISOString();
+          fireN8nWebhook(type, {
+            userId: userDoc?.id || "",
+            userName: userDoc?.displayName || userDoc?.email || "",
+            userEmail: userDoc?.email || "",
+            timestamp: now,
+            type,
+            message: N8N_MESSAGES[type](now),
+            ...(type === "end" ? { report: endShiftReport } : {}),
+          });
+          if (type === "end") setEndShiftReport("");
+        },
+      }
+    );
+  };
 
   return (
     <div className="p-4 sm:p-6 max-w-2xl mx-auto">
@@ -86,13 +92,13 @@ export default function Attendance() {
             </div>
           </div>
           <motion.button
-            whileHover={sendingAttendance === "start" ? {} : { scale: 1.02 }}
-            whileTap={sendingAttendance === "start" ? {} : { scale: 0.98 }}
+            whileHover={isLoading("start") ? {} : { scale: 1.02 }}
+            whileTap={isLoading("start") ? {} : { scale: 0.98 }}
             onClick={() => handleAttendance("start")}
-            disabled={sendingAttendance === "start"}
+            disabled={logAttendance.isPending}
             className="w-full py-3 bg-emerald-500 text-white text-sm font-semibold rounded-xl hover:bg-emerald-600 disabled:opacity-60 transition-colors shadow-sm"
           >
-            {sendingAttendance === "start" ? "Recording..." : "Start Main Shift"}
+            {isLoading("start") ? t.loading : "Start Main Shift"}
           </motion.button>
         </motion.div>
 
@@ -111,13 +117,13 @@ export default function Attendance() {
             </div>
           </div>
           <motion.button
-            whileHover={sendingAttendance === "midday" ? {} : { scale: 1.02 }}
-            whileTap={sendingAttendance === "midday" ? {} : { scale: 0.98 }}
+            whileHover={isLoading("midday") ? {} : { scale: 1.02 }}
+            whileTap={isLoading("midday") ? {} : { scale: 0.98 }}
             onClick={() => handleAttendance("midday")}
-            disabled={sendingAttendance === "midday"}
+            disabled={logAttendance.isPending}
             className="w-full py-3 bg-blue-500 text-white text-sm font-semibold rounded-xl hover:bg-blue-600 disabled:opacity-60 transition-colors shadow-sm"
           >
-            {sendingAttendance === "midday" ? "Recording..." : "Mid Day Attendance"}
+            {isLoading("midday") ? t.loading : "Mid Day Attendance"}
           </motion.button>
         </motion.div>
 
@@ -143,14 +149,14 @@ export default function Attendance() {
             className="w-full px-4 py-3 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all resize-none mb-3"
           />
           <motion.button
-            whileHover={sendingAttendance === "end" ? {} : { scale: 1.02 }}
-            whileTap={sendingAttendance === "end" ? {} : { scale: 0.98 }}
+            whileHover={isLoading("end") ? {} : { scale: 1.02 }}
+            whileTap={isLoading("end") ? {} : { scale: 0.98 }}
             onClick={() => handleAttendance("end")}
-            disabled={sendingAttendance === "end" || !endShiftReport.trim()}
+            disabled={logAttendance.isPending || !endShiftReport.trim()}
             className="w-full py-3 bg-orange-500 text-white text-sm font-semibold rounded-xl hover:bg-orange-600 disabled:opacity-60 transition-colors shadow-sm flex items-center justify-center gap-2"
           >
             <Send className="w-4 h-4" />
-            {sendingAttendance === "end" ? "Sending..." : "End Shift"}
+            {isLoading("end") ? t.saving : "End Shift"}
           </motion.button>
         </motion.div>
       </div>

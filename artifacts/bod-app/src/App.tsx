@@ -28,10 +28,22 @@ import Inbox from "@/pages/Inbox";
 import Portfolio from "@/pages/Portfolio";
 import Chat from "@/pages/Chat";
 import Forms from "@/pages/Forms";
+import Automations from "@/pages/Automations";
 import PublicForm from "@/pages/PublicForm";
 import NotFound from "@/pages/not-found";
+import { useActivityWatcher } from "@/hooks/useActivityWatcher";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 0,
+      refetchOnMount: true,
+      refetchOnWindowFocus: true,
+      refetchInterval: 2 * 60 * 1000,
+      refetchIntervalInBackground: false,
+    },
+  },
+});
 
 function LoadingScreen() {
   return (
@@ -51,9 +63,9 @@ function ProtectedRoute({
   component: () => React.ReactElement;
   adminOnly?: boolean;
 }) {
-  const { user, loading, isAdmin } = useAuth();
+  const { userDoc, loading, isAdmin } = useAuth();
   if (loading) return <LoadingScreen />;
-  if (!user) return <Redirect to="/login" />;
+  if (!userDoc) return <Redirect to="/login" />;
   if (adminOnly && !isAdmin) return <Redirect to="/" />;
   return (
     <AppLayout>
@@ -63,16 +75,16 @@ function ProtectedRoute({
 }
 
 function PublicRoute({ component: Component }: { component: () => React.ReactElement }) {
-  const { user, loading } = useAuth();
+  const { userDoc, loading } = useAuth();
   if (loading) return <LoadingScreen />;
-  if (user) return <Redirect to="/" />;
+  if (userDoc) return <Redirect to="/" />;
   return <Component />;
 }
 
 function HomeRoute() {
-  const { user, loading, isAdmin } = useAuth();
+  const { userDoc, loading, isAdmin } = useAuth();
   if (loading) return <LoadingScreen />;
-  if (!user) return <Redirect to="/login" />;
+  if (!userDoc) return <Redirect to="/login" />;
   return (
     <AppLayout>
       {isAdmin ? <Dashboard /> : <MemberDashboard />}
@@ -105,6 +117,7 @@ function Router() {
       <Route path="/portfolio" component={() => <ProtectedRoute component={Portfolio} />} />
       <Route path="/chat" component={() => <ProtectedRoute component={Chat} />} />
       <Route path="/forms" component={() => <ProtectedRoute component={Forms} adminOnly />} />
+      <Route path="/automations" component={() => <ProtectedRoute component={Automations} adminOnly />} />
       <Route path="/form/:formId" component={PublicForm} />
       <Route component={NotFound} />
     </Switch>
@@ -112,6 +125,7 @@ function Router() {
 }
 
 function App() {
+  useActivityWatcher();
   return (
     <QueryClientProvider client={queryClient}>
       <LangProvider>

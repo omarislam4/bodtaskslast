@@ -1,18 +1,18 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Send, Plus, Trash2, Edit2, Check, X, Shield, Mail, Phone, Building2 } from "lucide-react";
-import { doc, updateDoc, deleteDoc, addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { db } from "@/firebase";
-import { useSenders, Sender } from "@/hooks/useSenders";
+import { Plus, Trash2, Edit2, Check, X, Shield, Mail, Phone, Building2 } from "lucide-react";
+import { useSenders, Sender, useCreateSender, useUpdateSender, useDeleteSender } from "@/hooks/useSenders";
 import { useAuth } from "@/contexts/AuthContext";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { useLang } from "@/contexts/LangContext";
-import { toast } from "sonner";
 
 export default function Senders() {
   const { senders, loading } = useSenders();
   const { isAdmin } = useAuth();
   const { t } = useLang();
+  const createSender = useCreateSender();
+  const updateSender = useUpdateSender();
+  const deleteSender = useDeleteSender();
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", email: "", phone: "", company: "" });
@@ -30,36 +30,18 @@ export default function Senders() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) return;
-    try {
-      await addDoc(collection(db, "senders"), {
-        ...form,
-        createdAt: serverTimestamp(),
-      });
-      toast.success(t.addSenderTitle);
-      setShowCreate(false);
-      setForm({ name: "", email: "", phone: "", company: "" });
-    } catch {
-      toast.error("Failed to add sender");
-    }
+    await createSender.mutateAsync(form);
+    setShowCreate(false);
+    setForm({ name: "", email: "", phone: "", company: "" });
   };
 
   const handleUpdate = async (id: string) => {
-    try {
-      await updateDoc(doc(db, "senders", id), editForm);
-      toast.success(t.save);
-      setEditing(null);
-    } catch {
-      toast.error("Failed to update");
-    }
+    await updateSender.mutateAsync({ id, payload: editForm });
+    setEditing(null);
   };
 
   const handleDelete = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, "senders", id));
-      toast.success(t.delete);
-    } catch {
-      toast.error("Failed to delete");
-    }
+    await deleteSender.mutateAsync(id);
   };
 
   const fields: { key: "name" | "company" | "email" | "phone"; label: string; placeholder: string; required?: boolean; type?: string }[] = [

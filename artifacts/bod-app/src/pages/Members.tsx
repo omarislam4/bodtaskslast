@@ -1,26 +1,61 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Users, Plus, Trash2, Edit2, Check, X, Shield, UserCheck, ShieldCheck } from "lucide-react";
-import { doc, updateDoc, deleteDoc, addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { db } from "@/firebase";
-import { useMembers } from "@/hooks/useMembers";
-import { useSpaces } from "@/hooks/useSpaces";
+import { useMembers, memberKeys } from "@/hooks/useMembers";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { usersService } from "@/services/users";
+import { useSpaces, useAddSpaceMember, useRemoveSpaceMember } from "@/hooks/useSpaces";
 import { useAuth } from "@/contexts/AuthContext";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { MemberRowSkeleton } from "@/components/shared/SkeletonLoader";
 import { useLang } from "@/contexts/LangContext";
 import { toast } from "sonner";
-import { UserDoc } from "@/contexts/AuthContext";
+import type { UserDoc } from "@/types";
 
 export default function Members() {
   const { members, loading } = useMembers();
   const { spaces } = useSpaces();
   const { isAdmin } = useAuth();
   const { t } = useLang();
+  const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [form, setForm] = useState({ displayName: "", email: "", role: "member" as "admin" | "member" });
   const [editForm, setEditForm] = useState<Partial<UserDoc>>({});
+
+  const createMember = useMutation({
+    mutationFn: () => usersService.create({ email: form.email.trim(), displayName: form.displayName.trim(), role: form.role }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: memberKeys.all() });
+      toast.success(t.addMember);
+      setShowCreate(false);
+      setForm({ displayName: "", email: "", role: "member" });
+    },
+    onError: () => toast.error(t.errGeneric),
+  });
+
+  const updateMember = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: Record<string, unknown> }) =>
+      usersService.update(id, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: memberKeys.all() });
+      toast.success(t.save);
+      setEditing(null);
+    },
+    onError: () => toast.error(t.errGeneric),
+  });
+
+  const deleteMember = useMutation({
+    mutationFn: (id: string) => usersService.remove(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: memberKeys.all() });
+      toast.success(t.delete);
+    },
+    onError: () => toast.error(t.errGeneric),
+  });
+
+  const addSpaceMember = useAddSpaceMember();
+  const removeSpaceMember = useRemoveSpaceMember();
 
   if (!isAdmin) {
     return (
@@ -31,72 +66,33 @@ export default function Members() {
     );
   }
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.email.trim() || !form.displayName.trim()) return;
-    try {
-      await addDoc(collection(db, "users"), {
-        email: form.email.trim(),
-        displayName: form.displayName.trim(),
-        role: form.role,
-        avatar: "",
-        spaceIds: [],
-        createdAt: serverTimestamp(),
-      });
-      toast.success(t.addMember);
-      setShowCreate(false);
-      setForm({ displayName: "", email: "", role: "member" });
-    } catch {
-      toast.error("Failed to add member");
-    }
+    createMember.mutate();
   };
 
-  const handleUpdate = async (id: string) => {
-    try {
-      await updateDoc(doc(db, "users", id), editForm);
-      toast.success(t.save);
-      setEditing(null);
-    } catch {
-      toast.error("Failed to update member");
-    }
+  const handleUpdate = (id: string) => {
+    updateMember.mutate({ id, payload: editForm as Record<string, unknown> });
   };
 
-  const handleDelete = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, "users", id));
-      toast.success(t.delete);
-    } catch {
-      toast.error("Failed to delete member");
-    }
+  const handleDelete = (id: string) => {
+    deleteMember.mutate(id);
   };
 
-  const handleRoleToggle = async (member: UserDoc) => {
+  const handleRoleToggle = (member: UserDoc) => {
     const newRole = member.role === "admin" ? "member" : "admin";
-    try {
-      await updateDoc(doc(db, "users", member.id), { role: newRole });
-      toast.success(newRole === "admin" ? t.makeAdmin : t.removeAdminRole);
-    } catch {
-      toast.error("Failed to update role");
-    }
+    updateMember.mutate({ id: member.id, payload: { role: newRole } }, {
+      onSuccess: () => toast.success(newRole === "admin" ? t.makeAdmin : t.removeAdminRole),
+    });
   };
 
-  const handleSpaceToggle = async (member: UserDoc, spaceId: string) => {
+  const handleSpaceToggle = (member: UserDoc, spaceId: string) => {
     const hasSpace = member.spaceIds?.includes(spaceId);
-    const newSpaceIds = hasSpace
-      ? (member.spaceIds || []).filter((id) => id !== spaceId)
-      : [...(member.spaceIds || []), spaceId];
-    try {
-      await updateDoc(doc(db, "users", member.id), { spaceIds: newSpaceIds });
-      const spaceDoc = spaces.find((s) => s.id === spaceId);
-      if (spaceDoc) {
-        const newMemberIds = hasSpace
-          ? (spaceDoc.memberIds || []).filter((id) => id !== member.id)
-          : [...(spaceDoc.memberIds || []), member.id];
-        await updateDoc(doc(db, "spaces", spaceId), { memberIds: newMemberIds });
-      }
-      toast.success(hasSpace ? t.removeMember : t.addMember);
-    } catch {
-      toast.error("Failed to update space access");
+    if (hasSpace) {
+      removeSpaceMember.mutate({ spaceId, memberId: member.id });
+    } else {
+      addSpaceMember.mutate({ spaceId, userId: member.id });
     }
   };
 
@@ -155,7 +151,9 @@ export default function Members() {
             </div>
             <div className="flex gap-3 justify-end">
               <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-muted-foreground">{t.cancel}</button>
-              <button type="submit" className="px-4 py-2 text-sm font-semibold bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors">{t.addMember}</button>
+              <button type="submit" disabled={createMember.isPending} className="px-4 py-2 text-sm font-semibold bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-60">
+                {createMember.isPending ? t.creating : t.addMember}
+              </button>
             </div>
           </form>
         </motion.div>

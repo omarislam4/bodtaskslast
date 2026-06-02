@@ -1,17 +1,7 @@
-import { useState, useEffect } from "react";
-import { collection, onSnapshot, query, orderBy, Timestamp } from "firebase/firestore";
-import { db } from "../firebase";
-
-function toDate(val: unknown): Date {
-  if (!val) return new Date();
-  if (val instanceof Timestamp) return val.toDate();
-  if (val instanceof Date) return val;
-  if (typeof val === "string" || typeof val === "number") {
-    const d = new Date(val);
-    return isNaN(d.getTime()) ? new Date() : d;
-  }
-  return new Date();
-}
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { sendersService } from "@/services/senders";
+import { useLang } from "@/contexts/LangContext";
+import { toast } from "sonner";
 
 export interface Sender {
   id: string;
@@ -19,30 +9,68 @@ export interface Sender {
   email: string;
   phone: string;
   company: string;
-  createdAt: Date;
+  createdAt: string;
 }
 
+export interface CreateSenderPayload {
+  name: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+}
+
+export const senderKeys = {
+  all: () => ["senders"] as const,
+};
+
 export const useSenders = () => {
-  const [senders, setSenders] = useState<Sender[]>([]);
-  const [loading, setLoading] = useState(true);
+  const query = useQuery({
+    queryKey: senderKeys.all(),
+    queryFn: sendersService.list,
+  });
 
-  useEffect(() => {
-    const q = query(collection(db, "senders"), orderBy("name"));
-    const unsub = onSnapshot(q, (snap) => {
-      const data = snap.docs.map((doc) => ({
-        name: "",
-        email: "",
-        phone: "",
-        company: "",
-        ...doc.data(),
-        id: doc.id,
-        createdAt: toDate(doc.data().createdAt),
-      })) as Sender[];
-      setSenders(data);
-      setLoading(false);
-    });
-    return () => unsub();
-  }, []);
+  return {
+    senders: query.data ?? [],
+    loading: query.isLoading,
+  };
+};
 
-  return { senders, loading };
+export const useCreateSender = () => {
+  const queryClient = useQueryClient();
+  const { t } = useLang();
+  return useMutation({
+    mutationFn: (payload: CreateSenderPayload) => sendersService.create(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: senderKeys.all() });
+      toast.success(t.addSenderTitle);
+    },
+    onError: () => toast.error(t.errGeneric),
+  });
+};
+
+export const useUpdateSender = () => {
+  const queryClient = useQueryClient();
+  const { t } = useLang();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: Partial<CreateSenderPayload> }) =>
+      sendersService.update(id, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: senderKeys.all() });
+      toast.success(t.save);
+    },
+    onError: () => toast.error(t.errGeneric),
+  });
+};
+
+export const useDeleteSender = () => {
+  const queryClient = useQueryClient();
+  const { t } = useLang();
+  return useMutation({
+    mutationFn: (id: string) => sendersService.remove(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: senderKeys.all() });
+      toast.success(t.delete);
+    },
+    onError: () => toast.error(t.errGeneric),
+  });
 };

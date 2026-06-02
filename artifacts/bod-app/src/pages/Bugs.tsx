@@ -5,19 +5,17 @@ import {
   Bug, Plus, AlertTriangle, CheckCircle2, Clock, XCircle,
   Filter, Layers, UserCheck, Calendar, X, Search,
 } from "lucide-react";
-import { useAllTasks } from "@/hooks/useTasks";
-import { useSpaces } from "@/hooks/useSpaces";
+import { useAllTasksQuery, useCreateTask } from "@/hooks/useTaskQueries";
+import { useSpaces, useSpaceMembers } from "@/hooks/useSpaces";
 import { useMembers } from "@/hooks/useMembers";
 import { useSenders } from "@/hooks/useSenders";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
 import { TaskStatusBadge } from "@/components/tasks/TaskStatusBadge";
 import { format } from "date-fns";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { db } from "@/firebase";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import type { TaskStatus, TaskPriority, BugSeverity } from "@/hooks/useTasks";
+import type { TaskStatus, TaskPriority, BugSeverity } from "@/types";
 
 const SEVERITY_CONFIG: Record<BugSeverity, { label: string; color: string; bg: string; border: string }> = {
   critical: { label: "Critical", color: "text-red-500", bg: "bg-red-500/10", border: "border-red-500/30" },
@@ -37,11 +35,12 @@ function SeverityBadge({ severity }: { severity?: BugSeverity }) {
 }
 
 export default function Bugs() {
-  const { tasks, loading } = useAllTasks();
-  const { spaces } = useSpaces();
+  const { data: tasks = [], isLoading: loading } = useAllTasksQuery();
+  const createBug = useCreateTask();
+  const { data: spaces = [] } = useSpaces();
   const { members } = useMembers();
   const { senders } = useSenders();
-  const { userDoc, isAdmin } = useAuth();
+  const { isAdmin } = useAuth();
   const { t } = useLang();
   const [, navigate] = useLocation();
 
@@ -50,7 +49,6 @@ export default function Bugs() {
   const [spaceFilter, setSpaceFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreate, setShowCreate] = useState(false);
-  const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -92,40 +90,27 @@ export default function Bugs() {
     return result;
   }, [bugs, severityFilter, statusFilter, spaceFilter, searchQuery]);
 
-  const spaceMembers = useMemo(() => {
-    if (!form.spaceId) return members;
-    const space = spaces.find((s) => s.id === form.spaceId);
-    return space ? members.filter((m) => space.memberIds?.includes(m.id)) : members;
-  }, [form.spaceId, spaces, members]);
+  const { data: spaceMembers = [] } = useSpaceMembers(form.spaceId || undefined);
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title.trim() || !form.spaceId) return;
-    setCreating(true);
-    try {
-      await addDoc(collection(db, "tasks"), {
-        ...form,
-        type: "bug",
-        deadline: form.deadline ? new Date(form.deadline) : null,
-        createdAt: serverTimestamp(),
-        createdBy: userDoc?.id,
-        completedAt: null,
-        activityLog: [],
-        checklistItems: [],
-        tags: [],
-      });
-      toast.success("Bug reported successfully");
-      setShowCreate(false);
-      setForm({
-        title: "", description: "", stepsToReproduce: "", expectedBehavior: "", actualBehavior: "",
-        status: "todo", priority: "high", bugSeverity: "medium", deadline: "",
-        assigneeIds: [], senderId: "", spaceId: "", estimatedHours: 0, progress: 0,
-      });
-    } catch {
-      toast.error("Failed to report bug");
-    } finally {
-      setCreating(false);
-    }
+    createBug.mutate({
+      ...form,
+      type: "bug",
+      deadline: form.deadline || null,
+    }, {
+      onSuccess: () => {
+        toast.success("Bug reported successfully");
+        setShowCreate(false);
+        setForm({
+          title: "", description: "", stepsToReproduce: "", expectedBehavior: "", actualBehavior: "",
+          status: "todo", priority: "high", bugSeverity: "medium", deadline: "",
+          assigneeIds: [], senderId: "", spaceId: "", estimatedHours: 0, progress: 0,
+        });
+      },
+      onError: () => toast.error("Failed to report bug"),
+    });
   };
 
   const statCards = [
@@ -319,9 +304,9 @@ export default function Bugs() {
 
                 <div className="flex gap-3 justify-end pt-2">
                   <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground">{t.cancel}</button>
-                  <button type="submit" disabled={creating || !form.spaceId}
+                  <button type="submit" disabled={createBug.isPending || !form.spaceId}
                     className="px-4 py-2 text-sm font-semibold bg-red-500 text-white rounded-xl hover:bg-red-600 disabled:opacity-60 transition-colors">
-                    {creating ? "Reporting..." : "Report Bug"}
+                    {createBug.isPending ? "Reporting..." : "Report Bug"}
                   </button>
                 </div>
               </form>
@@ -425,7 +410,7 @@ export default function Bugs() {
                 <div className="flex items-start gap-3 flex-wrap sm:flex-nowrap">
                   <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
                     <Bug className="w-4 h-4 text-red-400 shrink-0" />
-                    <SeverityBadge severity={bug.bugSeverity} />
+                    <SeverityBadge severity={bug.bugSeverity ?? undefined} />
                   </div>
 
                   <div className="flex-1 min-w-0">
@@ -449,7 +434,7 @@ export default function Bugs() {
                       {bug.deadline && (
                         <span className="flex items-center gap-1 text-xs text-muted-foreground">
                           <Calendar className="w-3 h-3" />
-                          {format(bug.deadline, "MMM d, yyyy")}
+                          {format(new Date(bug.deadline), "MMM d, yyyy")}
                         </span>
                       )}
                     </div>

@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Calendar, Clock } from "lucide-react";
-import { Task } from "@/hooks/useTasks";
+import type { Task } from "@/types";
 import { UserDoc } from "@/contexts/AuthContext";
 import { TaskStatusBadge } from "./TaskStatusBadge";
 import { TaskPriorityBadge } from "./TaskPriorityBadge";
@@ -17,7 +17,7 @@ interface TaskCardProps {
 }
 
 export const TaskCard = ({ task, members, onClick, index = 0 }: TaskCardProps) => {
-  const isOverdue = task.deadline && task.deadline < new Date() && task.status !== "done";
+  const isOverdue = task.deadline && new Date(task.deadline) < new Date() && task.status !== "done";
 
   return (
     <motion.div
@@ -58,7 +58,7 @@ export const TaskCard = ({ task, members, onClick, index = 0 }: TaskCardProps) =
               : "bg-muted text-muted-foreground"
           )}>
             <Calendar className="w-3 h-3" />
-            {format(task.deadline, "MMM d")}
+            {format(new Date(task.deadline!), "MMM d")}
           </span>
         )}
         {task.estimatedHours > 0 && (

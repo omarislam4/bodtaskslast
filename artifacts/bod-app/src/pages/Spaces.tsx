@@ -2,62 +2,55 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
 import { Plus, Layers, Users, CheckCircle2, Search } from "lucide-react";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/firebase";
+import { useSpaces, useCreateSpace } from "@/hooks/useSpaces";
+import { useAllTasksQuery } from "@/hooks/useTaskQueries";
 import { useAuth } from "@/contexts/AuthContext";
-import { useSpaces } from "@/hooks/useSpaces";
-import { useAllTasks } from "@/hooks/useTasks";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { SpaceCardSkeleton } from "@/components/shared/SkeletonLoader";
 import { useLang } from "@/contexts/LangContext";
-import { toast } from "sonner";
 
 const SPACE_COLORS = ["#6366f1", "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6"];
 
 export default function Spaces() {
-  const { spaces, loading } = useSpaces();
-  const { tasks } = useAllTasks();
-  const { isAdmin, userDoc } = useAuth();
+  const { data: spaces = [], isLoading } = useSpaces();
+  const { data: tasks = [] } = useAllTasksQuery();
+  const createSpace = useCreateSpace();
+  const { isAdmin } = useAuth();
   const [, navigate] = useLocation();
   const { t } = useLang();
+
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [newColor, setNewColor] = useState(SPACE_COLORS[0]);
-  const [creating, setCreating] = useState(false);
   const [search, setSearch] = useState("");
 
-  // Only show top-level spaces (exclude sub-spaces that have a parentSpaceId)
-  const topLevelSpaces = spaces.filter((s) => !(s as unknown as { parentSpaceId?: string }).parentSpaceId);
+  const topLevelSpaces = spaces.filter((s) => !s.parentSpaceId);
 
-  const filtered = topLevelSpaces.filter((s) =>
-    s.name.toLowerCase().includes(search.toLowerCase()) ||
-    s.description?.toLowerCase().includes(search.toLowerCase())
+  const filtered = topLevelSpaces.filter(
+    (s) =>
+      s.name.toLowerCase().includes(search.toLowerCase()) ||
+      s.description?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim()) return;
-    setCreating(true);
-    try {
-      await addDoc(collection(db, "spaces"), {
+    createSpace.mutate(
+      {
         name: newName.trim(),
         description: newDesc.trim(),
         color: newColor,
         icon: "layers",
-        memberIds: isAdmin ? [userDoc?.id] : [],
-        createdAt: serverTimestamp(),
-        createdBy: userDoc?.id,
-      });
-      toast.success(t.createSpace);
-      setShowCreate(false);
-      setNewName("");
-      setNewDesc("");
-    } catch {
-      toast.error("Failed to create space");
-    } finally {
-      setCreating(false);
-    }
+      },
+      {
+        onSuccess: () => {
+          setShowCreate(false);
+          setNewName("");
+          setNewDesc("");
+        },
+      }
+    );
   };
 
   return (
@@ -137,15 +130,19 @@ export default function Spaces() {
               <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
                 {t.cancel}
               </button>
-              <button type="submit" disabled={creating} className="px-4 py-2 text-sm font-semibold bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-60 shadow-sm">
-                {creating ? t.creating : t.createSpace}
+              <button
+                type="submit"
+                disabled={createSpace.isPending}
+                className="px-4 py-2 text-sm font-semibold bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-60 shadow-sm"
+              >
+                {createSpace.isPending ? t.creating : t.createSpace}
               </button>
             </div>
           </form>
         </motion.div>
       )}
 
-      {loading ? (
+      {isLoading ? (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array(6).fill(0).map((_, i) => <SpaceCardSkeleton key={i} />)}
         </div>

@@ -1,15 +1,12 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Zap, Plus, X, CheckCircle2, ChevronRight, Archive, Play, Trash2, Pencil } from "lucide-react";
-import {
-  collection, addDoc, serverTimestamp, updateDoc, doc,
-  arrayUnion, arrayRemove, deleteDoc,
-} from "firebase/firestore";
-import { db } from "@/firebase";
-import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
-import { useSprints, Sprint, SprintStatus } from "@/hooks/useSprints";
-import { useAllTasks, Task } from "@/hooks/useTasks";
+import {
+  useSprints, useCreateSprint, useUpdateSprint, useDeleteSprint,
+  useAddTaskToSprint, useRemoveTaskFromSprint,
+} from "@/hooks/useSprintQueries";
+import { useAllTasksQuery } from "@/hooks/useTaskQueries";
 import { useSpaces } from "@/hooks/useSpaces";
 import { TaskStatusBadge } from "@/components/tasks/TaskStatusBadge";
 import { TaskPriorityBadge } from "@/components/tasks/TaskPriorityBadge";
@@ -17,6 +14,7 @@ import { toast } from "sonner";
 import { format, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
+import type { Sprint, SprintStatus, Task } from "@/types";
 
 const STATUS_CONFIG: Record<SprintStatus, { label: string; color: string; bg: string }> = {
   planning:  { label: "Planning", color: "text-blue-400",   bg: "bg-blue-400/10" },
@@ -25,73 +23,68 @@ const STATUS_CONFIG: Record<SprintStatus, { label: string; color: string; bg: st
 };
 
 export default function Sprints() {
-  const { userDoc } = useAuth();
   const { t } = useLang();
-  const { sprints, loading: sprintsLoading } = useSprints();
-  const { tasks } = useAllTasks();
-  const { spaces } = useSpaces();
+  const { data: sprints = [], isLoading: sprintsLoading } = useSprints();
+  const { data: tasks = [] } = useAllTasksQuery();
+  const { data: spaces = [] } = useSpaces();
   const [, navigate] = useLocation();
   const [showCreate, setShowCreate] = useState(false);
-  const [creating, setCreating] = useState(false);
   const [selectedSprintId, setSelectedSprintId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", goal: "", spaceId: "", startDate: "", endDate: "" });
 
-  // Edit state
   const [editingSprint, setEditingSprint] = useState<Sprint | null>(null);
   const [editForm, setEditForm] = useState({ name: "", goal: "", startDate: "", endDate: "" });
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const createSprint = useCreateSprint();
+  const updateSprint = useUpdateSprint();
+  const deleteSprint = useDeleteSprint();
+  const addTaskToSprint = useAddTaskToSprint();
+  const removeTaskFromSprint = useRemoveTaskFromSprint();
+
+  const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim() || !form.spaceId) return;
-    setCreating(true);
-    try {
-      await addDoc(collection(db, "sprints"), {
-        name: form.name, goal: form.goal, spaceId: form.spaceId,
-        status: "planning", taskIds: [], totalPoints: 0, completedPoints: 0,
-        startDate: form.startDate ? new Date(form.startDate) : null,
-        endDate: form.endDate ? new Date(form.endDate) : null,
-        createdBy: userDoc?.id || "", createdAt: serverTimestamp(),
-      });
-      toast.success("Sprint created!");
-      setShowCreate(false);
-      setForm({ name: "", goal: "", spaceId: "", startDate: "", endDate: "" });
-    } catch { toast.error("Failed to create sprint"); }
-    finally { setCreating(false); }
+    createSprint.mutate({
+      name: form.name,
+      goal: form.goal,
+      spaceId: form.spaceId,
+      startDate: form.startDate || null,
+      endDate: form.endDate || null,
+    }, {
+      onSuccess: () => {
+        toast.success("Sprint created!");
+        setShowCreate(false);
+        setForm({ name: "", goal: "", spaceId: "", startDate: "", endDate: "" });
+      },
+    });
   };
 
-  const addTaskToSprint = async (sprint: Sprint, task: Task) => {
+  const handleAddTaskToSprint = (sprint: Sprint, task: Task) => {
     if (sprint.taskIds.includes(task.id)) return;
-    try {
-      await updateDoc(doc(db, "sprints", sprint.id), { taskIds: arrayUnion(task.id) });
-      await updateDoc(doc(db, "tasks", task.id), { sprintId: sprint.id });
-      toast.success("Task added to sprint");
-    } catch { toast.error("Failed"); }
+    addTaskToSprint.mutate({ sprintId: sprint.id, taskId: task.id }, {
+      onSuccess: () => toast.success("Task added to sprint"),
+      onError: () => toast.error("Failed"),
+    });
   };
 
-  const removeFromSprint = async (sprint: Sprint, taskId: string) => {
-    try {
-      await updateDoc(doc(db, "sprints", sprint.id), { taskIds: arrayRemove(taskId) });
-      await updateDoc(doc(db, "tasks", taskId), { sprintId: null });
-    } catch { toast.error("Failed"); }
+  const handleRemoveFromSprint = (sprint: Sprint, taskId: string) => {
+    removeTaskFromSprint.mutate({ sprintId: sprint.id, taskId }, {
+      onError: () => toast.error("Failed"),
+    });
   };
 
-  const changeStat = async (sprint: Sprint, status: SprintStatus) => {
-    try { await updateDoc(doc(db, "sprints", sprint.id), { status }); }
-    catch { toast.error("Failed"); }
+  const handleChangeStatus = (sprint: Sprint, status: SprintStatus) => {
+    updateSprint.mutate({ id: sprint.id, payload: { status } }, {
+      onError: () => toast.error("Failed"),
+    });
   };
 
-  const deleteSprint = async (sprintId: string) => {
+  const handleDeleteSprint = (sprintId: string) => {
     if (!confirm("Delete this sprint? Tasks will remain but be removed from the sprint.")) return;
-    try {
-      const sprint = sprints.find(s => s.id === sprintId);
-      if (sprint) {
-        for (const taskId of sprint.taskIds) {
-          await updateDoc(doc(db, "tasks", taskId), { sprintId: null }).catch(() => {});
-        }
-      }
-      await deleteDoc(doc(db, "sprints", sprintId));
-      toast.success("Sprint deleted");
-    } catch { toast.error("Failed to delete sprint"); }
+    deleteSprint.mutate(sprintId, {
+      onSuccess: () => toast.success("Sprint deleted"),
+      onError: () => toast.error("Failed to delete sprint"),
+    });
   };
 
   const openEdit = (sprint: Sprint) => {
@@ -99,24 +92,29 @@ export default function Sprints() {
     setEditForm({
       name: sprint.name,
       goal: sprint.goal || "",
-      startDate: sprint.startDate ? format(sprint.startDate, "yyyy-MM-dd") : "",
-      endDate: sprint.endDate ? format(sprint.endDate, "yyyy-MM-dd") : "",
+      startDate: sprint.startDate ? format(new Date(sprint.startDate), "yyyy-MM-dd") : "",
+      endDate: sprint.endDate ? format(new Date(sprint.endDate), "yyyy-MM-dd") : "",
     });
   };
 
-  const saveEdit = async (e: React.FormEvent) => {
+  const saveEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingSprint || !editForm.name.trim()) return;
-    try {
-      await updateDoc(doc(db, "sprints", editingSprint.id), {
+    updateSprint.mutate({
+      id: editingSprint.id,
+      payload: {
         name: editForm.name.trim(),
         goal: editForm.goal.trim(),
-        startDate: editForm.startDate ? new Date(editForm.startDate) : null,
-        endDate: editForm.endDate ? new Date(editForm.endDate) : null,
-      });
-      toast.success("Sprint updated!");
-      setEditingSprint(null);
-    } catch { toast.error("Failed to update sprint"); }
+        startDate: editForm.startDate || null,
+        endDate: editForm.endDate || null,
+      },
+    }, {
+      onSuccess: () => {
+        toast.success("Sprint updated!");
+        setEditingSprint(null);
+      },
+      onError: () => toast.error("Failed to update sprint"),
+    });
   };
 
   const activeSprints = sprints.filter(s => s.status === "active");
@@ -158,8 +156,8 @@ export default function Sprints() {
               </h2>
               {activeSprints.map(sprint => (
                 <SprintCard key={sprint.id} sprint={sprint} tasks={getSprintTasks(sprint)}
-                  doneCount={getDoneCount(sprint)} spaces={spaces} onRemove={removeFromSprint}
-                  onStatus={changeStat} onNavigate={navigate} onEdit={openEdit} onDelete={deleteSprint} />
+                  doneCount={getDoneCount(sprint)} spaces={spaces} onRemove={handleRemoveFromSprint}
+                  onStatus={handleChangeStatus} onNavigate={navigate} onEdit={openEdit} onDelete={handleDeleteSprint} />
               ))}
             </div>
           )}
@@ -171,8 +169,8 @@ export default function Sprints() {
               </h2>
               {planningSprints.map(sprint => (
                 <SprintCard key={sprint.id} sprint={sprint} tasks={getSprintTasks(sprint)}
-                  doneCount={getDoneCount(sprint)} spaces={spaces} onRemove={removeFromSprint}
-                  onStatus={changeStat} onNavigate={navigate} onEdit={openEdit} onDelete={deleteSprint} />
+                  doneCount={getDoneCount(sprint)} spaces={spaces} onRemove={handleRemoveFromSprint}
+                  onStatus={handleChangeStatus} onNavigate={navigate} onEdit={openEdit} onDelete={handleDeleteSprint} />
               ))}
             </div>
           )}
@@ -196,7 +194,7 @@ export default function Sprints() {
                       </div>
                       <TaskPriorityBadge priority={task.priority} />
                       {sprints.filter(s => s.status !== "completed").length > 0 && (
-                        <select onChange={e => { const sp = sprints.find(s => s.id === e.target.value); if (sp) addTaskToSprint(sp, task); }}
+                        <select onChange={e => { const sp = sprints.find(s => s.id === e.target.value); if (sp) handleAddTaskToSprint(sp, task); }}
                           defaultValue=""
                           className="text-xs px-2 py-1 bg-background border border-input rounded-lg focus:outline-none">
                           <option value="" disabled>{t.addToSprint}</option>
@@ -218,8 +216,8 @@ export default function Sprints() {
               </summary>
               {completedSprints.map(sprint => (
                 <SprintCard key={sprint.id} sprint={sprint} tasks={getSprintTasks(sprint)}
-                  doneCount={getDoneCount(sprint)} spaces={spaces} onRemove={removeFromSprint}
-                  onStatus={changeStat} onNavigate={navigate} onEdit={openEdit} onDelete={deleteSprint} />
+                  doneCount={getDoneCount(sprint)} spaces={spaces} onRemove={handleRemoveFromSprint}
+                  onStatus={handleChangeStatus} onNavigate={navigate} onEdit={openEdit} onDelete={handleDeleteSprint} />
               ))}
             </details>
           )}
@@ -270,9 +268,9 @@ export default function Sprints() {
                 <div className="flex gap-3 pt-2">
                   <button type="button" onClick={() => setShowCreate(false)}
                     className="flex-1 px-4 py-2 text-sm font-semibold border border-border rounded-xl text-muted-foreground hover:bg-muted transition-all">{t.cancel}</button>
-                  <button type="submit" disabled={creating}
+                  <button type="submit" disabled={createSprint.isPending}
                     className="flex-1 px-4 py-2 text-sm font-semibold bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 disabled:opacity-60 transition-all">
-                    {creating ? t.creating : t.createSprint}</button>
+                    {createSprint.isPending ? t.creating : t.createSprint}</button>
                 </div>
               </form>
             </motion.div>
@@ -311,9 +309,9 @@ export default function Sprints() {
                 <div className="flex gap-3 pt-2">
                   <button type="button" onClick={() => setEditingSprint(null)}
                     className="flex-1 px-4 py-2 text-sm font-semibold border border-border rounded-xl text-muted-foreground hover:bg-muted transition-all">{t.cancel}</button>
-                  <button type="submit"
-                    className="flex-1 px-4 py-2 text-sm font-semibold bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all">
-                    Save Changes</button>
+                  <button type="submit" disabled={updateSprint.isPending}
+                    className="flex-1 px-4 py-2 text-sm font-semibold bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 disabled:opacity-60 transition-all">
+                    {updateSprint.isPending ? t.saving : "Save Changes"}</button>
                 </div>
               </form>
             </motion.div>
@@ -335,7 +333,7 @@ function SprintCard({ sprint, tasks, doneCount, spaces, onRemove, onStatus, onNa
 }) {
   const pct = tasks.length > 0 ? Math.round((doneCount / tasks.length) * 100) : 0;
   const cfg = STATUS_CONFIG[sprint.status];
-  const daysLeft = sprint.endDate ? differenceInDays(sprint.endDate, new Date()) : null;
+  const daysLeft = sprint.endDate ? differenceInDays(new Date(sprint.endDate), new Date()) : null;
 
   return (
     <div className="bg-card border border-border rounded-xl p-4 mb-3">
@@ -347,8 +345,8 @@ function SprintCard({ sprint, tasks, doneCount, spaces, onRemove, onStatus, onNa
           </div>
           {sprint.goal && <p className="text-sm text-muted-foreground">{sprint.goal}</p>}
           <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-            {sprint.startDate && <span>{format(sprint.startDate, "MMM d")}</span>}
-            {sprint.endDate && <><span>→</span><span>{format(sprint.endDate, "MMM d")}</span></>}
+            {sprint.startDate && <span>{format(new Date(sprint.startDate), "MMM d")}</span>}
+            {sprint.endDate && <><span>→</span><span>{format(new Date(sprint.endDate), "MMM d")}</span></>}
             {daysLeft != null && sprint.status === "active" && (
               <span className={cn("font-medium", daysLeft < 2 ? "text-red-500" : "text-muted-foreground")}>{daysLeft}d left</span>
             )}

@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { Search, Bell, X, Command, CheckCircle2, AlertCircle, Clock, Menu } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { useAllTasks } from "@/hooks/useTasks";
+import { useAllTasksQuery } from "@/hooks/useTaskQueries";
 import { useSpaces } from "@/hooks/useSpaces";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
@@ -20,7 +20,7 @@ export const Topbar = ({ onMenuClick }: TopbarProps) => {
   const searchRef = useRef<HTMLInputElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
   const [location, navigate] = useLocation();
-  const { tasks } = useAllTasks();
+  const { data: tasks = [] } = useAllTasksQuery();
   const { spaces } = useSpaces();
   const { userDoc } = useAuth();
   const { t, isRTL } = useLang();
@@ -44,9 +44,9 @@ export const Topbar = ({ onMenuClick }: TopbarProps) => {
     ? tasks.filter((tk) => tk.assigneeIds?.includes(userDoc.id) && tk.status !== "done")
     : [];
 
-  const overdueTasks = myTasks.filter((tk) => tk.deadline && tk.deadline < new Date());
+  const overdueTasks = myTasks.filter((tk) => tk.deadline && new Date(tk.deadline) < new Date());
   const dueSoonTasks = myTasks.filter(
-    (tk) => tk.deadline && !overdueTasks.includes(tk) && isWithinInterval(tk.deadline, { start: new Date(), end: addDays(new Date(), 3) })
+    (tk) => tk.deadline && !overdueTasks.includes(tk) && isWithinInterval(new Date(tk.deadline), { start: new Date(), end: addDays(new Date(), 3) })
   );
   const inProgressTasks = myTasks.filter((tk) => tk.status === "in-progress" && !overdueTasks.includes(tk) && !dueSoonTasks.includes(tk));
   const notifCount = overdueTasks.length + dueSoonTasks.length;
@@ -179,7 +179,7 @@ export const Topbar = ({ onMenuClick }: TopbarProps) => {
                             <div className="min-w-0 flex-1">
                               <p className="text-xs font-medium text-foreground truncate">{tk.title}</p>
                               <p className="text-xs text-red-500">
-                                {tk.deadline ? `${Math.abs(differenceInDays(tk.deadline, new Date()))} ${t.daysOverdue}` : t.noDeadline}
+                                {tk.deadline ? `${Math.abs(differenceInDays(new Date(tk.deadline), new Date()))} ${t.daysOverdue}` : t.noDeadline}
                               </p>
                             </div>
                           </button>
@@ -190,7 +190,7 @@ export const Topbar = ({ onMenuClick }: TopbarProps) => {
                       <div>
                         <p className="text-xs font-semibold text-amber-500 uppercase tracking-wide px-4 py-1.5">{t.dueSoon}</p>
                         {dueSoonTasks.map((tk) => {
-                          const days = tk.deadline ? differenceInDays(tk.deadline, new Date()) : 0;
+                          const days = tk.deadline ? differenceInDays(new Date(tk.deadline), new Date()) : 0;
                           return (
                             <button
                               key={tk.id}
@@ -221,7 +221,7 @@ export const Topbar = ({ onMenuClick }: TopbarProps) => {
                             <CheckCircle2 className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
                             <div className="min-w-0 flex-1">
                               <p className="text-xs font-medium text-foreground truncate">{tk.title}</p>
-                              <p className="text-xs text-muted-foreground">{tk.deadline ? format(tk.deadline, "MMM d") : t.noDeadline}</p>
+                              <p className="text-xs text-muted-foreground">{tk.deadline ? format(new Date(tk.deadline), "MMM d") : t.noDeadline}</p>
                             </div>
                           </button>
                         ))}

@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
 import { Calendar, AlertCircle } from "lucide-react";
-import { useAllTasks } from "@/hooks/useTasks";
+import { useAllTasksQuery } from "@/hooks/useTaskQueries";
 import { useSpaces } from "@/hooks/useSpaces";
 import { TaskStatusBadge } from "@/components/tasks/TaskStatusBadge";
 import { TaskPriorityBadge } from "@/components/tasks/TaskPriorityBadge";
@@ -13,8 +13,8 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function Timeline() {
-  const { tasks, loading } = useAllTasks();
-  const { spaces } = useSpaces();
+  const { data: tasks = [], isLoading: loading } = useAllTasksQuery();
+  const { data: spaces = [] } = useSpaces();
   const [, navigate] = useLocation();
   const { t } = useLang();
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -29,10 +29,10 @@ export default function Timeline() {
   const tasksWithDeadline = tasks.filter((tk) => tk.deadline && tk.status !== "done");
 
   const getTasksForDay = (day: Date) =>
-    tasksWithDeadline.filter((tk) => tk.deadline && isSameDay(tk.deadline, day));
+    tasksWithDeadline.filter((tk) => tk.deadline && isSameDay(new Date(tk.deadline), day));
 
   const upcomingTasks = tasksWithDeadline
-    .sort((a, b) => (a.deadline?.getTime() || 0) - (b.deadline?.getTime() || 0));
+    .sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime());
 
   if (loading) {
     return (
@@ -127,7 +127,7 @@ export default function Timeline() {
             <div className="space-y-3 max-h-[500px] overflow-y-auto">
               {upcomingTasks.slice(0, 20).map((task) => {
                 const space = spaces.find((s) => s.id === task.spaceId);
-                const overdue = task.deadline && task.deadline < new Date();
+                const overdue = task.deadline && new Date(task.deadline) < new Date();
                 return (
                   <motion.div
                     key={task.id}
@@ -146,7 +146,7 @@ export default function Timeline() {
                         <span className={`text-xs flex items-center gap-1 ${overdue ? "text-red-500" : "text-muted-foreground"}`}>
                           {overdue && <AlertCircle className="w-3 h-3" />}
                           <Calendar className="w-3 h-3" />
-                          {format(task.deadline, "MMM d")}
+                          {format(new Date(task.deadline), "MMM d")}
                         </span>
                       )}
                     </div>

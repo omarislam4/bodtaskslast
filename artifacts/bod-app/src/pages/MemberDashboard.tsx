@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
 import { CheckCircle2, Clock, AlertCircle, Calendar, ArrowRight } from "lucide-react";
-import { useAllTasks } from "@/hooks/useTasks";
+import { useAllTasksQuery } from "@/hooks/useTaskQueries";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
 import { TaskStatusBadge } from "@/components/tasks/TaskStatusBadge";
@@ -19,7 +19,7 @@ const cardVariants = {
 };
 
 export default function MemberDashboard() {
-  const { tasks } = useAllTasks();
+  const { data: tasks = [] } = useAllTasksQuery();
   const { userDoc } = useAuth();
   const { t } = useLang();
   const [, navigate] = useLocation();
@@ -34,7 +34,7 @@ export default function MemberDashboard() {
     const done = myTasks.filter((tk) => tk.status === "done").length;
     const inProgress = myTasks.filter((tk) => tk.status === "in-progress").length;
     const overdue = myTasks.filter(
-      (tk) => tk.deadline && isPast(tk.deadline) && tk.status !== "done"
+      (tk) => tk.deadline && isPast(new Date(tk.deadline)) && tk.status !== "done"
     ).length;
 
     const upcoming = myTasks
@@ -42,9 +42,9 @@ export default function MemberDashboard() {
         (tk) =>
           tk.deadline &&
           tk.status !== "done" &&
-          isWithinInterval(tk.deadline, { start: new Date(), end: addDays(new Date(), 7) })
+          isWithinInterval(new Date(tk.deadline), { start: new Date(), end: addDays(new Date(), 7) })
       )
-      .sort((a, b) => (a.deadline?.getTime() || 0) - (b.deadline?.getTime() || 0));
+      .sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime());
 
     const active = myTasks.filter((tk) => tk.status !== "done").slice(0, 10);
 
@@ -116,7 +116,7 @@ export default function MemberDashboard() {
                     <span className="text-xs text-foreground truncate">{task.title}</span>
                   </div>
                   <span className="text-xs text-muted-foreground shrink-0 ml-2">
-                    {task.deadline && format(task.deadline, "MMM d")}
+                    {task.deadline && format(new Date(task.deadline), "MMM d")}
                   </span>
                 </div>
               ))}
@@ -149,7 +149,7 @@ export default function MemberDashboard() {
             <div className="space-y-2">
               {stats.active.map((task) => {
                 const isOverdue =
-                  task.deadline && isPast(task.deadline) && task.status !== "done";
+                  task.deadline && isPast(new Date(task.deadline)) && task.status !== "done";
                 return (
                   <div
                     key={task.id}

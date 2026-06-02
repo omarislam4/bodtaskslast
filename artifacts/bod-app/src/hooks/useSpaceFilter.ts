@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import { Space } from "./useSpaces";
+import type { Space } from "@/types";
 
 const STORAGE_KEY = (userId: string) => `spaceFilter_hidden_${userId}`;
 const CHANGE_EVENT = "bod:spaceFilterChange";
@@ -53,9 +53,10 @@ export const useSpaceFilter = () => {
     return !hiddenSpaceIds.includes(spaceId);
   }, [hiddenSpaceIds, isAdmin]);
 
-  const filterSpaces = useCallback((spaces: Space[]) => {
-    if (!isAdmin) return spaces;
-    return spaces.filter(s => !hiddenSpaceIds.includes(s.id));
+  const filterSpaces = useCallback((spaces: Space[] = []) => {
+    const safeSpaces = Array.isArray(spaces) ? spaces : [];
+    if (!isAdmin) return safeSpaces;
+    return safeSpaces.filter(s => !hiddenSpaceIds.includes(s.id));
   }, [hiddenSpaceIds, isAdmin]);
 
   const showAll = useCallback(() => {

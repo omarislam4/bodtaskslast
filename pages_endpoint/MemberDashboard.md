@@ -1,0 +1,57 @@
+# Member Dashboard Page Endpoints
+
+## Endpoint Usage
+
+`MemberDashboard.tsx` does not introduce a new dedicated backend contract in this pass.
+
+It currently depends on the endpoints below.
+
+## `GET /api/auth/me`
+
+### Payload
+
+None
+
+### Success Response
+
+See [AuthEndpoints.md](C:/laragon/www/bod-app-api/docs/pages_endpoint/AuthEndpoints.md).
+
+## `GET /api/my-tasks`
+
+### Payload
+
+None
+
+### Success Response
+
+See [MyTasks.md](C:/laragon/www/bod-app-api/docs/pages_endpoint/MyTasks.md).
+
+## `GET /api/spaces`
+
+### Payload
+
+None
+
+### Success Response
+
+See [Spaces.md](C:/laragon/www/bod-app-api/docs/pages_endpoint/Spaces.md).
+
+## Task Endpoints
+
+The dashboard cards and task navigation also depend on the implemented shared task contracts:
+
+- [Tasks.md](C:/laragon/www/bod-app-api/docs/pages_endpoint/Tasks.md)
+- [TaskDetail.md](C:/laragon/www/bod-app-api/docs/pages_endpoint/TaskDetail.md)
+- [MyTasks.md](C:/laragon/www/bod-app-api/docs/pages_endpoint/MyTasks.md)
+
+## Current Status
+
+This page is now covered by the auth, spaces, and implemented Laravel task endpoints documented above.
+
+## Flow
+
+1. `GET /api/auth/me` provides the current user identity.
+2. `GET /api/my-tasks` provides the user's task list, counts, and upcoming deadlines.
+3. `GET /api/spaces` supports navigation into the user's spaces.
+4. Clicking a task opens the detail contract in [TaskDetail.md](C:/laragon/www/bod-app-api/docs/pages_endpoint/TaskDetail.md).
+

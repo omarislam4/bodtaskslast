@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { Task, TaskStatus } from "@/hooks/useTasks";
+import type { Task, TaskStatus } from "@/types";
 import { UserDoc } from "@/contexts/AuthContext";
 import { TaskCard } from "./TaskCard";
 import { TaskStatusBadge } from "./TaskStatusBadge";

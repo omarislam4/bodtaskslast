@@ -1,34 +1,30 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, Plus, Hash, X, Trash2, AlertCircle, ArrowLeft } from "lucide-react";
-import {
-  collection, addDoc, serverTimestamp, deleteDoc, doc, query,
-  where, getDocs,
-} from "firebase/firestore";
-import { db } from "@/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
-import { useChannels } from "@/hooks/useChat";
+import { useSpaceChannels, useCreateChannel, useDeleteChannel } from "@/hooks/useChatQueries";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { useMembers } from "@/hooks/useMembers";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 export default function Chat() {
-  const { userDoc, isAdmin } = useAuth();
+  const { isAdmin } = useAuth();
   const { t, isRTL } = useLang();
-  const { channels, loading: channelsLoading } = useChannels();
+  const { data: channels = [], isLoading: channelsLoading } = useSpaceChannels();
   const { members } = useMembers();
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
   const [showNewChannel, setShowNewChannel] = useState(false);
   const [newChannelName, setNewChannelName] = useState("");
   const [newChannelDesc, setNewChannelDesc] = useState("");
-  const [creating, setCreating] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
-  const [deletingChannel, setDeletingChannel] = useState(false);
 
-  const selectedChannel = channels.find(c => c.id === selectedChannelId);
+  const createChannel = useCreateChannel();
+  const deleteChannel = useDeleteChannel();
+
   const globalChannels = channels.filter(c => !c.spaceId);
+  const selectedChannel = globalChannels.find(c => c.id === selectedChannelId);
 
   useEffect(() => {
     if (globalChannels.length > 0 && !selectedChannelId) {
@@ -36,61 +32,59 @@ export default function Chat() {
     }
   }, [globalChannels, selectedChannelId]);
 
-  const handleCreateChannel = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newChannelName.trim()) return;
-    setCreating(true);
-    try {
-      const ref = await addDoc(collection(db, "chatChannels"), {
-        name: newChannelName.toLowerCase().replace(/\s+/g, "-"),
-        description: newChannelDesc,
-        spaceId: null,
+  useEffect(() => {
+    if (!channelsLoading && globalChannels.length === 0) {
+      createChannel.mutate({
+        name: "general",
+        description: "General discussions",
+        spaceId: undefined,
         isPrivate: false,
         memberIds: [],
-        createdBy: userDoc?.id || "",
-        createdAt: serverTimestamp(),
-      });
-      setSelectedChannelId(ref.id);
-      setShowNewChannel(false);
-      setNewChannelName(""); setNewChannelDesc("");
-    } catch { toast.error("Failed to create channel"); }
-    finally { setCreating(false); }
-  };
-
-  const handleDeleteChannel = async (channelId: string) => {
-    setDeletingChannel(true);
-    try {
-      const msgsQ = query(collection(db, "chatMessages"), where("channelId", "==", channelId));
-      const snap = await getDocs(msgsQ);
-      await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
-      await deleteDoc(doc(db, "chatChannels", channelId));
-      if (selectedChannelId === channelId) {
-        const remaining = globalChannels.filter(c => c.id !== channelId);
-        setSelectedChannelId(remaining.length > 0 ? remaining[0].id : null);
-      }
-      setShowDeleteConfirm(null);
-      toast.success("Channel deleted");
-    } catch { toast.error("Failed to delete channel"); }
-    finally { setDeletingChannel(false); }
-  };
-
-  // Ensure #general exists
-  useEffect(() => {
-    if (!channelsLoading && globalChannels.length === 0 && userDoc) {
-      addDoc(collection(db, "chatChannels"), {
-        name: "general", description: "General discussions",
-        spaceId: null, isPrivate: false, memberIds: [],
-        createdBy: userDoc.id || "", createdAt: serverTimestamp(),
+      }, {
+        onSuccess: (ch) => setSelectedChannelId(ch.id),
       });
     }
-  }, [channelsLoading, globalChannels.length, userDoc]);
+  }, [channelsLoading, globalChannels.length]);
 
-  // On mobile, show either the channel list or the chat panel
+  const handleCreateChannel = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newChannelName.trim()) return;
+    createChannel.mutate({
+      name: newChannelName.toLowerCase().replace(/\s+/g, "-"),
+      description: newChannelDesc,
+      spaceId: undefined,
+      isPrivate: false,
+      memberIds: [],
+    }, {
+      onSuccess: (ch) => {
+        setSelectedChannelId(ch.id);
+        setShowNewChannel(false);
+        setNewChannelName("");
+        setNewChannelDesc("");
+      },
+      onError: () => toast.error("Failed to create channel"),
+    });
+  };
+
+  const handleDeleteChannel = (channelId: string) => {
+    deleteChannel.mutate(channelId, {
+      onSuccess: () => {
+        if (selectedChannelId === channelId) {
+          const remaining = globalChannels.filter(c => c.id !== channelId);
+          setSelectedChannelId(remaining.length > 0 ? remaining[0].id : null);
+        }
+        setShowDeleteConfirm(null);
+        toast.success("Channel deleted");
+      },
+      onError: () => toast.error("Failed to delete channel"),
+    });
+  };
+
   const mobileShowChat = !!selectedChannelId;
 
   return (
     <div className="flex h-[calc(100vh-4rem)] bg-background overflow-hidden">
-      {/* Channel sidebar — full width on mobile when no channel selected */}
+      {/* Channel sidebar */}
       <div className={cn(
         "bg-sidebar border-border flex flex-col shrink-0",
         "w-full md:w-56 md:border-r md:flex",
@@ -140,8 +134,8 @@ export default function Chat() {
                   className="w-full px-2 py-1.5 text-xs bg-white/10 border border-white/10 rounded-lg text-sidebar-foreground placeholder:text-sidebar-foreground/40 focus:outline-none" />
                 <div className="flex gap-2">
                   <button type="button" onClick={() => setShowNewChannel(false)} className="flex-1 py-1.5 text-xs text-sidebar-foreground/40 border border-white/10 rounded-lg">Cancel</button>
-                  <button type="submit" disabled={creating} className="flex-1 py-1.5 text-xs bg-primary text-primary-foreground rounded-lg disabled:opacity-60">
-                    {creating ? "..." : "Create"}
+                  <button type="submit" disabled={createChannel.isPending} className="flex-1 py-1.5 text-xs bg-primary text-primary-foreground rounded-lg disabled:opacity-60">
+                    {createChannel.isPending ? "..." : "Create"}
                   </button>
                 </div>
               </form>
@@ -150,17 +144,15 @@ export default function Chat() {
         </AnimatePresence>
       </div>
 
-      {/* Main chat area — full width on mobile when channel selected */}
+      {/* Main chat area */}
       <div className={cn(
         "flex-1 flex flex-col min-w-0",
         mobileShowChat ? "flex" : "hidden md:flex"
       )}>
         {selectedChannel ? (
           <>
-            {/* Channel header */}
             <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border shrink-0">
               <div className="flex items-center gap-2 min-w-0">
-                {/* Back button — mobile only */}
                 <button
                   onClick={() => setSelectedChannelId(null)}
                   className="md:hidden p-1.5 -ms-1 text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-muted"
@@ -220,9 +212,9 @@ export default function Chat() {
                   className="flex-1 px-4 py-2 text-sm border border-border rounded-xl text-muted-foreground hover:bg-muted">
                   Cancel
                 </button>
-                <button onClick={() => handleDeleteChannel(showDeleteConfirm)} disabled={deletingChannel}
+                <button onClick={() => handleDeleteChannel(showDeleteConfirm)} disabled={deleteChannel.isPending}
                   className="flex-1 px-4 py-2 text-sm font-semibold bg-destructive text-destructive-foreground rounded-xl hover:bg-destructive/90 disabled:opacity-60">
-                  {deletingChannel ? "Deleting..." : "Delete"}
+                  {deleteChannel.isPending ? "Deleting..." : "Delete"}
                 </button>
               </div>
             </motion.div>

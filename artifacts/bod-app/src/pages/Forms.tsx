@@ -1,11 +1,9 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ClipboardList, Plus, X, Copy, Trash2, ExternalLink, ChevronUp, ChevronDown } from "lucide-react";
-import { collection, addDoc, serverTimestamp, deleteDoc, doc } from "firebase/firestore";
-import { db } from "@/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
-import { useForms, Form, FormField, FormFieldType } from "@/hooks/useForms";
+import { useForms, Form, FormField, FormFieldType, useCreateForm, useDeleteForm } from "@/hooks/useForms";
 import { useSpaces } from "@/hooks/useSpaces";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -24,6 +22,8 @@ export default function Forms() {
   const { userDoc } = useAuth();
   const { t } = useLang();
   const { forms, loading } = useForms();
+  const createForm = useCreateForm();
+  const deleteForm = useDeleteForm();
   const { spaces } = useSpaces();
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -60,22 +60,19 @@ export default function Forms() {
     if (!form.title.trim()) return;
     setCreating(true);
     try {
-      await addDoc(collection(db, "forms"), {
-        ...form, fields, submissionCount: 0, isPublic: true,
-        createdBy: userDoc?.id || "", createdAt: serverTimestamp(),
+      await createForm.mutateAsync({
+        ...form, fields, isPublic: true, createdBy: userDoc?.id || "",
       });
-      toast.success("Form created!");
       setShowCreate(false);
       setForm({ title: "", description: "", spaceId: "" });
       setFields([{ id: "f1", type: "text", label: "Name", required: true }, { id: "f2", type: "text", label: "Description", required: false }]);
-    } catch { toast.error("Failed to create form"); }
+    } catch { /* handled by hook */ }
     finally { setCreating(false); }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this form?")) return;
-    try { await deleteDoc(doc(db, "forms", id)); toast.success("Form deleted"); }
-    catch { toast.error("Failed"); }
+    deleteForm.mutate(id);
   };
 
   const getPublicLink = (id: string) => {

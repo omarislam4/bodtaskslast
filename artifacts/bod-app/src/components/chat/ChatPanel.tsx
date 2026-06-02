@@ -1,11 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, Send, Reply, Pencil, Trash2, X, Smile, Check } from "lucide-react";
-import { collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, getDocs, query, where, writeBatch } from "firebase/firestore";
-import { db } from "@/firebase";
 import { useAuth } from "@/contexts/AuthContext";
-import { useMessages } from "@/hooks/useChat";
-import type { ChatMessage } from "@/hooks/useChat";
+import { useChannelMessages, useSendMessage, useEditMessage, useDeleteMessage, useToggleReaction } from "@/hooks/useChatQueries";
+import type { ChatMessage } from "@/types";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -25,10 +23,13 @@ const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🔥"];
 
 export function ChatPanel({ channelId, channelName, spaceId, spaceMembers = [], className, onClearChat }: ChatPanelProps) {
   const { userDoc, isAdmin } = useAuth();
-  const { messages, loading } = useMessages(channelId);
+  const { data: messages = [], isLoading: loading } = useChannelMessages(channelId);
+  const sendMessage = useSendMessage(channelId);
+  const editMessage = useEditMessage();
+  const deleteMessage = useDeleteMessage(channelId);
+  const toggleReaction = useToggleReaction(channelId);
 
   const [text, setText] = useState("");
-  const [sending, setSending] = useState(false);
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
@@ -85,95 +86,55 @@ export function ChatPanel({ channelId, channelName, spaceId, spaceMembers = [], 
     return [...new Set(ids)];
   };
 
-  const handleSend = async (e: React.FormEvent) => {
+  const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!text.trim() || !userDoc) return;
-    setSending(true);
     const mentions = parseMentionIds(text);
-    try {
-      await addDoc(collection(db, "chatMessages"), {
-        channelId,
-        spaceId: spaceId || null,
-        senderId: userDoc.id || "",
-        senderName: userDoc.displayName || userDoc.email || "Unknown",
+    sendMessage.mutate(
+      {
         text: text.trim(),
         mentions,
-        replyTo: replyingTo ? {
-          id: replyingTo.id,
-          text: replyingTo.deleted ? "[deleted]" : replyingTo.text.slice(0, 80),
-          senderName: replyingTo.senderName,
-        } : null,
-        reactions: {},
-        deleted: false,
-        createdAt: serverTimestamp(),
-      });
-      await updateDoc(doc(db, "chatChannels", channelId), {
-        lastMessage: text.trim().slice(0, 80),
-        lastMessageAt: serverTimestamp(),
-      });
-      for (const uid of mentions) {
-        addDoc(collection(db, "notifications"), {
-          userId: uid,
-          type: "mention",
-          title: `${userDoc.displayName || "Someone"} mentioned you in chat`,
-          body: text.trim().slice(0, 100),
-          spaceId: spaceId || null,
-          read: false,
-          createdAt: serverTimestamp(),
-        }).catch(() => {});
-      }
-      setText("");
-      setReplyingTo(null);
-    } catch { toast.error("Failed to send message"); }
-    finally { setSending(false); }
+        replyTo: replyingTo
+          ? {
+              id: replyingTo.id,
+              text: replyingTo.deleted ? "[deleted]" : replyingTo.text.slice(0, 80),
+              senderName: replyingTo.senderName,
+            }
+          : null,
+      },
+      {
+        onSuccess: () => {
+          setText("");
+          setReplyingTo(null);
+        },
+      },
+    );
   };
 
-  const handleEdit = async (msgId: string) => {
+  const handleEdit = (msgId: string) => {
     if (!editText.trim()) return;
-    try {
-      await updateDoc(doc(db, "chatMessages", msgId), { text: editText.trim(), edited: true });
-      setEditingId(null);
-    } catch { toast.error("Failed to edit"); }
+    editMessage.mutate(
+      { msgId, text: editText.trim() },
+      { onSuccess: () => setEditingId(null) },
+    );
   };
 
-  const handleDelete = async (msgId: string) => {
-    try {
-      await deleteDoc(doc(db, "chatMessages", msgId));
-    } catch { toast.error("Failed to delete"); }
+  const handleDelete = (msgId: string) => {
+    deleteMessage.mutate(msgId);
   };
 
-  const handleClearChat = async () => {
-    if (!confirm("Clear all messages in this channel?")) return;
-    try {
-      const q = query(collection(db, "chatMessages"), where("channelId", "==", channelId));
-      const snap = await getDocs(q);
-      const batch = writeBatch(db);
-      snap.docs.forEach(d => batch.delete(d.ref));
-      await batch.commit();
-      toast.success("Chat cleared");
-    } catch { toast.error("Failed to clear chat"); }
+  const handleReact = (msgId: string, emoji: string) => {
+    toggleReaction.mutate({ msgId, emoji });
   };
-
-  const handleReact = async (msgId: string, emoji: string) => {
-    const msg = messages.find(m => m.id === msgId);
-    if (!msg || !userDoc) return;
-    const uid = userDoc.id || "";
-    const current = ((msg.reactions || {}) as Record<string, string[]>)[emoji] || [];
-    const updated = current.includes(uid) ? current.filter(id => id !== uid) : [...current, uid];
-    const reactions = { ...((msg.reactions || {}) as Record<string, string[]>), [emoji]: updated };
-    try { await updateDoc(doc(db, "chatMessages", msgId), { reactions }); } catch {}
-  };
-
-  const clearChat = onClearChat || handleClearChat;
 
   return (
     <div className={cn("flex flex-col h-full", className)} onClick={() => setEmojiPickerId(null)}>
       {/* Channel header */}
-      {(channelName || isAdmin) && (
+      {(channelName || (isAdmin && onClearChat)) && (
         <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card/50">
           {channelName && <span className="text-sm font-semibold text-foreground truncate"># {channelName}</span>}
-          {isAdmin && (
-            <button onClick={clearChat} className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1 transition-colors ml-auto">
+          {isAdmin && onClearChat && (
+            <button onClick={onClearChat} className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1 transition-colors ml-auto">
               <Trash2 className="w-3 h-3" /> Clear chat
             </button>
           )}
@@ -204,7 +165,7 @@ export function ChatPanel({ channelId, channelName, spaceId, spaceMembers = [], 
             const isMe = msg.senderId === userDoc?.id;
             const prev = i > 0 ? messages[i - 1] : null;
             const showHeader = !prev || prev.senderId !== msg.senderId
-              || (msg.createdAt.getTime() - prev.createdAt.getTime()) > 300000;
+              || (new Date(msg.createdAt).getTime() - new Date(prev.createdAt).getTime()) > 300000;
             const canEdit = isMe && !msg.deleted;
             const canDelete = (isMe || isAdmin) && !msg.deleted;
             const msgReactions = (msg.reactions || {}) as Record<string, string[]>;
@@ -221,7 +182,7 @@ export function ChatPanel({ channelId, channelName, spaceId, spaceMembers = [], 
                       {(msg.senderName || "U")[0].toUpperCase()}
                     </div>
                     <span className="text-xs font-semibold text-foreground">{isMe ? "You" : msg.senderName}</span>
-                    <span className="text-xs text-muted-foreground/50">{format(msg.createdAt, "HH:mm")}</span>
+                    <span className="text-xs text-muted-foreground/50">{format(new Date(msg.createdAt), "HH:mm")}</span>
                   </div>
                 )}
 
@@ -385,7 +346,7 @@ export function ChatPanel({ channelId, channelName, spaceId, spaceMembers = [], 
             placeholder="Message... use @ to mention someone"
             className="flex-1 px-4 py-2.5 text-sm bg-card border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
           />
-          <button type="submit" disabled={sending || !text.trim()}
+          <button type="submit" disabled={sendMessage.isPending || !text.trim()}
             className="flex items-center justify-center w-9 h-9 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 disabled:opacity-50 transition-all shrink-0">
             <Send className="w-4 h-4" />
           </button>

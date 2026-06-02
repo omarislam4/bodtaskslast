@@ -1,11 +1,9 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Target, Plus, TrendingUp, AlertTriangle, XCircle, CheckCircle2, X, ChevronRight, Trash2 } from "lucide-react";
-import { collection, addDoc, serverTimestamp, updateDoc, doc, deleteDoc } from "firebase/firestore";
-import { db } from "@/firebase";
-import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
-import { useGoals, Goal, GoalType, GoalStatus } from "@/hooks/useGoals";
+import { useGoals, useCreateGoal, useUpdateGoal, useDeleteGoal } from "@/hooks/useGoalQueries";
+import type { Goal, GoalType, GoalStatus } from "@/types";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -25,11 +23,12 @@ const TYPE_CONFIG: Record<GoalType, { label: string; suffix: string }> = {
 };
 
 export default function Goals() {
-  const { userDoc } = useAuth();
   const { t } = useLang();
-  const { goals, loading } = useGoals();
+  const { data: goals = [], isLoading: loading } = useGoals();
+  const createGoal = useCreateGoal();
+  const updateGoal = useUpdateGoal();
+  const deleteGoal = useDeleteGoal();
   const [showCreate, setShowCreate] = useState(false);
-  const [creating, setCreating] = useState(false);
   const [editGoal, setEditGoal] = useState<Goal | null>(null);
   const [form, setForm] = useState({
     title: "", description: "", type: "percent" as GoalType,
@@ -51,40 +50,39 @@ export default function Goals() {
     return Math.min(100, Math.round((goal.currentValue / goal.targetValue) * 100));
   };
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title.trim()) return;
-    setCreating(true);
-    try {
-      await addDoc(collection(db, "goals"), {
-        ...form,
-        dueDate: form.dueDate ? new Date(form.dueDate) : null,
-        linkedTaskIds: [],
-        createdBy: userDoc?.id || "",
-        createdAt: serverTimestamp(),
-      });
-      toast.success("Goal created!");
-      setShowCreate(false);
-      setForm({ title: "", description: "", type: "percent", targetValue: 100, currentValue: 0, folder: "", status: "on_track", dueDate: "" });
-    } catch { toast.error("Failed to create goal"); }
-    finally { setCreating(false); }
+    createGoal.mutate({
+      title: form.title,
+      description: form.description,
+      type: form.type,
+      targetValue: form.targetValue,
+      currentValue: form.currentValue,
+      status: form.status,
+      dueDate: form.dueDate || null,
+    }, {
+      onSuccess: () => {
+        toast.success("Goal created!");
+        setShowCreate(false);
+        setForm({ title: "", description: "", type: "percent", targetValue: 100, currentValue: 0, folder: "", status: "on_track", dueDate: "" });
+      },
+    });
   };
 
-  const handleUpdateProgress = async (goal: Goal, newVal: number) => {
-    try {
-      await updateDoc(doc(db, "goals", goal.id), { currentValue: newVal });
-    } catch { toast.error("Failed to update"); }
+  const handleUpdateProgress = (goal: Goal, newVal: number) => {
+    updateGoal.mutate({ id: goal.id, payload: { currentValue: newVal } });
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (!confirm("Delete this goal?")) return;
-    try { await deleteDoc(doc(db, "goals", id)); toast.success("Goal deleted"); }
-    catch { toast.error("Failed to delete"); }
+    deleteGoal.mutate(id, {
+      onSuccess: () => toast.success("Goal deleted"),
+    });
   };
 
-  const handleStatusChange = async (goal: Goal, status: GoalStatus) => {
-    try { await updateDoc(doc(db, "goals", goal.id), { status }); }
-    catch { toast.error("Failed to update"); }
+  const handleStatusChange = (goal: Goal, status: GoalStatus) => {
+    updateGoal.mutate({ id: goal.id, payload: { status } });
   };
 
   return (
@@ -153,7 +151,7 @@ export default function Goals() {
                       <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", cfg.bg, cfg.color)}>{cfg.label}</span>
                       <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{typeCfg.label}</span>
                       {goal.dueDate && (
-                        <span className="text-xs text-muted-foreground ms-auto">{format(goal.dueDate, "MMM d, yyyy")}</span>
+                        <span className="text-xs text-muted-foreground ms-auto">{format(new Date(goal.dueDate), "MMM d, yyyy")}</span>
                       )}
                     </div>
                     {goal.description && <p className="text-sm text-muted-foreground mb-3">{goal.description}</p>}
@@ -273,9 +271,9 @@ export default function Goals() {
                     className="flex-1 px-4 py-2 text-sm font-semibold border border-border rounded-xl text-muted-foreground hover:bg-muted transition-all">
                     {t.cancel}
                   </button>
-                  <button type="submit" disabled={creating}
+                  <button type="submit" disabled={createGoal.isPending}
                     className="flex-1 px-4 py-2 text-sm font-semibold bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 disabled:opacity-60 transition-all">
-                    {creating ? t.creating : t.createGoal}
+                    {createGoal.isPending ? t.creating : t.createGoal}
                   </button>
                 </div>
               </form>

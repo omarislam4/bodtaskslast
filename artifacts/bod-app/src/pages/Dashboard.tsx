@@ -9,7 +9,10 @@ import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend,
 } from "recharts";
-import { useAllTasks } from "@/hooks/useTasks";
+import { useAllTasksQuery } from "@/hooks/useTaskQueries";
+import { useQueryClient } from "@tanstack/react-query";
+import { tasksService } from "@/services/tasks";
+import { taskKeys } from "@/hooks/useTaskQueries";
 import { useSpaces } from "@/hooks/useSpaces";
 import { useSpaceFilter } from "@/hooks/useSpaceFilter";
 import { useMembers } from "@/hooks/useMembers";
@@ -20,8 +23,7 @@ import { KanbanBoard } from "@/components/tasks/KanbanBoard";
 import { useLang } from "@/contexts/LangContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, isWithinInterval, addDays, isPast } from "date-fns";
-import { updateDoc, doc, arrayUnion, addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { db } from "@/firebase";
+import { notificationsService } from "@/services/notifications";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -48,8 +50,9 @@ const cardVariants: Variants = {
 type DashView = "overview" | "kanban";
 
 export default function Dashboard() {
-  const { tasks: allTasks, loading: tasksLoading } = useAllTasks();
-  const { spaces: allSpaces, loading: spacesLoading } = useSpaces();
+  const { data: allTasks = [], isLoading: tasksLoading } = useAllTasksQuery();
+  const queryClient = useQueryClient();
+  const { data: allSpaces = [], isLoading: spacesLoading } = useSpaces();
   const { filterSpaces } = useSpaceFilter();
   const spaces = filterSpaces(allSpaces);
   const visibleSpaceIds = new Set(spaces.map(s => s.id));
@@ -83,13 +86,13 @@ export default function Dashboard() {
     ].filter((s) => s.value > 0);
 
     const upcoming = tasks
-      .filter((tk) => tk.deadline && tk.status !== "done" && isWithinInterval(tk.deadline, { start: new Date(), end: addDays(new Date(), 7) }))
-      .sort((a, b) => (a.deadline?.getTime() || 0) - (b.deadline?.getTime() || 0))
+      .filter((tk) => tk.deadline && tk.status !== "done" && isWithinInterval(new Date(tk.deadline), { start: new Date(), end: addDays(new Date(), 7) }))
+      .sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime())
       .slice(0, 5);
 
     const overdue = tasks.filter(
-      (tk) => tk.deadline && isPast(tk.deadline) && tk.status !== "done"
-    ).sort((a, b) => (a.deadline?.getTime() || 0) - (b.deadline?.getTime() || 0));
+      (tk) => tk.deadline && isPast(new Date(tk.deadline)) && tk.status !== "done"
+    ).sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime());
 
     const recent = tasks.slice(0, 6);
 
@@ -164,73 +167,40 @@ export default function Dashboard() {
     if (!task) return;
 
     const newAssigneeMember = members.find((m) => m.id === newAssigneeId);
-    const prevAssignees = task.assigneeIds.map((id) => members.find((m) => m.id === id)?.displayName || id).join(", ");
     const adminName = userDoc?.displayName || userDoc?.email || "Admin";
 
     setReassigning(taskId);
     try {
-      const activityEntry = {
-        type: "reassign",
-        text: `Task reassigned by ${adminName} from [${prevAssignees || "unassigned"}] to ${newAssigneeMember?.displayName || newAssigneeMember?.email || newAssigneeId}${reason ? ` — Reason: ${reason}` : ""}${newDeadlineStr ? ` — New deadline: ${newDeadlineStr}` : ""}`,
-        timestamp: Date.now(),
-        sender: adminName,
-        reassignedBy: userDoc?.id || "",
-        fromAssignees: task.assigneeIds,
-        toAssignee: newAssigneeId,
-        reason: reason || "",
-        newDeadline: newDeadlineStr || "",
-      };
-
-      const updatePayload: Record<string, unknown> = {
-        assigneeIds: [newAssigneeId],
-        activityLog: arrayUnion(activityEntry),
-      };
-      if (newDeadlineStr) {
-        updatePayload.deadline = new Date(newDeadlineStr);
-      }
-
-      await updateDoc(doc(db, "tasks", taskId), updatePayload);
-
-      const notifBase = {
-        taskId,
-        taskTitle: task.title,
-        type: "reassign",
-        by: adminName,
-        byId: userDoc?.id || "",
-        reason: reason || "",
-        timestamp: Date.now(),
-        read: false,
-      };
+      const restPayload: Record<string, unknown> = { assigneeIds: [newAssigneeId] };
+      if (newDeadlineStr) restPayload.deadline = newDeadlineStr;
+      await tasksService.update(taskId, restPayload);
+      queryClient.invalidateQueries({ queryKey: taskKeys.all() });
 
       const notifPromises: Promise<unknown>[] = [];
 
       for (const oldId of task.assigneeIds) {
         if (oldId !== newAssigneeId) {
           notifPromises.push(
-            addDoc(collection(db, "notifications"), {
+            notificationsService.create({
               userId: oldId,
               type: "assignment",
               title: "Removed from task",
               body: `You were removed from "${task.title}"${reason ? ` — ${reason}` : ""}`,
               taskId,
               spaceId: task.spaceId || null,
-              read: false,
-              createdAt: serverTimestamp(),
             }).catch(() => {})
           );
         }
       }
 
       notifPromises.push(
-        addDoc(collection(db, "notifications"), {
+        notificationsService.create({
           userId: newAssigneeId,
           type: "assignment",
           title: "Assigned to task",
           body: `You were assigned to "${task.title}" by ${adminName}${reason ? ` — ${reason}` : ""}`,
           taskId,
           spaceId: task.spaceId || null,
-          read: false,
-          createdAt: serverTimestamp(),
         }).catch(() => {})
       );
 
@@ -374,7 +344,7 @@ export default function Dashboard() {
                         <span className="text-xs text-foreground truncate">{task.title}</span>
                       </div>
                       <span className="text-xs text-muted-foreground shrink-0 ml-2">
-                        {task.deadline && format(task.deadline, "MMM d")}
+                        {task.deadline && format(new Date(task.deadline), "MMM d")}
                       </span>
                     </div>
                   ))}
@@ -469,7 +439,7 @@ export default function Dashboard() {
                           <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
                             {spaceName && <span className="flex items-center gap-1"><Layers className="w-3 h-3" />{spaceName}</span>}
                             {assigned.length > 0 && <span className="flex items-center gap-1"><UserCheck className="w-3 h-3" />{assigned.join(", ")}</span>}
-                            {task.deadline && <span className="text-red-500 font-medium">Due {format(task.deadline, "MMM d")}</span>}
+                            {task.deadline && <span className="text-red-500 font-medium">Due {format(new Date(task.deadline), "MMM d")}</span>}
                           </div>
                         </div>
                       </div>
@@ -628,7 +598,7 @@ export default function Dashboard() {
                           <td className="py-2.5 pr-4"><TaskStatusBadge status={task.status} size="sm" /></td>
                           <td className="py-2.5 pr-4"><TaskPriorityBadge priority={task.priority} size="sm" /></td>
                           <td className="py-2.5 pr-4"><span className="text-xs text-muted-foreground">{assigned.slice(0, 2).join(", ") || "—"}</span></td>
-                          <td className="py-2.5 text-xs text-muted-foreground">{task.deadline ? format(task.deadline, "MMM d, yyyy") : "—"}</td>
+                          <td className="py-2.5 text-xs text-muted-foreground">{task.deadline ? format(new Date(task.deadline), "MMM d, yyyy") : "—"}</td>
                         </tr>
                       );
                     })}

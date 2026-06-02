@@ -2,47 +2,46 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { FileText, Send } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { toast } from "sonner";
+import { useLang } from "@/contexts/LangContext";
+import { useSubmitWeeklyReport } from "@/hooks/useAttendance";
 import { format } from "date-fns";
 
-async function fireWebhook(url: string, payload: Record<string, string>): Promise<void> {
-  try {
-    await fetch(url, {
-      method: "POST",
-      mode: "no-cors",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify(payload),
-    });
-  } catch {
-    throw new Error("Network error — check your connection");
-  }
+const N8N_WEEKLY_URL = "https://n8n.athar-riyada.com/webhook/weekly-report";
+
+function fireN8nWeeklyReport(payload: Record<string, string>): void {
+  fetch(N8N_WEEKLY_URL, {
+    method: "POST",
+    mode: "no-cors",
+    headers: { "Content-Type": "text/plain" },
+    body: JSON.stringify(payload),
+  }).catch(() => {});
 }
 
 export default function WeeklyReport() {
   const { userDoc } = useAuth();
+  const { t } = useLang();
+  const submitReport = useSubmitWeeklyReport();
   const [weeklyReport, setWeeklyReport] = useState("");
-  const [sendingWeeklyReport, setSendingWeeklyReport] = useState(false);
 
-  const handleWeeklyReport = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!weeklyReport.trim()) return;
-    setSendingWeeklyReport(true);
-    try {
-      const now = new Date().toISOString();
-      await fireWebhook("https://n8n.athar-riyada.com/webhook/weekly-report", {
-        userId: userDoc?.id || "",
-        userName: userDoc?.displayName || userDoc?.email || "",
-        userEmail: userDoc?.email || "",
-        timestamp: now,
-        report: weeklyReport,
-      });
-      setWeeklyReport("");
-      toast.success("Weekly report sent!");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to send report. Please try again.");
-    } finally {
-      setSendingWeeklyReport(false);
-    }
+
+    submitReport.mutate(
+      { report: weeklyReport },
+      {
+        onSuccess: () => {
+          fireN8nWeeklyReport({
+            userId: userDoc?.id || "",
+            userName: userDoc?.displayName || userDoc?.email || "",
+            userEmail: userDoc?.email || "",
+            timestamp: new Date().toISOString(),
+            report: weeklyReport,
+          });
+          setWeeklyReport("");
+        },
+      }
+    );
   };
 
   return (
@@ -65,7 +64,7 @@ export default function WeeklyReport() {
             <p className="text-xs text-muted-foreground">Week of {format(new Date(), "MMM d, yyyy")}</p>
           </div>
         </div>
-        <form onSubmit={handleWeeklyReport} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <textarea
             value={weeklyReport}
             onChange={(e) => setWeeklyReport(e.target.value)}
@@ -77,11 +76,11 @@ export default function WeeklyReport() {
           <motion.button
             type="submit"
             whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-            disabled={sendingWeeklyReport || !weeklyReport.trim()}
+            disabled={submitReport.isPending || !weeklyReport.trim()}
             className="w-full py-3 bg-purple-500 text-white text-sm font-semibold rounded-xl hover:bg-purple-600 disabled:opacity-60 transition-colors shadow-sm flex items-center justify-center gap-2"
           >
             <Send className="w-4 h-4" />
-            {sendingWeeklyReport ? "Sending Report..." : "Send Report"}
+            {submitReport.isPending ? t.saving : "Send Report"}
           </motion.button>
         </form>
       </motion.div>

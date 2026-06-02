@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { TaskPriority } from "@/hooks/useTasks";
+import type { TaskPriority } from "@/types";
 
 const priorityConfig: Record<TaskPriority, { label: string; className: string; dot: string }> = {
   low: {

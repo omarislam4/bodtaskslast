@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { CheckSquare, Clock, AlertTriangle, Calendar, ChevronRight } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
-import { useMyTasks } from "@/hooks/useTasks";
+import { useAllTasksQuery } from "@/hooks/useTaskQueries";
 import { useSpaces } from "@/hooks/useSpaces";
 import { TaskStatusBadge } from "@/components/tasks/TaskStatusBadge";
 import { TaskPriorityBadge } from "@/components/tasks/TaskPriorityBadge";
@@ -16,7 +16,8 @@ type Tab = "today" | "overdue" | "upcoming" | "all";
 export default function MyTasks() {
   const { userDoc } = useAuth();
   const { t } = useLang();
-  const { tasks, loading } = useMyTasks(userDoc?.id);
+  const { data: allTasks = [], isLoading: loading } = useAllTasksQuery();
+  const tasks = userDoc ? allTasks.filter(t => t.assigneeIds?.includes(userDoc.id)) : [];
   const { spaces } = useSpaces();
   const [, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState<Tab>("today");
@@ -26,9 +27,9 @@ export default function MyTasks() {
 
   const activeTasks = tasks.filter(t => t.status !== "done");
 
-  const todayTasks = activeTasks.filter(t => t.deadline && isToday(t.deadline));
-  const overdueTasks = activeTasks.filter(t => t.deadline && isPast(t.deadline) && !isToday(t.deadline));
-  const upcomingTasks = activeTasks.filter(t => t.deadline && isWithinInterval(t.deadline, { start: addDays(now, 1), end: addDays(now, 14) }));
+  const todayTasks = activeTasks.filter(t => t.deadline && isToday(new Date(t.deadline)));
+  const overdueTasks = activeTasks.filter(t => t.deadline && isPast(new Date(t.deadline)) && !isToday(new Date(t.deadline)));
+  const upcomingTasks = activeTasks.filter(t => t.deadline && isWithinInterval(new Date(t.deadline), { start: addDays(now, 1), end: addDays(now, 14) }));
 
   const getTabTasks = () => {
     let list = activeTab === "today" ? todayTasks
@@ -39,12 +40,13 @@ export default function MyTasks() {
     return list;
   };
 
-  const getDeadlineLabel = (t: Date | null) => {
-    if (!t) return null;
-    if (isToday(t)) return { text: "Today", color: "text-yellow-500" };
-    if (isTomorrow(t)) return { text: "Tomorrow", color: "text-blue-400" };
-    if (isPast(t)) return { text: `${Math.floor((now.getTime() - t.getTime()) / 86400000)}d overdue`, color: "text-red-500" };
-    return { text: format(t, "MMM d"), color: "text-muted-foreground" };
+  const getDeadlineLabel = (deadline: string | null | undefined) => {
+    if (!deadline) return null;
+    const d = new Date(deadline);
+    if (isToday(d)) return { text: "Today", color: "text-yellow-500" };
+    if (isTomorrow(d)) return { text: "Tomorrow", color: "text-blue-400" };
+    if (isPast(d)) return { text: `${Math.floor((now.getTime() - d.getTime()) / 86400000)}d overdue`, color: "text-red-500" };
+    return { text: format(d, "MMM d"), color: "text-muted-foreground" };
   };
 
   const tabs: { id: Tab; label: string; count: number; icon: typeof Clock; color: string }[] = [

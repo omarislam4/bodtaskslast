@@ -1,15 +1,11 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { User, Moon, Sun, Save, LogOut, Phone, Clock, Webhook, Bell } from "lucide-react";
-import { doc, updateDoc } from "firebase/firestore";
-import { signOut } from "firebase/auth";
-import { auth, db } from "@/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useWebhookSettings } from "@/hooks/useWebhook";
+import { useUpdateProfile } from "@/hooks/useUserQueries";
+import { useAppSettings, useUpdateAppSettings } from "@/hooks/useSettingsQueries";
 import { useLang } from "@/contexts/LangContext";
-import { toast } from "sonner";
-
 const COUNTRY_CODES = [
   { code: "+1", label: "🇺🇸 +1 (US/CA)" },
   { code: "+20", label: "🇪🇬 +20 (Egypt)" },
@@ -32,64 +28,28 @@ const COUNTRY_CODES = [
 ];
 
 export default function Settings() {
-  const { userDoc, isAdmin } = useAuth();
+  const { userDoc, isAdmin, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { settings: webhookSettings, saveSettings } = useWebhookSettings();
   const { t, lang, setLang } = useLang();
 
   const [displayName, setDisplayName] = useState(userDoc?.displayName || "");
   const [phone, setPhone] = useState(userDoc?.phone || "");
   const [countryCode, setCountryCode] = useState(userDoc?.countryCode || "+20");
   const [shiftEnd, setShiftEnd] = useState(userDoc?.shiftEnd || "");
-  const [saving, setSaving] = useState(false);
+  const updateProfile = useUpdateProfile(userDoc?.id || "");
 
-  const [webhookUrl, setWebhookUrl] = useState(webhookSettings.webhookUrl || "https://n8n.bodhosting.com/webhook/manual-send-notification");
-  const [reminderMinutes, setReminderMinutes] = useState(webhookSettings.reminderMinutes || 30);
-  const [savingWebhook, setSavingWebhook] = useState(false);
+  const { data: appSettings } = useAppSettings(isAdmin);
+  const updateAppSettings = useUpdateAppSettings();
+  const [webhookUrl, setWebhookUrl] = useState(appSettings?.webhookUrl || "https://n8n.bodhosting.com/webhook/manual-send-notification");
+  const [reminderMinutes, setReminderMinutes] = useState(appSettings?.reminderMinutes || 30);
 
-  const handleSaveProfile = async () => {
+  const handleSaveProfile = () => {
     if (!userDoc) return;
-    setSaving(true);
-    try {
-      const profileData = {
-        displayName,
-        phone,
-        countryCode,
-        shiftEnd,
-        shiftReminderSent: false,
-      };
-      await updateDoc(doc(db, "users", userDoc.id), profileData);
-      const { setDoc, doc: fsDoc } = await import("firebase/firestore");
-      await setDoc(fsDoc(db, "members", userDoc.id), {
-        ...profileData,
-        email: userDoc.email,
-        id: userDoc.id,
-        fullPhone: `${countryCode}${phone}`.replace(/\s/g, ""),
-      }, { merge: true });
-      toast.success(t.saveChanges);
-    } catch {
-      toast.error("Failed to save profile");
-    } finally {
-      setSaving(false);
-    }
+    updateProfile.mutate({ displayName, phone, countryCode, shiftEnd });
   };
 
-  const handleSaveWebhook = async () => {
-    setSavingWebhook(true);
-    try {
-      await saveSettings({ webhookUrl, reminderMinutes });
-      const { setDoc, doc: fsDoc } = await import("firebase/firestore");
-      await setDoc(fsDoc(db, "config", "app"), {
-        webhookUrl,
-        remindMinutes: reminderMinutes,
-        reminderMinutes,
-      }, { merge: true });
-      toast.success(t.webhookSettings);
-    } catch {
-      toast.error("Failed to save webhook settings");
-    } finally {
-      setSavingWebhook(false);
-    }
+  const handleSaveWebhook = () => {
+    updateAppSettings.mutate({ webhookUrl, reminderMinutes });
   };
 
   return (
@@ -182,11 +142,11 @@ export default function Settings() {
         <motion.button
           whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
           onClick={handleSaveProfile}
-          disabled={saving}
+          disabled={updateProfile.isPending}
           className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-60"
         >
           <Save className="w-4 h-4" />
-          {saving ? t.saving : t.saveChanges}
+          {updateProfile.isPending ? t.saving : t.saveChanges}
         </motion.button>
 
         {/* Language */}
@@ -248,11 +208,11 @@ export default function Settings() {
               <motion.button
                 whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
                 onClick={handleSaveWebhook}
-                disabled={savingWebhook}
+                disabled={updateAppSettings.isPending}
                 className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-60"
               >
                 <Save className="w-4 h-4" />
-                {savingWebhook ? t.saving : t.saveChanges}
+                {updateAppSettings.isPending ? t.saving : t.saveChanges}
               </motion.button>
             </div>
           </motion.div>
@@ -280,7 +240,7 @@ export default function Settings() {
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-card border border-border rounded-xl p-5">
           <h3 className="text-sm font-semibold text-foreground mb-4">{lang === "ar" ? "الجلسة" : "Session"}</h3>
           <button
-            onClick={() => signOut(auth)}
+            onClick={logout}
             className="flex items-center gap-2 px-4 py-2 bg-destructive/10 text-destructive text-sm font-medium rounded-xl hover:bg-destructive/20 transition-colors"
           >
             <LogOut className="w-4 h-4" />

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
 import { History as HistoryIcon, Search, CheckCircle2, Calendar, Filter } from "lucide-react";
-import { useAllTasks } from "@/hooks/useTasks";
+import { useAllTasksQuery } from "@/hooks/useTaskQueries";
 import { useMembers } from "@/hooks/useMembers";
 import { useSpaces } from "@/hooks/useSpaces";
 import { TaskPriorityBadge } from "@/components/tasks/TaskPriorityBadge";
@@ -11,7 +11,7 @@ import { useLang } from "@/contexts/LangContext";
 import { format } from "date-fns";
 
 export default function History() {
-  const { tasks, loading } = useAllTasks();
+  const { data: tasks = [], isLoading: loading } = useAllTasksQuery();
   const { members } = useMembers();
   const { spaces } = useSpaces();
   const [, navigate] = useLocation();
@@ -107,7 +107,7 @@ export default function History() {
                   {task.completedAt && (
                     <span className="text-xs text-muted-foreground flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
-                      {format(task.completedAt, "MMM d, yyyy")}
+                      {format(new Date(task.completedAt), "MMM d, yyyy")}
                     </span>
                   )}
                 </div>

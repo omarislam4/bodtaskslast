@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
-import { collection, getDocs, updateDoc, doc } from "firebase/firestore";
-import { db } from "../firebase";
 import { sendToWebhook, WebhookSettings } from "./useWebhook";
+import { usersService } from "@/services/users";
+import { tasksService } from "@/services/tasks";
 import { toast } from "sonner";
 
 function timeToMinutes(timeStr: string): number {
@@ -23,16 +23,15 @@ export const useShiftReminder = (settings: WebhookSettings, isAdmin: boolean) =>
 
     const check = async () => {
       try {
-        const [membersSnap, tasksSnap] = await Promise.all([
-          getDocs(collection(db, "users")),
-          getDocs(collection(db, "tasks")),
+        const [members, tasks] = await Promise.all([
+          usersService.list(),
+          tasksService.list(),
         ]);
 
         const now = nowMinutes();
         const reminderWindow = settings.reminderMinutes;
 
-        for (const memberDoc of membersSnap.docs) {
-          const member = memberDoc.data();
+        for (const member of members) {
           if (!member.shiftEnd || member.shiftReminderSent) continue;
 
           const shiftEndMin = timeToMinutes(member.shiftEnd);
@@ -40,36 +39,36 @@ export const useShiftReminder = (settings: WebhookSettings, isAdmin: boolean) =>
 
           const remaining = shiftEndMin - now;
           if (remaining > 0 && remaining <= reminderWindow) {
-            // Find in-progress tasks for this member
-            const inProgressTasks = tasksSnap.docs
-              .map((d) => ({ id: d.id, ...d.data() }))
-              .filter((t: Record<string, unknown>) =>
+            const inProgressTasks = tasks.filter(
+              (t) =>
                 t.status === "in-progress" &&
                 Array.isArray(t.assigneeIds) &&
-                (t.assigneeIds as string[]).includes(memberDoc.id)
-              );
+                t.assigneeIds.includes(member.id)
+            );
 
             if (inProgressTasks.length > 0) {
               const phone = `${member.countryCode || ""}${member.phone || ""}`.replace(/\s/g, "");
               for (const task of inProgressTasks) {
-                const t = task as Record<string, unknown>;
                 try {
                   await sendToWebhook(settings.webhookUrl, {
                     type: "auto-shift",
-                    taskName: t.title as string,
-                    taskId: t.id as string,
-                    deadline: t.deadline ? String(t.deadline) : undefined,
+                    taskName: task.title,
+                    taskId: task.id,
+                    deadline: task.deadline ?? undefined,
                     phone,
-                    assigneeIds: t.assigneeIds as string[],
+                    assigneeIds: task.assigneeIds,
                     source: "dashboard",
-                  }, t.id as string);
+                  });
                 } catch {
                   // continue to next
                 }
               }
 
-              // Mark as sent to avoid duplicates
-              await updateDoc(doc(db, "users", memberDoc.id), { shiftReminderSent: true });
+              try {
+                await usersService.update(member.id, { shiftReminderSent: true });
+              } catch {
+                // non-critical
+              }
               toast.info(`Shift reminder sent to ${member.displayName || member.email}`);
             }
           }
@@ -79,7 +78,6 @@ export const useShiftReminder = (settings: WebhookSettings, isAdmin: boolean) =>
       }
     };
 
-    // Run immediately, then every 60 seconds
     check();
     intervalRef.current = setInterval(check, 60_000);
 

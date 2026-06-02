@@ -1,11 +1,9 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Bell, CheckCheck, AtSign, UserCheck, MessageSquare, Info, ChevronRight } from "lucide-react";
-import { doc, updateDoc, writeBatch } from "firebase/firestore";
-import { db } from "@/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
-import { useNotifications, Notification, NotificationType } from "@/hooks/useNotifications";
+import { useNotifications, useMarkNotificationRead, useMarkAllNotificationsRead, Notification, NotificationType } from "@/hooks/useNotifications";
 import { useLocation } from "wouter";
 import { format, formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -23,12 +21,10 @@ const TYPE_CONFIG: Record<NotificationType, { icon: typeof Bell; color: string }
 
 export default function Inbox() {
   const { userDoc } = useAuth();
-
-// أضف دي مباشرةً بعدها
-console.log("userDoc:", userDoc);
-console.log("userDoc.id:", userDoc?.id);
   const { t } = useLang();
   const { notifications, loading, unreadCount } = useNotifications(userDoc?.id);
+  const markReadMutation = useMarkNotificationRead();
+  const markAllReadMutation = useMarkAllNotificationsRead();
   const [, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState<InboxTab>("all");
 
@@ -41,19 +37,14 @@ console.log("userDoc.id:", userDoc?.id);
     }
   };
 
-  const markRead = async (notif: Notification) => {
+  const markRead = (notif: Notification) => {
     if (notif.read) return;
-    try { await updateDoc(doc(db, "notifications", notif.id), { read: true }); }
-    catch {}
+    markReadMutation.mutate(notif.id);
   };
 
-  const markAllRead = async () => {
-    const unread = notifications.filter(n => !n.read);
-    if (unread.length === 0) return;
-    const batch = writeBatch(db);
-    unread.forEach(n => batch.update(doc(db, "notifications", n.id), { read: true }));
-    try { await batch.commit(); }
-    catch {}
+  const markAllRead = () => {
+    if (unreadCount === 0) return;
+    markAllReadMutation.mutate();
   };
 
   const tabs: { id: InboxTab; label: string; count?: number }[] = [

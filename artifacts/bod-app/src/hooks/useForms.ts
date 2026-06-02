@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
-import { collection, onSnapshot, query, orderBy, Timestamp } from "firebase/firestore";
-import { db } from "../firebase";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { formsService } from "@/services/forms";
+import { useLang } from "@/contexts/LangContext";
+import { toast } from "sonner";
 
 export type FormFieldType = "text" | "number" | "date" | "dropdown" | "checkbox" | "email";
 
@@ -21,46 +22,56 @@ export interface Form {
   submissionCount: number;
   isPublic: boolean;
   createdBy: string;
-  createdAt: Date;
+  createdAt: string;
 }
 
-function toDate(val: unknown): Date | null {
-  if (!val) return null;
-  if (val instanceof Timestamp) return val.toDate();
-  if (val instanceof Date) return val;
-  if (typeof val === "string" || typeof val === "number") {
-    const d = new Date(val);
-    return isNaN(d.getTime()) ? null : d;
-  }
-  return null;
+export interface CreateFormPayload {
+  title: string;
+  description?: string;
+  spaceId?: string;
+  fields?: FormField[];
+  isPublic?: boolean;
+  createdBy?: string;
 }
+
+export const formKeys = {
+  all: () => ["forms"] as const,
+};
 
 export const useForms = () => {
-  const [forms, setForms] = useState<Form[]>([]);
-  const [loading, setLoading] = useState(true);
+  const query = useQuery({
+    queryKey: formKeys.all(),
+    queryFn: formsService.list,
+  });
 
-  useEffect(() => {
-    const q = query(collection(db, "forms"), orderBy("createdAt", "desc"));
-    const unsub = onSnapshot(q, (snap) => {
-      setForms(snap.docs.map(doc => {
-        const d = doc.data();
-        return {
-          title: "",
-          description: "",
-          spaceId: "",
-          submissionCount: 0,
-          isPublic: true,
-          createdBy: "",
-          ...d,
-          id: doc.id,
-          fields: Array.isArray(d.fields) ? d.fields as FormField[] : [],
-          createdAt: toDate(d.createdAt) ?? new Date(),
-        } as Form;
-      }));
-      setLoading(false);
-    });
-    return () => unsub();
-  }, []);
+  return {
+    forms: query.data ?? [],
+    loading: query.isLoading,
+  };
+};
 
-  return { forms, loading };
+export const useCreateForm = () => {
+  const queryClient = useQueryClient();
+  const { t } = useLang();
+  return useMutation({
+    mutationFn: (payload: CreateFormPayload) => formsService.create(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: formKeys.all() });
+      toast.success(t.createForm);
+    },
+    onError: () => toast.error(t.errGeneric),
+  });
+};
+
+export const useDeleteForm = () => {
+  const queryClient = useQueryClient();
+  const { t } = useLang();
+  return useMutation({
+    mutationFn: (id: string) => formsService.remove(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: formKeys.all() });
+      toast.success(t.delete);
+    },
+    onError: () => toast.error(t.errGeneric),
+  });
 };

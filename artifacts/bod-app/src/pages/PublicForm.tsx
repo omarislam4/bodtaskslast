@@ -1,26 +1,11 @@
 import { useState, useEffect } from "react";
 import { useParams } from "wouter";
-import { doc, getDoc, addDoc, collection, serverTimestamp, updateDoc, increment } from "firebase/firestore";
-import { db } from "@/firebase";
+import { formsService } from "@/services/forms";
 import { ClipboardList, CheckCircle2, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import bodLogo from "@assets/bod-logo.png";
 
-interface FormField {
-  id: string;
-  type: "text" | "number" | "date" | "dropdown" | "checkbox" | "email";
-  label: string;
-  required: boolean;
-  options?: string[];
-}
-
-interface Form {
-  id: string;
-  title: string;
-  description?: string;
-  fields: FormField[];
-  isPublic: boolean;
-}
+import type { FormField, Form } from "@/hooks/useForms";
 
 export default function PublicForm() {
   const { formId } = useParams<{ formId: string }>();
@@ -33,20 +18,17 @@ export default function PublicForm() {
 
   useEffect(() => {
     if (!formId) return;
-    getDoc(doc(db, "forms", formId)).then(snap => {
-      if (snap.exists()) {
-        const d = snap.data();
-        setForm({ id: snap.id, ...d } as Form);
+    formsService.getPublic(formId)
+      .then(data => {
+        setForm(data);
         const initial: Record<string, string | boolean> = {};
-        (d.fields as FormField[]).forEach(f => {
+        data.fields.forEach(f => {
           initial[f.id] = f.type === "checkbox" ? false : "";
         });
         setValues(initial);
-      } else {
-        setError("Form not found");
-      }
-      setLoading(false);
-    }).catch(() => { setError("Failed to load form"); setLoading(false); });
+        setLoading(false);
+      })
+      .catch(() => { setError("Form not found"); setLoading(false); });
   }, [formId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -63,15 +45,7 @@ export default function PublicForm() {
     setSubmitting(true);
     setError(null);
     try {
-      await addDoc(collection(db, "formSubmissions"), {
-        formId: form.id,
-        formTitle: form.title,
-        values,
-        submittedAt: serverTimestamp(),
-      });
-      await updateDoc(doc(db, "forms", form.id), {
-        submissionCount: increment(1),
-      });
+      await formsService.submit(form.id, values);
       setSubmitted(true);
     } catch {
       setError("Failed to submit. Please try again.");

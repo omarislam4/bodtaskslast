@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { BarChart2, CheckCircle2, AlertTriangle, XCircle, Users, TrendingUp } from "lucide-react";
 import { useLang } from "@/contexts/LangContext";
 import { useSpaces } from "@/hooks/useSpaces";
-import { useAllTasks } from "@/hooks/useTasks";
+import { useAllTasksQuery } from "@/hooks/useTaskQueries";
 import { useMembers } from "@/hooks/useMembers";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
@@ -18,14 +18,14 @@ const HEALTH_CONFIG: Record<HealthStatus, { label: string; color: string; bg: st
 export default function Portfolio() {
   const { t } = useLang();
   const { spaces } = useSpaces();
-  const { tasks } = useAllTasks();
+  const { data: tasks = [] } = useAllTasksQuery();
   const { members } = useMembers();
   const [, navigate] = useLocation();
 
   const getHealth = (spaceId: string): HealthStatus => {
     const spaceTasks = tasks.filter(t => t.spaceId === spaceId && t.status !== "done");
     if (spaceTasks.length === 0) return "on_track";
-    const overdue = spaceTasks.filter(t => t.deadline && t.deadline < new Date()).length;
+    const overdue = spaceTasks.filter(t => t.deadline && new Date(t.deadline) < new Date()).length;
     const ratio = overdue / spaceTasks.length;
     if (ratio >= 0.3) return "off_track";
     if (ratio >= 0.1) return "at_risk";
@@ -37,7 +37,7 @@ export default function Portfolio() {
     const done = spaceTasks.filter(t => t.status === "done").length;
     const total = spaceTasks.length;
     const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-    const overdue = spaceTasks.filter(t => t.status !== "done" && t.deadline && t.deadline < new Date()).length;
+    const overdue = spaceTasks.filter(t => t.status !== "done" && t.deadline && new Date(t.deadline) < new Date()).length;
     return { total, done, pct, overdue };
   };
 

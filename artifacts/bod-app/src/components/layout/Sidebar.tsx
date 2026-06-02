@@ -7,19 +7,15 @@ import {
   History, Settings, ChevronRight, Sun,
   Moon, LogOut, ChevronDown, Menu, X, CornerDownRight,
   ClipboardCheck, FileText, Bug, CheckSquare,
-  BarChart2, MessageCircle, SlidersHorizontal, Eye, EyeOff,
+  BarChart2, MessageCircle, SlidersHorizontal, Eye, EyeOff, Bot,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useLang } from "@/contexts/LangContext";
-import { useSpaces, Space } from "@/hooks/useSpaces";
+import { useSpaces, useSubSpaces } from "@/hooks/useSpaces";
 import { useSpaceFilter } from "@/hooks/useSpaceFilter";
-import { signOut } from "firebase/auth";
-import { auth } from "@/firebase";
 import bodLogo from "@assets/bod-logo.png";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
-import { db } from "@/firebase";
 
 interface SidebarProps {
   onClose?: () => void;
@@ -33,34 +29,21 @@ export const Sidebar = ({ onClose }: SidebarProps) => {
   const filterRef = useRef<HTMLDivElement>(null);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
   const [location] = useLocation();
-  const { userDoc, isAdmin } = useAuth();
+  const { userDoc, isAdmin, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { lang, setLang, t } = useLang();
-  const { spaces } = useSpaces();
+  const { data: spaces = [] } = useSpaces();
   const { hiddenSpaceIds, toggleSpaceVisibility, filterSpaces } = useSpaceFilter();
-  const [subSpacesMap, setSubSpacesMap] = useState<Record<string, Space[]>>({});
 
-  const handleLogout = () => signOut(auth);
+  const handleLogout = () => logout();
 
   const spaceMatch = location.match(/^\/spaces\/([^/]+)/);
   const currentSpaceId = spaceMatch ? spaceMatch[1] : null;
 
-  const topSpaces = spaces.filter((s) => !(s as Space & { parentSpaceId?: string }).parentSpaceId);
-  const visibleTopSpaces = isAdmin ? filterSpaces(topSpaces) : topSpaces;
+  const { data: currentSubSpaces = [] } = useSubSpaces(currentSpaceId ?? undefined);
 
-  useEffect(() => {
-    if (!currentSpaceId) return;
-    const q = query(collection(db, "spaces"), where("parentSpaceId", "==", currentSpaceId));
-    const unsub = onSnapshot(q, (snap) => {
-      const subs = snap.docs.map((d) => ({
-        name: "", description: "", color: "#6366f1", icon: "",
-        memberIds: [], createdBy: "", createdAt: new Date(),
-        ...d.data(), id: d.id,
-      })) as Space[];
-      setSubSpacesMap((prev) => ({ ...prev, [currentSpaceId]: subs }));
-    });
-    return () => unsub();
-  }, [currentSpaceId]);
+  const topSpaces = spaces.filter((s) => !s.parentSpaceId);
+  const visibleTopSpaces = isAdmin ? filterSpaces(topSpaces) : topSpaces;
 
   const openFilter = useCallback(() => {
     if (filterBtnRef.current) {
@@ -95,6 +78,7 @@ export const Sidebar = ({ onClose }: SidebarProps) => {
     { icon: BarChart2,       label: t.portfolio,    href: "/portfolio" },
     { icon: MessageCircle,   label: t.chat,         href: "/chat" },
     { icon: Bug,             label: t.bugTracker,   href: "/bugs",           adminOnly: true },
+    { icon: Bot,             label: t.automations,  href: "/automations",    adminOnly: true },
     { icon: ClipboardCheck,  label: "Attendance",   href: "/attendance" },
     { icon: FileText,        label: "Weekly Report", href: "/weekly-report" },
     { icon: Calendar,        label: t.timeline,     href: "/timeline",       adminOnly: true },
@@ -227,7 +211,7 @@ export const Sidebar = ({ onClose }: SidebarProps) => {
                       >
                         {visibleTopSpaces.map((space) => {
                           const isSpaceActive = location.startsWith(`/spaces/${space.id}`);
-                          const spaceSubs = subSpacesMap[space.id] || [];
+                          const spaceSubs = space.id === currentSpaceId ? currentSubSpaces : [];
                           const showSubs = isSpaceActive && spaceSubs.length > 0 && currentSpaceId === space.id;
 
                           return (
