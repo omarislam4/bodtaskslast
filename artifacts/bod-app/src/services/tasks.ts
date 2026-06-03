@@ -15,6 +15,15 @@ export const tasksService = {
   list: (params?: TaskQueryParams): Promise<Task[]> =>
     api.get<Task[]>("/tasks", { params }).then((r) => r.data),
 
+  myTasks: (params?: { scope?: "today" | "overdue" | "upcoming" | "all"; search?: string }): Promise<Task[]> =>
+    api.get<Task[]>("/my-tasks", { params }).then((r) => r.data),
+
+  timeline: (month: string): Promise<{ month: string; tasks: Task[] }> =>
+    api.get("/tasks/timeline", { params: { month } }).then((r) => r.data),
+
+  history: (params?: { search?: string; priority?: string }): Promise<Task[]> =>
+    api.get<Task[]>("/history", { params }).then((r) => r.data),
+
   get: (id: string): Promise<Task> =>
     api.get<Task>(`/tasks/${id}`).then((r) => r.data),
 

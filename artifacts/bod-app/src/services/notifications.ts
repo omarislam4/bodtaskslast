@@ -11,14 +11,14 @@ export interface NotificationPayload {
 
 export const notificationsService = {
   list: (): Promise<import("@/hooks/useNotifications").Notification[]> =>
-    api.get("/notifications").then((r) => r.data),
+    api.get("/inbox/notifications").then((r) => r.data),
 
   markRead: (id: string): Promise<void> =>
-    api.patch(`/notifications/${id}`, { read: true }).then(() => undefined),
+    api.post(`/inbox/notifications/${id}/read`).then(() => undefined),
 
   markAllRead: (): Promise<void> =>
-    api.post("/notifications/read-all").then(() => undefined),
+    api.post("/inbox/notifications/mark-all-read").then(() => undefined),
 
   create: (payload: NotificationPayload): Promise<void> =>
-    api.post("/notifications", { ...payload, read: false }).then(() => undefined),
+    api.post("/inbox/notifications", { ...payload, read: false }).then(() => undefined),
 };

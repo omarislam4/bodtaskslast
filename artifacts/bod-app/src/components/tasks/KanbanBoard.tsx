@@ -4,14 +4,7 @@ import type { Task, TaskStatus } from "@/types";
 import { UserDoc } from "@/contexts/AuthContext";
 import { TaskCard } from "./TaskCard";
 import { TaskStatusBadge } from "./TaskStatusBadge";
-
-const COLUMNS: { id: TaskStatus; label: string; color: string }[] = [
-  { id: "todo", label: "To Do", color: "bg-slate-400" },
-  { id: "in-progress", label: "In Progress", color: "bg-blue-500" },
-  { id: "review", label: "Review", color: "bg-amber-500" },
-  { id: "done", label: "Done", color: "bg-emerald-500" },
-  { id: "blocked", label: "Blocked", color: "bg-red-500" },
-];
+import { useLang } from "@/contexts/LangContext";
 
 interface KanbanBoardProps {
   tasks: Task[];
@@ -21,6 +14,15 @@ interface KanbanBoardProps {
 
 export function KanbanBoard({ tasks, members, spaceId }: KanbanBoardProps) {
   const [, navigate] = useLocation();
+  const { t } = useLang();
+
+  const COLUMNS: { id: TaskStatus; label: string; color: string }[] = [
+    { id: "todo", label: t.todo, color: "bg-slate-400" },
+    { id: "in-progress", label: t.inProgress, color: "bg-blue-500" },
+    { id: "review", label: t.review, color: "bg-amber-500" },
+    { id: "done", label: t.done, color: "bg-emerald-500" },
+    { id: "blocked", label: t.blocked, color: "bg-red-500" },
+  ];
 
   return (
     <div className="flex gap-4 overflow-x-auto pb-4 min-h-100">
@@ -34,7 +36,9 @@ export function KanbanBoard({ tasks, members, spaceId }: KanbanBoardProps) {
             {/* Column header */}
             <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
               <div className={`w-2 h-2 rounded-full ${col.color}`} />
-              <span className="text-xs font-semibold text-foreground">{col.label}</span>
+              <span className="text-xs font-semibold text-foreground">
+                {col.label}
+              </span>
               <span className="ml-auto text-xs bg-muted text-muted-foreground rounded-full px-2 py-0.5 font-medium">
                 {colTasks.length}
               </span>
@@ -57,7 +61,7 @@ export function KanbanBoard({ tasks, members, spaceId }: KanbanBoardProps) {
                       navigate(
                         spaceId
                           ? `/spaces/${task.spaceId}/tasks/${task.id}`
-                          : `/spaces/${task.spaceId}/tasks/${task.id}`
+                          : `/spaces/${task.spaceId}/tasks/${task.id}`,
                       )
                     }
                   />

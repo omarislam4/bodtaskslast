@@ -35,7 +35,7 @@ function SeverityBadge({ severity }: { severity?: BugSeverity }) {
 }
 
 export default function Bugs() {
-  const { data: tasks = [], isLoading: loading } = useAllTasksQuery();
+  const { data: tasks = [], isLoading: loading } = useAllTasksQuery({ type: "bug" });
   const createBug = useCreateTask();
   const { data: spaces = [] } = useSpaces();
   const { members } = useMembers();
@@ -66,20 +66,18 @@ export default function Bugs() {
     progress: 0,
   });
 
-  const bugs = useMemo(() => tasks.filter((t) => t.type === "bug"), [tasks]);
-
   const stats = useMemo(() => {
-    const total = bugs.length;
-    const open = bugs.filter((b) => b.status === "todo").length;
-    const inProgress = bugs.filter((b) => b.status === "in-progress").length;
-    const resolved = bugs.filter((b) => b.status === "done").length;
-    const critical = bugs.filter((b) => b.bugSeverity === "critical").length;
-    const blocked = bugs.filter((b) => b.status === "blocked").length;
+    const total = tasks.length;
+    const open = tasks.filter((b) => b.status === "todo").length;
+    const inProgress = tasks.filter((b) => b.status === "in-progress").length;
+    const resolved = tasks.filter((b) => b.status === "done").length;
+    const critical = tasks.filter((b) => b.bugSeverity === "critical").length;
+    const blocked = tasks.filter((b) => b.status === "blocked").length;
     return { total, open, inProgress, resolved, critical, blocked };
-  }, [bugs]);
+  }, [tasks]);
 
   const filtered = useMemo(() => {
-    let result = bugs;
+    let result = tasks;
     if (severityFilter !== "all") result = result.filter((b) => b.bugSeverity === severityFilter);
     if (statusFilter !== "all") result = result.filter((b) => b.status === statusFilter);
     if (spaceFilter !== "all") result = result.filter((b) => b.spaceId === spaceFilter);
@@ -88,7 +86,7 @@ export default function Bugs() {
       result = result.filter((b) => b.title.toLowerCase().includes(q) || b.description?.toLowerCase().includes(q));
     }
     return result;
-  }, [bugs, severityFilter, statusFilter, spaceFilter, searchQuery]);
+  }, [tasks, severityFilter, statusFilter, spaceFilter, searchQuery]);
 
   const { data: spaceMembers = [] } = useSpaceMembers(form.spaceId || undefined);
 
@@ -392,8 +390,8 @@ export default function Bugs() {
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
           <Bug className="w-12 h-12 mb-3 opacity-20" />
-          <p className="text-sm font-medium">{bugs.length === 0 ? t.noBugsYet : "No bugs match your filters"}</p>
-          <p className="text-xs mt-1">{bugs.length === 0 ? t.noBugsDesc : "Try adjusting the filters above."}</p>
+          <p className="text-sm font-medium">{tasks.length === 0 ? t.noBugsYet : "No bugs match your filters"}</p>
+          <p className="text-xs mt-1">{tasks.length === 0 ? t.noBugsDesc : "Try adjusting the filters above."}</p>
         </div>
       ) : (
         <div className="space-y-2">

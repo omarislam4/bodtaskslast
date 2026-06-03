@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
-import { CheckCircle2, Clock, AlertCircle, Calendar, ArrowRight } from "lucide-react";
-import { useAllTasksQuery } from "@/hooks/useTaskQueries";
+import { CheckCircle2, Clock, AlertCircle, Calendar, ArrowRight, ArrowLeft } from "lucide-react";
+import { useMyTasksQuery } from "@/hooks/useTaskQueries";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
 import { TaskStatusBadge } from "@/components/tasks/TaskStatusBadge";
@@ -19,22 +19,17 @@ const cardVariants = {
 };
 
 export default function MemberDashboard() {
-  const { data: tasks = [] } = useAllTasksQuery();
+  const { data: myTasks = [] } = useMyTasksQuery({ scope: "all" });
   const { userDoc } = useAuth();
-  const { t } = useLang();
+  const { t, isRTL } = useLang();
   const [, navigate] = useLocation();
-
-  const myTasks = useMemo(
-    () => tasks.filter((tk) => userDoc && tk.assigneeIds.includes(userDoc.id)),
-    [tasks, userDoc]
-  );
 
   const stats = useMemo(() => {
     const total = myTasks.length;
     const done = myTasks.filter((tk) => tk.status === "done").length;
     const inProgress = myTasks.filter((tk) => tk.status === "in-progress").length;
     const overdue = myTasks.filter(
-      (tk) => tk.deadline && isPast(new Date(tk.deadline)) && tk.status !== "done"
+      (tk) => tk.deadline && isPast(new Date(tk.deadline)) && tk.status !== "done",
     ).length;
 
     const upcoming = myTasks
@@ -42,7 +37,7 @@ export default function MemberDashboard() {
         (tk) =>
           tk.deadline &&
           tk.status !== "done" &&
-          isWithinInterval(new Date(tk.deadline), { start: new Date(), end: addDays(new Date(), 7) })
+          isWithinInterval(new Date(tk.deadline), { start: new Date(), end: addDays(new Date(), 7) }),
       )
       .sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime());
 
@@ -55,7 +50,7 @@ export default function MemberDashboard() {
     { label: t.totalTasks, value: stats.total, icon: CheckCircle2, color: "text-primary", bg: "bg-primary/10" },
     { label: t.inProgress, value: stats.inProgress, icon: Clock, color: "text-blue-500", bg: "bg-blue-500/10" },
     { label: t.completed, value: stats.done, icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-    { label: "Overdue", value: stats.overdue, icon: AlertCircle, color: "text-red-500", bg: "bg-red-500/10" },
+    { label: t.overdue, value: stats.overdue, icon: AlertCircle, color: "text-red-500", bg: "bg-red-500/10" },
   ];
 
   return (
@@ -64,7 +59,7 @@ export default function MemberDashboard() {
         <h1 className="text-xl sm:text-2xl font-bold text-foreground">
           {t.welcomeBack}, {userDoc?.displayName?.split(" ")[0] || ""}
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">Here are your assigned tasks</p>
+        <p className="text-sm text-muted-foreground mt-1">{t.hereAreYourAssignedTasks}</p>
       </div>
 
       {/* Stat cards */}
@@ -79,9 +74,7 @@ export default function MemberDashboard() {
             className="bg-card border border-border rounded-xl p-4 sm:p-5 shadow-sm"
           >
             <div className="flex items-center justify-between mb-2 sm:mb-3">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider line-clamp-1">
-                {card.label}
-              </span>
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider line-clamp-1">{card.label}</span>
               <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg ${card.bg} flex items-center justify-center shrink-0`}>
                 <card.icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${card.color}`} />
               </div>
@@ -137,19 +130,18 @@ export default function MemberDashboard() {
           className="bg-card border border-border rounded-xl p-4 sm:p-5 shadow-sm"
         >
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-foreground">My Active Tasks</h3>
+            <h3 className="text-sm font-semibold text-foreground">{t.activeTasks}</h3>
             <button
               onClick={() => navigate("/spaces")}
               className="text-xs text-primary hover:underline flex items-center gap-1"
             >
-              View spaces <ArrowRight className="w-3 h-3" />
+              {t.viewSpaces} {isRTL ? <ArrowLeft className="w-3 h-3" /> : <ArrowRight className="w-3 h-3" />}
             </button>
           </div>
           {stats.active.length > 0 ? (
             <div className="space-y-2">
               {stats.active.map((task) => {
-                const isOverdue =
-                  task.deadline && isPast(new Date(task.deadline)) && task.status !== "done";
+                const isOverdue = task.deadline && isPast(new Date(task.deadline)) && task.status !== "done";
                 return (
                   <div
                     key={task.id}
@@ -159,9 +151,7 @@ export default function MemberDashboard() {
                     <TaskStatusBadge status={task.status} size="sm" />
                     <span className="text-xs text-foreground truncate flex-1">{task.title}</span>
                     <TaskPriorityBadge priority={task.priority} size="sm" />
-                    {isOverdue && (
-                      <span className="text-xs text-red-500 font-medium shrink-0">Overdue</span>
-                    )}
+                    {isOverdue && <span className="text-xs text-red-500 font-medium shrink-0">Overdue</span>}
                   </div>
                 );
               })}

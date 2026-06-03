@@ -1,13 +1,14 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Search, Bell, X, Command, CheckCircle2, AlertCircle, Clock, Menu } from "lucide-react";
+import { Search, Bell, X, Command, Menu, AtSign, UserCheck, MessageSquare, CheckCheck, Info, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useAllTasksQuery } from "@/hooks/useTaskQueries";
 import { useSpaces } from "@/hooks/useSpaces";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
-import { format, differenceInDays, isWithinInterval, addDays } from "date-fns";
+import { format } from "date-fns";
+import { useNotifications, useMarkNotificationRead, type NotificationType } from "@/hooks/useNotifications";
 
 interface TopbarProps {
   onMenuClick?: () => void;
@@ -24,6 +25,17 @@ export const Topbar = ({ onMenuClick }: TopbarProps) => {
   const { spaces } = useSpaces();
   const { userDoc } = useAuth();
   const { t, isRTL } = useLang();
+  const { notifications, unreadCount, hasNew, clearNew } = useNotifications(userDoc?.id);
+  const markRead = useMarkNotificationRead();
+
+  const NOTIF_ICON: Record<NotificationType, { icon: typeof Bell; color: string }> = {
+    assignment:    { icon: UserCheck,     color: "text-blue-400" },
+    mention:       { icon: AtSign,        color: "text-purple-400" },
+    comment:       { icon: MessageSquare, color: "text-green-400" },
+    status_change: { icon: CheckCheck,    color: "text-yellow-400" },
+    reminder:      { icon: Bell,          color: "text-orange-400" },
+    system:        { icon: Info,          color: "text-muted-foreground" },
+  };
 
   const breadcrumbLabels: Record<string, string> = {
     "/": t.dashboard,
@@ -39,17 +51,6 @@ export const Topbar = ({ onMenuClick }: TopbarProps) => {
     if (path === "/") return location === "/";
     return location.startsWith(path);
   })?.[1] || "";
-
-  const myTasks = userDoc
-    ? tasks.filter((tk) => tk.assigneeIds?.includes(userDoc.id) && tk.status !== "done")
-    : [];
-
-  const overdueTasks = myTasks.filter((tk) => tk.deadline && new Date(tk.deadline) < new Date());
-  const dueSoonTasks = myTasks.filter(
-    (tk) => tk.deadline && !overdueTasks.includes(tk) && isWithinInterval(new Date(tk.deadline), { start: new Date(), end: addDays(new Date(), 3) })
-  );
-  const inProgressTasks = myTasks.filter((tk) => tk.status === "in-progress" && !overdueTasks.includes(tk) && !dueSoonTasks.includes(tk));
-  const notifCount = overdueTasks.length + dueSoonTasks.length;
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -118,17 +119,20 @@ export const Topbar = ({ onMenuClick }: TopbarProps) => {
 
       <div className="relative" ref={notifRef}>
         <button
-          onClick={() => setNotifOpen((v) => !v)}
+          onClick={() => { setNotifOpen((v) => !v); clearNew(); }}
           className="relative w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150"
         >
-          <Bell className="w-4 h-4" />
-          {notifCount > 0 && (
+          {hasNew && (
+            <span className="absolute inset-0 rounded-lg animate-ping bg-red-400/30 pointer-events-none" />
+          )}
+          <Bell className={cn("w-4 h-4", hasNew && "text-red-500")} />
+          {unreadCount > 0 && (
             <motion.span
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center leading-none"
             >
-              {notifCount > 9 ? "9+" : notifCount}
+              {unreadCount > 9 ? "9+" : unreadCount}
             </motion.span>
           )}
         </button>
@@ -148,8 +152,8 @@ export const Topbar = ({ onMenuClick }: TopbarProps) => {
               <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                 <h3 className="text-sm font-semibold text-foreground">{t.notifications}</h3>
                 <div className="flex items-center gap-2">
-                  {notifCount > 0 && (
-                    <span className="text-xs bg-red-500/10 text-red-500 font-medium px-1.5 py-0.5 rounded-full">{notifCount}</span>
+                  {unreadCount > 0 && (
+                    <span className="text-xs bg-red-500/10 text-red-500 font-medium px-1.5 py-0.5 rounded-full">{unreadCount}</span>
                   )}
                   <button onClick={() => setNotifOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
                     <X className="w-3.5 h-3.5" />
@@ -158,89 +162,54 @@ export const Topbar = ({ onMenuClick }: TopbarProps) => {
               </div>
 
               <div className="max-h-72 overflow-y-auto">
-                {overdueTasks.length === 0 && dueSoonTasks.length === 0 && inProgressTasks.length === 0 && myTasks.length === 0 ? (
+                {notifications.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-8 text-center px-4">
                     <Bell className="w-8 h-8 text-muted-foreground/30 mb-2" />
-                    <p className="text-sm text-muted-foreground">{t.allCaughtUp}</p>
-                    <p className="text-xs text-muted-foreground/60 mt-0.5">{t.noPendingTasks}</p>
+                    <p className="text-sm text-muted-foreground">{t.noNotificationsYet}</p>
+                    <p className="text-xs text-muted-foreground/60 mt-0.5">{t.noNotificationsDesc}</p>
                   </div>
                 ) : (
-                  <div className="py-2">
-                    {overdueTasks.length > 0 && (
-                      <div>
-                        <p className="text-xs font-semibold text-red-500 uppercase tracking-wide px-4 py-1.5">{t.overdue}</p>
-                        {overdueTasks.map((tk) => (
-                          <button
-                            key={tk.id}
-                            className="flex items-start gap-3 w-full px-4 py-2.5 hover:bg-muted/50 transition-colors text-start"
-                            onClick={() => { navigate(`/spaces/${tk.spaceId}/tasks/${tk.id}`); setNotifOpen(false); }}
-                          >
-                            <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs font-medium text-foreground truncate">{tk.title}</p>
-                              <p className="text-xs text-red-500">
-                                {tk.deadline ? `${Math.abs(differenceInDays(new Date(tk.deadline), new Date()))} ${t.daysOverdue}` : t.noDeadline}
-                              </p>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                    {dueSoonTasks.length > 0 && (
-                      <div>
-                        <p className="text-xs font-semibold text-amber-500 uppercase tracking-wide px-4 py-1.5">{t.dueSoon}</p>
-                        {dueSoonTasks.map((tk) => {
-                          const days = tk.deadline ? differenceInDays(new Date(tk.deadline), new Date()) : 0;
-                          return (
-                            <button
-                              key={tk.id}
-                              className="flex items-start gap-3 w-full px-4 py-2.5 hover:bg-muted/50 transition-colors text-start"
-                              onClick={() => { navigate(`/spaces/${tk.spaceId}/tasks/${tk.id}`); setNotifOpen(false); }}
-                            >
-                              <Clock className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                              <div className="min-w-0 flex-1">
-                                <p className="text-xs font-medium text-foreground truncate">{tk.title}</p>
-                                <p className="text-xs text-amber-500">
-                                  {days === 0 ? t.dueToday : days === 1 ? t.dueTomorrow : `${t.dueInDays} ${days} ${t.days}`}
-                                </p>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                    {inProgressTasks.length > 0 && (
-                      <div>
-                        <p className="text-xs font-semibold text-blue-500 uppercase tracking-wide px-4 py-1.5">{t.inProgress}</p>
-                        {inProgressTasks.slice(0, 4).map((tk) => (
-                          <button
-                            key={tk.id}
-                            className="flex items-start gap-3 w-full px-4 py-2.5 hover:bg-muted/50 transition-colors text-start"
-                            onClick={() => { navigate(`/spaces/${tk.spaceId}/tasks/${tk.id}`); setNotifOpen(false); }}
-                          >
-                            <CheckCircle2 className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs font-medium text-foreground truncate">{tk.title}</p>
-                              <p className="text-xs text-muted-foreground">{tk.deadline ? format(new Date(tk.deadline), "MMM d") : t.noDeadline}</p>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                  <div className="py-1">
+                    {notifications.slice(0, 8).map((n) => {
+                      const { icon: Icon, color } = NOTIF_ICON[n.type] ?? NOTIF_ICON.system;
+                      return (
+                        <button
+                          key={n.id}
+                          className={cn(
+                            "flex items-start gap-3 w-full px-4 py-2.5 hover:bg-muted/50 transition-colors text-start",
+                            !n.read && "bg-primary/5"
+                          )}
+                          onClick={() => {
+                            markRead.mutate(n.id);
+                            if (n.taskId && n.spaceId) {
+                              navigate(`/spaces/${n.spaceId}/tasks/${n.taskId}`);
+                              setNotifOpen(false);
+                            }
+                          }}
+                        >
+                          <Icon className={cn("w-4 h-4 shrink-0 mt-0.5", color)} />
+                          <div className="min-w-0 flex-1">
+                            <p className={cn("text-xs font-medium truncate", n.read ? "text-muted-foreground" : "text-foreground")}>{n.title}</p>
+                            <p className="text-xs text-muted-foreground truncate">{n.body}</p>
+                            <p className="text-[10px] text-muted-foreground/60 mt-0.5">{format(new Date(n.createdAt), "MMM d, HH:mm")}</p>
+                          </div>
+                          {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0 mt-1.5" />}
+                          {n.taskId && n.spaceId && <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>
 
-              {myTasks.length > 0 && (
-                <div className="border-t border-border px-4 py-2.5">
-                  <button
-                    onClick={() => { navigate("/spaces"); setNotifOpen(false); }}
-                    className="text-xs text-primary hover:underline w-full text-center"
-                  >
-                    {t.viewAllTasks}
-                  </button>
-                </div>
-              )}
+              <div className="border-t border-border px-4 py-2.5">
+                <button
+                  onClick={() => { navigate("/inbox"); setNotifOpen(false); }}
+                  className="text-xs text-primary hover:underline w-full text-center"
+                >
+                  {t.viewAllTasks}
+                </button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

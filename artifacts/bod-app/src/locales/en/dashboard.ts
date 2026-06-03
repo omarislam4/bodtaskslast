@@ -17,8 +17,10 @@ const dashboard = {
   completionRate: "Completion Rate",
   employeeStats: "Employee Statistics",
   activeTasks: "Active Tasks",
+  viewSpaces: "View spaces",
   completedTasks: "Completed",
   noDataYet: "No data yet",
+  hereAreYourAssignedTasks: "Here are your assigned tasks",
 } as const;
 
 export type DashboardKeys = keyof typeof dashboard;

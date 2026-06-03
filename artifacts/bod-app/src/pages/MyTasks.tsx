@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { CheckSquare, Clock, AlertTriangle, Calendar, ChevronRight } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
-import { useAllTasksQuery } from "@/hooks/useTaskQueries";
+import { useMyTasksQuery } from "@/hooks/useTaskQueries";
 import { useSpaces } from "@/hooks/useSpaces";
 import { TaskStatusBadge } from "@/components/tasks/TaskStatusBadge";
 import { TaskPriorityBadge } from "@/components/tasks/TaskPriorityBadge";
@@ -14,10 +13,8 @@ import { cn } from "@/lib/utils";
 type Tab = "today" | "overdue" | "upcoming" | "all";
 
 export default function MyTasks() {
-  const { userDoc } = useAuth();
   const { t } = useLang();
-  const { data: allTasks = [], isLoading: loading } = useAllTasksQuery();
-  const tasks = userDoc ? allTasks.filter(t => t.assigneeIds?.includes(userDoc.id)) : [];
+  const { data: tasks = [], isLoading: loading } = useMyTasksQuery();
   const { spaces } = useSpaces();
   const [, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState<Tab>("today");

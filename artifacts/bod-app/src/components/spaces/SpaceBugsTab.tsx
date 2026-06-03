@@ -1,7 +1,7 @@
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Bug, AlertTriangle } from "lucide-react";
-import { useTasksBySpace } from "@/hooks/useTaskQueries";
+import { useAllTasksQuery } from "@/hooks/useTaskQueries";
 import type { BugSeverity } from "@/types";
 import { useMembers } from "@/hooks/useMembers";
 import { useLang } from "@/contexts/LangContext";
@@ -24,11 +24,10 @@ interface Props {
 
 export function SpaceBugsTab({ spaceId, isInSpace, onReportBug }: Props) {
   const [, navigate] = useLocation();
-  const { data: tasks = [] } = useTasksBySpace(spaceId);
+  const { data: bugs = [] } = useAllTasksQuery({ type: "bug", spaceId });
   const { members } = useMembers();
   const { t } = useLang();
 
-  const bugs = tasks.filter((tk) => tk.type === "bug");
   const bugCounts = {
     total: bugs.length,
     open: bugs.filter((b) => b.status === "todo").length,

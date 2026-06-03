@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
 import { History as HistoryIcon, Search, CheckCircle2, Calendar, Filter } from "lucide-react";
-import { useAllTasksQuery } from "@/hooks/useTaskQueries";
+import { useHistoryQuery } from "@/hooks/useTaskQueries";
 import { useMembers } from "@/hooks/useMembers";
 import { useSpaces } from "@/hooks/useSpaces";
 import { TaskPriorityBadge } from "@/components/tasks/TaskPriorityBadge";
@@ -11,7 +11,6 @@ import { useLang } from "@/contexts/LangContext";
 import { format } from "date-fns";
 
 export default function History() {
-  const { data: tasks = [], isLoading: loading } = useAllTasksQuery();
   const { members } = useMembers();
   const { spaces } = useSpaces();
   const [, navigate] = useLocation();
@@ -19,13 +18,13 @@ export default function History() {
   const [search, setSearch] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
 
-  const completedTasks = tasks.filter((tk) => tk.status === "done");
+  const { data: completedTasks = [], isLoading: loading } = useHistoryQuery(
+    priorityFilter !== "all" ? { priority: priorityFilter } : undefined
+  );
 
   const filtered = completedTasks.filter((tk) => {
-    const matchesSearch = (tk.title ?? "").toLowerCase().includes(search.toLowerCase()) ||
+    return (tk.title ?? "").toLowerCase().includes(search.toLowerCase()) ||
       (tk.description ?? "").toLowerCase().includes(search.toLowerCase());
-    const matchesPriority = priorityFilter === "all" || tk.priority === priorityFilter;
-    return matchesSearch && matchesPriority;
   });
 
   return (

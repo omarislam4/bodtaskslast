@@ -8,12 +8,36 @@ export const taskKeys = {
   all: (params?: TaskQueryParams) =>
     params ? (["tasks", params] as const) : (["tasks"] as const),
   detail: (id: string) => ["task", id] as const,
+  myTasks: (params?: { scope?: string; search?: string }) =>
+    params ? (["my-tasks", params] as const) : (["my-tasks"] as const),
+  timeline: (month: string) => ["tasks-timeline", month] as const,
+  history: (params?: { search?: string; priority?: string }) =>
+    params ? (["history", params] as const) : (["history"] as const),
 };
 
-export const useAllTasksQuery = () =>
+export const useAllTasksQuery = (params?: TaskQueryParams) =>
   useQuery({
-    queryKey: taskKeys.all(),
-    queryFn: () => tasksService.list(),
+    queryKey: taskKeys.all(params),
+    queryFn: () => tasksService.list(params),
+  });
+
+export const useMyTasksQuery = (params?: { scope?: "today" | "overdue" | "upcoming" | "all"; search?: string }) =>
+  useQuery({
+    queryKey: taskKeys.myTasks(params),
+    queryFn: () => tasksService.myTasks(params),
+  });
+
+export const useTimelineQuery = (month: string) =>
+  useQuery({
+    queryKey: taskKeys.timeline(month),
+    queryFn: () => tasksService.timeline(month),
+    enabled: !!month,
+  });
+
+export const useHistoryQuery = (params?: { search?: string; priority?: string }) =>
+  useQuery({
+    queryKey: taskKeys.history(params),
+    queryFn: () => tasksService.history(params),
   });
 
 export const useTasksBySpace = (spaceId: string) =>

@@ -8,6 +8,8 @@ import { AvatarGroup } from "@/components/shared/AvatarGroup";
 import { ProgressBar } from "@/components/shared/ProgressBar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { formatDate } from "@/lib/date";
+import { useLang } from "@/contexts/LangContext";
 
 interface TaskCardProps {
   task: Task;
@@ -16,8 +18,17 @@ interface TaskCardProps {
   index?: number;
 }
 
-export const TaskCard = ({ task, members, onClick, index = 0 }: TaskCardProps) => {
-  const isOverdue = task.deadline && new Date(task.deadline) < new Date() && task.status !== "done";
+export const TaskCard = ({
+  task,
+  members,
+  onClick,
+  index = 0,
+}: TaskCardProps) => {
+  const { lang } = useLang();
+  const isOverdue =
+    task.deadline &&
+    new Date(task.deadline) < new Date() &&
+    task.status !== "done";
 
   return (
     <motion.div
@@ -28,15 +39,17 @@ export const TaskCard = ({ task, members, onClick, index = 0 }: TaskCardProps) =
       onClick={onClick}
       className={cn(
         "bg-card border border-border rounded-xl p-4 cursor-pointer transition-shadow duration-200 group",
-        task.status === "done" && "opacity-70"
+        task.status === "done" && "opacity-70",
       )}
       data-testid={`task-card-${task.id}`}
     >
       <div className="flex items-start justify-between gap-3 mb-2.5">
-        <h4 className={cn(
-          "text-sm font-medium text-foreground leading-snug group-hover:text-primary transition-colors duration-150 line-clamp-2",
-          task.status === "done" && "line-through text-muted-foreground"
-        )}>
+        <h4
+          className={cn(
+            "text-sm font-medium text-foreground leading-snug group-hover:text-primary transition-colors duration-150 line-clamp-2",
+            task.status === "done" && "line-through text-muted-foreground",
+          )}
+        >
           {task.title}
         </h4>
         <TaskStatusBadge status={task.status} size="sm" />
@@ -51,14 +64,16 @@ export const TaskCard = ({ task, members, onClick, index = 0 }: TaskCardProps) =
       <div className="flex items-center gap-2 mb-3 flex-wrap">
         <TaskPriorityBadge priority={task.priority} size="sm" />
         {task.deadline && (
-          <span className={cn(
-            "inline-flex items-center gap-1 text-xs rounded-full px-2 py-0.5",
-            isOverdue
-              ? "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"
-              : "bg-muted text-muted-foreground"
-          )}>
+          <span
+            className={cn(
+              "inline-flex items-center gap-1 text-xs rounded-full px-2 py-0.5",
+              isOverdue
+                ? "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"
+                : "bg-muted text-muted-foreground",
+            )}
+          >
             <Calendar className="w-3 h-3" />
-            {format(new Date(task.deadline!), "MMM d")}
+            {formatDate(task.deadline, "MMMMMM d", lang)}
           </span>
         )}
         {task.estimatedHours > 0 && (
@@ -70,8 +85,15 @@ export const TaskCard = ({ task, members, onClick, index = 0 }: TaskCardProps) =
       </div>
 
       <div className="flex items-center justify-between">
-        <AvatarGroup memberIds={task.assigneeIds} members={members} max={3} size="sm" />
-        <span className="text-xs text-muted-foreground font-medium">{task.progress}%</span>
+        <AvatarGroup
+          memberIds={task.assigneeIds}
+          members={members}
+          max={3}
+          size="sm"
+        />
+        <span className="text-xs text-muted-foreground font-medium">
+          {task.progress}%
+        </span>
       </div>
 
       {task.progress > 0 && (

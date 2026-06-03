@@ -22,6 +22,8 @@ const dashboard: Record<DashboardKeys, TranslationValue> = {
   activeTasks: "المهام النشطة",
   completedTasks: "المكتملة",
   noDataYet: "لا توجد بيانات بعد",
+  viewSpaces: "عرض المساحات",
+  hereAreYourAssignedTasks: "هذه هي المهام المعينة لك",
 };
 
 export default dashboard;

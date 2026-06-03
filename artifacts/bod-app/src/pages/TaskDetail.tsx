@@ -59,16 +59,20 @@ import type {
   RecurrenceFrequency,
 } from "@/types";
 import { TaskStatusBadge } from "@/components/tasks/TaskStatusBadge";
-import {
-  TaskPriorityBadge,
-  priorityOptions,
-} from "@/components/tasks/TaskPriorityBadge";
+import { TaskPriorityBadge } from "@/components/tasks/TaskPriorityBadge";
 import { AvatarGroup } from "@/components/shared/AvatarGroup";
 import { ProgressBar } from "@/components/shared/ProgressBar";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { taskStatusConfig } from "@/config/status-config";
+import {
+  priorityOptions,
+  priorityStateConfig,
+  recurrenceFrequencyOptions,
+  recurrenceFrequencyStateConfig,
+  taskStatusConfig,
+} from "@/config/status-config";
+import { formatDate } from "@/lib/date";
 
 const DEP_TYPE_CONFIG: Record<
   DependencyType,
@@ -83,7 +87,7 @@ const DEP_TYPE_CONFIG: Record<
 export default function TaskDetail() {
   const { spaceId, taskId } = useParams<{ spaceId: string; taskId: string }>();
   const { isAdmin, userDoc } = useAuth();
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const { members } = useMembers();
   const { senders } = useSenders();
   const { data: spaces = [] } = useSpaces();
@@ -160,6 +164,9 @@ export default function TaskDetail() {
   const [showRecurrence, setShowRecurrence] = useState(false);
 
   const space = spaces.find((s) => s.id === spaceId);
+
+  const priorityConfig = priorityStateConfig(t);
+  const recurrenceFrequencyConfig = recurrenceFrequencyStateConfig(t);
 
   // Timer interval
   useEffect(() => {
@@ -948,7 +955,7 @@ export default function TaskDetail() {
             >
               {priorityOptions.map((p) => (
                 <option key={p} value={p}>
-                  {p.charAt(0).toUpperCase() + p.slice(1)}
+                  {priorityConfig[p].label}
                 </option>
               ))}
             </select>
@@ -1210,7 +1217,7 @@ export default function TaskDetail() {
                     checked={timeBillable}
                     onChange={(e) => setTimeBillable(e.target.checked)}
                     className="accent-primary"
-                  />{" "}
+                  />
                   {t.billable}
                 </label>
                 <button
@@ -1359,7 +1366,8 @@ export default function TaskDetail() {
             {task.recurrence && (
               <div className="mt-2 flex items-center gap-2">
                 <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-full flex items-center gap-1">
-                  <Repeat className="w-3 h-3" /> {task.recurrence.frequency}
+                  <Repeat className="w-3 h-3" />{" "}
+                  {recurrenceFrequencyConfig[task.recurrence.frequency].label}
                 </span>
                 <button
                   onClick={() => updateTask.mutate({ recurrence: null })}
@@ -1378,14 +1386,7 @@ export default function TaskDetail() {
                   className="overflow-hidden"
                 >
                   <div className="mt-3 space-y-2">
-                    {(
-                      [
-                        "daily",
-                        "weekly",
-                        "monthly",
-                        "yearly",
-                      ] as RecurrenceFrequency[]
-                    ).map((freq) => (
+                    {recurrenceFrequencyOptions.map((freq) => (
                       <button
                         key={freq}
                         onClick={() => {
@@ -1397,11 +1398,11 @@ export default function TaskDetail() {
                         className={cn(
                           "w-full text-xs px-3 py-2 rounded-lg text-start transition-all",
                           task.recurrence?.frequency === freq
-                            ? "bg-primary text-primary-foreground"
+                            ? recurrenceFrequencyConfig[freq].className
                             : "bg-muted text-muted-foreground hover:bg-muted/80",
                         )}
                       >
-                        {freq.charAt(0).toUpperCase() + freq.slice(1)}
+                        {recurrenceFrequencyConfig[freq].label}
                       </button>
                     ))}
                     {task.recurrence && (
@@ -1409,7 +1410,7 @@ export default function TaskDetail() {
                         onClick={() => updateTask.mutate({ recurrence: null })}
                         className="w-full text-xs px-3 py-2 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-all"
                       >
-                        Remove Recurrence
+                        {t.removeRecurrence}
                       </button>
                     )}
                   </div>
@@ -1464,13 +1465,14 @@ export default function TaskDetail() {
           {/* Meta */}
           <div className="px-4 py-3 text-xs text-muted-foreground space-y-1">
             <p>
-              {t.created} {format(new Date(task.createdAt), "MMM d, yyyy")}
+              {t.created}{" "}
+              {formatDate(task.createdAt, "MMMMMMMMMM d, yyyy", lang)}
             </p>
             {task.completedAt && (
               <p className="flex items-center gap-1 text-emerald-500">
                 <CheckCircle2 className="w-3 h-3" />
                 {t.completed}{" "}
-                {format(new Date(task.completedAt), "MMM d, yyyy")}
+                {formatDate(task.completedAt, "MMMMMMMMMM d, yyyy", lang)}
               </p>
             )}
           </div>

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { motion, type Variants } from "framer-motion";
 import { useLocation } from "wouter";
 import {
@@ -9,12 +9,8 @@ import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend,
 } from "recharts";
-import { useAllTasksQuery } from "@/hooks/useTaskQueries";
 import { useQueryClient } from "@tanstack/react-query";
-import { tasksService } from "@/services/tasks";
-import { taskKeys } from "@/hooks/useTaskQueries";
-import { useSpaces } from "@/hooks/useSpaces";
-import { useSpaceFilter } from "@/hooks/useSpaceFilter";
+import { useAllTasksQuery } from "@/hooks/useTaskQueries";
 import { useMembers } from "@/hooks/useMembers";
 import { DashboardStatSkeleton } from "@/components/shared/SkeletonLoader";
 import { TaskStatusBadge } from "@/components/tasks/TaskStatusBadge";
@@ -22,10 +18,10 @@ import { TaskPriorityBadge } from "@/components/tasks/TaskPriorityBadge";
 import { KanbanBoard } from "@/components/tasks/KanbanBoard";
 import { useLang } from "@/contexts/LangContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { format, isWithinInterval, addDays, isPast } from "date-fns";
-import { notificationsService } from "@/services/notifications";
+import { format } from "date-fns";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useDashboard, useReassignTask, dashboardKeys } from "@/hooks/useDashboard";
 
 const STATUS_COLORS: Record<string, string> = {
   todo: "#94a3b8",
@@ -34,11 +30,6 @@ const STATUS_COLORS: Record<string, string> = {
   done: "#10b981",
   blocked: "#ef4444",
 };
-
-const MEMBER_PALETTE = [
-  "#6366f1", "#3b82f6", "#10b981", "#f59e0b", "#ef4444",
-  "#8b5cf6", "#ec4899", "#14b8a6", "#f97316", "#06b6d4",
-];
 
 const cardVariants: Variants = {
   hidden: { opacity: 0, y: 12 },
@@ -50,162 +41,59 @@ const cardVariants: Variants = {
 type DashView = "overview" | "kanban";
 
 export default function Dashboard() {
-  const { data: allTasks = [], isLoading: tasksLoading } = useAllTasksQuery();
   const queryClient = useQueryClient();
-  const { data: allSpaces = [], isLoading: spacesLoading } = useSpaces();
-  const { filterSpaces } = useSpaceFilter();
-  const spaces = filterSpaces(allSpaces);
-  const visibleSpaceIds = new Set(spaces.map(s => s.id));
-  const tasks = allTasks.filter(tk => !tk.spaceId || visibleSpaceIds.has(tk.spaceId));
   const { members } = useMembers();
   const [, navigate] = useLocation();
   const { t } = useLang();
-  const { userDoc, isAdmin } = useAuth();
+  const { isAdmin } = useAuth();
   const [view, setView] = useState<DashView>("overview");
+  const [perfSpaceId, setPerfSpaceId] = useState("all");
+
+  const { data, isLoading } = useDashboard(perfSpaceId);
+  const reassignMutation = useReassignTask();
+
+  // Kanban only loads when that view is active
+  const { data: allTasks = [] } = useAllTasksQuery();
+
   const [reassigning, setReassigning] = useState<string | null>(null);
   const [reassignTarget, setReassignTarget] = useState<Record<string, string>>({});
   const [reassignReason, setReassignReason] = useState<Record<string, string>>({});
   const [reassignDeadline, setReassignDeadline] = useState<Record<string, string>>({});
   const [memberSearch, setMemberSearch] = useState<Record<string, string>>({});
   const [dropdownOpen, setDropdownOpen] = useState<Record<string, boolean>>({});
-  const [perfSpaceId, setPerfSpaceId] = useState("all");
 
-  const stats = useMemo(() => {
-    const total = tasks.length;
-    const done = tasks.filter((tk) => tk.status === "done").length;
-    const inProgress = tasks.filter((tk) => tk.status === "in-progress").length;
-    const blocked = tasks.filter((tk) => tk.status === "blocked").length;
-    const bugs = tasks.filter((tk) => tk.type === "bug").length;
-    const unassigned = tasks.filter((tk) => !tk.assigneeIds || tk.assigneeIds.length === 0).length;
-    const statusBreakdown = [
-      { name: "To Do", value: tasks.filter((tk) => tk.status === "todo").length, key: "todo" },
-      { name: "In Progress", value: inProgress, key: "in-progress" },
-      { name: "Review", value: tasks.filter((tk) => tk.status === "review").length, key: "review" },
-      { name: "Done", value: done, key: "done" },
-      { name: "Blocked", value: blocked, key: "blocked" },
-    ].filter((s) => s.value > 0);
+  const stats = data?.stats;
+  const statusBreakdown = data?.statusBreakdown ?? [];
+  const upcoming = data?.upcoming ?? [];
+  const overdue = data?.overdue ?? [];
+  const recent = data?.recent ?? [];
+  const spaces = data?.spaces ?? [];
+  const memberPerformance = data?.memberPerformance ?? [];
+  const memberPieData = memberPerformance.map((m) => ({ name: m.name, value: m.total, color: m.color }));
 
-    const upcoming = tasks
-      .filter((tk) => tk.deadline && tk.status !== "done" && isWithinInterval(new Date(tk.deadline), { start: new Date(), end: addDays(new Date(), 7) }))
-      .sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime())
-      .slice(0, 5);
-
-    const overdue = tasks.filter(
-      (tk) => tk.deadline && isPast(new Date(tk.deadline)) && tk.status !== "done"
-    ).sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime());
-
-    const recent = tasks.slice(0, 6);
-
-    return { total, done, inProgress, blocked, bugs, unassigned, statusBreakdown, upcoming, overdue, recent };
-  }, [tasks]);
-
-  // Employee stats for admin charts
-  const memberStats = useMemo(() => {
-    const filteredTasks = perfSpaceId === "all" ? tasks : tasks.filter(tk => tk.spaceId === perfSpaceId);
-    const assignedStats = members
-      .map((m, idx) => {
-        const memberTasks = filteredTasks.filter((tk) => tk.assigneeIds.includes(m.id));
-        const todo = memberTasks.filter((tk) => tk.status === "todo").length;
-        const inProg = memberTasks.filter((tk) => tk.status === "in-progress").length;
-        const review = memberTasks.filter((tk) => tk.status === "review").length;
-        const done = memberTasks.filter((tk) => tk.status === "done").length;
-        const blocked = memberTasks.filter((tk) => tk.status === "blocked").length;
-        const total = memberTasks.length;
-        const completionRate = total > 0 ? Math.round((done / total) * 100) : 0;
-        return {
-          name: (m.displayName || m.email || "Unknown").split(" ")[0],
-          fullName: m.displayName || m.email || "Unknown",
-          todo, inProgress: inProg, review, done, blocked, total, completionRate,
-          color: MEMBER_PALETTE[idx % MEMBER_PALETTE.length],
-        };
-      })
-      .filter((m) => m.total > 0)
-      .sort((a, b) => b.total - a.total)
-      .slice(0, 10);
-
-    const unassignedTasks = filteredTasks.filter(tk => !tk.assigneeIds || tk.assigneeIds.length === 0);
-    if (unassignedTasks.length > 0) {
-      const todo = unassignedTasks.filter(tk => tk.status === "todo").length;
-      const inProg = unassignedTasks.filter(tk => tk.status === "in-progress").length;
-      const review = unassignedTasks.filter(tk => tk.status === "review").length;
-      const done = unassignedTasks.filter(tk => tk.status === "done").length;
-      const blocked = unassignedTasks.filter(tk => tk.status === "blocked").length;
-      assignedStats.push({
-        name: "Unassigned",
-        fullName: "Unassigned Tasks",
-        todo, inProgress: inProg, review, done, blocked,
-        total: unassignedTasks.length,
-        completionRate: unassignedTasks.length > 0 ? Math.round((done / unassignedTasks.length) * 100) : 0,
-        color: "#94a3b8",
-      });
-    }
-
-    return assignedStats;
-  }, [tasks, members, perfSpaceId]);
-
-  const memberPieData = useMemo(() =>
-    memberStats.map((m) => ({ name: m.name, value: m.total, color: m.color })),
-    [memberStats]
-  );
-
-  const statCards = [
-    { label: t.totalTasks, value: stats.total, icon: TrendingUp, color: "text-primary", bg: "bg-primary/10" },
-    { label: t.inProgress, value: stats.inProgress, icon: Clock, color: "text-blue-500", bg: "bg-blue-500/10" },
-    { label: t.completed, value: stats.done, icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-    { label: "Blocked", value: stats.blocked, icon: AlertCircle, color: "text-red-500", bg: "bg-red-500/10" },
-    { label: "Not Assigned", value: stats.unassigned, icon: Users, color: "text-amber-500", bg: "bg-amber-500/10" },
-    ...(isAdmin ? [{ label: t.bugs, value: stats.bugs, icon: Bug, color: "text-orange-500", bg: "bg-orange-500/10" }] : []),
-  ];
+  const statCards = stats
+    ? [
+        { label: t.totalTasks, value: stats.total, icon: TrendingUp, color: "text-primary", bg: "bg-primary/10" },
+        { label: t.inProgress, value: stats.inProgress, icon: Clock, color: "text-blue-500", bg: "bg-blue-500/10" },
+        { label: t.completed, value: stats.done, icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+        { label: "Blocked", value: stats.blocked, icon: AlertCircle, color: "text-red-500", bg: "bg-red-500/10" },
+        { label: "Not Assigned", value: stats.unassigned, icon: Users, color: "text-amber-500", bg: "bg-amber-500/10" },
+        ...(isAdmin ? [{ label: t.bugs, value: stats.bugs, icon: Bug, color: "text-orange-500", bg: "bg-orange-500/10" }] : []),
+      ]
+    : [];
 
   const handleReassign = async (taskId: string) => {
     const newAssigneeId = reassignTarget[taskId];
-    const reason = (reassignReason[taskId] || "").trim();
-    const newDeadlineStr = reassignDeadline[taskId] || "";
     if (!newAssigneeId) return;
 
-    const task = tasks.find((t) => t.id === taskId);
-    if (!task) return;
-
     const newAssigneeMember = members.find((m) => m.id === newAssigneeId);
-    const adminName = userDoc?.displayName || userDoc?.email || "Admin";
+    const reason = (reassignReason[taskId] || "").trim() || undefined;
+    const newDeadline = reassignDeadline[taskId] || undefined;
 
     setReassigning(taskId);
     try {
-      const restPayload: Record<string, unknown> = { assigneeIds: [newAssigneeId] };
-      if (newDeadlineStr) restPayload.deadline = newDeadlineStr;
-      await tasksService.update(taskId, restPayload);
-      queryClient.invalidateQueries({ queryKey: taskKeys.all() });
-
-      const notifPromises: Promise<unknown>[] = [];
-
-      for (const oldId of task.assigneeIds) {
-        if (oldId !== newAssigneeId) {
-          notifPromises.push(
-            notificationsService.create({
-              userId: oldId,
-              type: "assignment",
-              title: "Removed from task",
-              body: `You were removed from "${task.title}"${reason ? ` — ${reason}` : ""}`,
-              taskId,
-              spaceId: task.spaceId || null,
-            }).catch(() => {})
-          );
-        }
-      }
-
-      notifPromises.push(
-        notificationsService.create({
-          userId: newAssigneeId,
-          type: "assignment",
-          title: "Assigned to task",
-          body: `You were assigned to "${task.title}" by ${adminName}${reason ? ` — ${reason}` : ""}`,
-          taskId,
-          spaceId: task.spaceId || null,
-        }).catch(() => {})
-      );
-
-      await Promise.all(notifPromises);
-
+      await reassignMutation.mutateAsync({ taskId, payload: { assigneeId: newAssigneeId, reason, newDeadline } });
+      queryClient.invalidateQueries({ queryKey: dashboardKeys.all() });
       toast.success(`Task reassigned to ${newAssigneeMember?.displayName || "member"}`);
       setReassignTarget((prev) => { const next = { ...prev }; delete next[taskId]; return next; });
       setReassignReason((prev) => { const next = { ...prev }; delete next[taskId]; return next; });
@@ -244,7 +132,7 @@ export default function Dashboard() {
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-6 sm:mb-8">
-        {tasksLoading
+        {isLoading
           ? Array(5).fill(0).map((_, i) => <DashboardStatSkeleton key={i} />)
           : statCards.map((card, i) => (
               <motion.div
@@ -270,13 +158,7 @@ export default function Dashboard() {
       {view === "kanban" && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
           <h3 className="text-sm font-semibold text-foreground mb-4">All Tasks — Kanban</h3>
-          {tasksLoading ? (
-            <div className="flex gap-4 overflow-x-auto">
-              {Array(5).fill(0).map((_, i) => <div key={i} className="w-72 h-64 bg-muted rounded-2xl animate-pulse shrink-0" />)}
-            </div>
-          ) : (
-            <KanbanBoard tasks={tasks} members={members} />
-          )}
+          <KanbanBoard tasks={allTasks} members={members} />
         </motion.div>
       )}
 
@@ -290,12 +172,12 @@ export default function Dashboard() {
               className="bg-card border border-border rounded-xl p-4 sm:p-5 shadow-sm"
             >
               <h3 className="text-sm font-semibold text-foreground mb-4">{t.tasksTab}</h3>
-              {stats.statusBreakdown.length > 0 ? (
+              {statusBreakdown.length > 0 ? (
                 <>
                   <ResponsiveContainer width="100%" height={160}>
                     <PieChart>
-                      <Pie data={stats.statusBreakdown} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={3} dataKey="value">
-                        {stats.statusBreakdown.map((entry) => (
+                      <Pie data={statusBreakdown} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={3} dataKey="value">
+                        {statusBreakdown.map((entry) => (
                           <Cell key={entry.key} fill={STATUS_COLORS[entry.key]} />
                         ))}
                       </Pie>
@@ -303,7 +185,7 @@ export default function Dashboard() {
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="mt-3 space-y-2">
-                    {stats.statusBreakdown.map((s) => (
+                    {statusBreakdown.map((s) => (
                       <div key={s.key} className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2">
                           <span className="w-2 h-2 rounded-full" style={{ backgroundColor: STATUS_COLORS[s.key] }} />
@@ -331,9 +213,9 @@ export default function Dashboard() {
                 <h3 className="text-sm font-semibold text-foreground">{t.upcomingDeadlines}</h3>
                 <Calendar className="w-4 h-4 text-muted-foreground" />
               </div>
-              {stats.upcoming.length > 0 ? (
+              {upcoming.length > 0 ? (
                 <div className="space-y-2">
-                  {stats.upcoming.map((task) => (
+                  {upcoming.map((task) => (
                     <div
                       key={task.id}
                       className="flex items-center justify-between p-2.5 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
@@ -368,34 +250,27 @@ export default function Dashboard() {
                   {t.viewAllTasks} <ArrowRight className="w-3 h-3" />
                 </button>
               </div>
-              {spacesLoading ? (
-                <div className="space-y-2">{Array(3).fill(0).map((_, i) => <div key={i} className="h-12 bg-muted rounded-lg animate-pulse" />)}</div>
-              ) : spaces.length > 0 ? (
+              {spaces.length > 0 ? (
                 <div className="space-y-2">
-                  {spaces.slice(0, 5).map((space) => {
-                    const spaceTasks = tasks.filter((tk) => tk.spaceId === space.id);
-                    const done = spaceTasks.filter((tk) => tk.status === "done").length;
-                    const pct = spaceTasks.length > 0 ? Math.round((done / spaceTasks.length) * 100) : 0;
-                    return (
-                      <div
-                        key={space.id}
-                        className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
-                        onClick={() => navigate(`/spaces/${space.id}`)}
-                      >
-                        <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: space.color || "#6366f1" }} />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-foreground truncate">{space.name}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <div className="h-1 flex-1 bg-muted rounded-full overflow-hidden">
-                              <div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />
-                            </div>
-                            <span className="text-xs text-muted-foreground shrink-0">{pct}%</span>
+                  {spaces.slice(0, 5).map((space) => (
+                    <div
+                      key={space.id}
+                      className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                      onClick={() => navigate(`/spaces/${space.id}`)}
+                    >
+                      <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: space.color || "#6366f1" }} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-foreground truncate">{space.name}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <div className="h-1 flex-1 bg-muted rounded-full overflow-hidden">
+                            <div className="h-full bg-primary rounded-full" style={{ width: `${space.completionRate}%` }} />
                           </div>
+                          <span className="text-xs text-muted-foreground shrink-0">{space.completionRate}%</span>
                         </div>
-                        <span className="text-xs text-muted-foreground shrink-0">{spaceTasks.length} {t.tasks}</span>
                       </div>
-                    );
-                  })}
+                      <span className="text-xs text-muted-foreground shrink-0">{space.taskCount} {t.tasks}</span>
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center h-32 text-muted-foreground text-sm">
@@ -406,8 +281,8 @@ export default function Dashboard() {
             </motion.div>
           </div>
 
-          {/* ─── OVERDUE TASKS ─── */}
-          {stats.overdue.length > 0 && (
+          {/* OVERDUE TASKS */}
+          {overdue.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32 }}
               className="mt-5 sm:mt-6 bg-card border border-red-200 dark:border-red-900/30 rounded-xl p-4 sm:p-5 shadow-sm"
@@ -418,12 +293,12 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold text-foreground">Overdue Tasks</h3>
-                  <p className="text-xs text-muted-foreground">{stats.overdue.length} tasks past deadline — review & reassign</p>
+                  <p className="text-xs text-muted-foreground">{overdue.length} tasks past deadline — review & reassign</p>
                 </div>
               </div>
               <div className="space-y-4">
-                {stats.overdue.slice(0, 10).map((task) => {
-                  const assigned = task.assigneeIds.map((id) => members.find((m) => m.id === id)?.displayName || "").filter(Boolean);
+                {overdue.slice(0, 10).map((task) => {
+                  const assigned = (task.assigneeIds ?? []).map((id) => members.find((m) => m.id === id)?.displayName || "").filter(Boolean);
                   const spaceName = spaces.find((s) => s.id === task.spaceId)?.name || "";
                   const hasTarget = !!reassignTarget[task.id];
                   return (
@@ -434,7 +309,7 @@ export default function Dashboard() {
                             <span className="text-sm font-medium text-foreground cursor-pointer hover:text-primary" onClick={() => navigate(`/spaces/${task.spaceId}/tasks/${task.id}`)}>
                               {task.title}
                             </span>
-                            <TaskPriorityBadge priority={task.priority} size="sm" />
+                            {task.priority && <TaskPriorityBadge priority={task.priority} size="sm" />}
                           </div>
                           <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
                             {spaceName && <span className="flex items-center gap-1"><Layers className="w-3 h-3" />{spaceName}</span>}
@@ -546,8 +421,8 @@ export default function Dashboard() {
                     </div>
                   );
                 })}
-                {stats.overdue.length > 10 && (
-                  <p className="text-xs text-muted-foreground text-center pt-1">+{stats.overdue.length - 10} more overdue tasks</p>
+                {overdue.length > 10 && (
+                  <p className="text-xs text-muted-foreground text-center pt-1">+{overdue.length - 10} more overdue tasks</p>
                 )}
               </div>
             </motion.div>
@@ -561,11 +436,11 @@ export default function Dashboard() {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-foreground">{t.tasksTab}</h3>
             </div>
-            {tasksLoading ? (
+            {isLoading ? (
               <div className="space-y-2">{Array(4).fill(0).map((_, i) => <div key={i} className="h-10 bg-muted rounded-lg animate-pulse" />)}</div>
-            ) : stats.recent.length > 0 ? (
+            ) : recent.length > 0 ? (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm min-w-[500px]">
+                <table className="w-full text-sm min-w-125">
                   <thead>
                     <tr className="border-b border-border">
                       {[t.tasksTab, "Type", t.status, t.priority, t.assignMembers, t.deadline].map((h) => (
@@ -574,8 +449,8 @@ export default function Dashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {stats.recent.map((task) => {
-                      const assigned = task.assigneeIds.map((id) => members.find((m) => m.id === id)?.displayName || "").filter(Boolean);
+                    {recent.map((task) => {
+                      const assigned = (task.assigneeIds ?? []).map((id) => members.find((m) => m.id === id)?.displayName || "").filter(Boolean);
                       return (
                         <tr
                           key={task.id}
@@ -596,7 +471,7 @@ export default function Dashboard() {
                             </span>
                           </td>
                           <td className="py-2.5 pr-4"><TaskStatusBadge status={task.status} size="sm" /></td>
-                          <td className="py-2.5 pr-4"><TaskPriorityBadge priority={task.priority} size="sm" /></td>
+                          <td className="py-2.5 pr-4">{task.priority && <TaskPriorityBadge priority={task.priority} size="sm" />}</td>
                           <td className="py-2.5 pr-4"><span className="text-xs text-muted-foreground">{assigned.slice(0, 2).join(", ") || "—"}</span></td>
                           <td className="py-2.5 text-xs text-muted-foreground">{task.deadline ? format(new Date(task.deadline), "MMM d, yyyy") : "—"}</td>
                         </tr>
@@ -610,7 +485,7 @@ export default function Dashboard() {
             )}
           </motion.div>
 
-          {/* ─── ADMIN: TEAM PERFORMANCE ─── */}
+          {/* ADMIN: TEAM PERFORMANCE */}
           {isAdmin && (
             <motion.div
               initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
@@ -635,7 +510,7 @@ export default function Dashboard() {
                   {spaces.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
               </div>
-              {memberStats.length === 0 && (
+              {memberPerformance.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-10 text-muted-foreground text-sm">
                   <Users className="w-8 h-8 mb-2 opacity-30" />
                   No task data for this space
@@ -643,11 +518,10 @@ export default function Dashboard() {
               )}
 
               <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
-                {/* Stacked bar chart: tasks per member by status */}
                 <div className="lg:col-span-2 bg-card border border-border rounded-xl p-4 sm:p-5 shadow-sm">
                   <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-4">{t.tasksByMember}</h4>
                   <ResponsiveContainer width="100%" height={220}>
-                    <BarChart data={memberStats} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                    <BarChart data={memberPerformance} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
                       <XAxis dataKey="name" tick={{ fontSize: 11, fill: "var(--color-muted-foreground)" }} axisLine={false} tickLine={false} />
                       <YAxis tick={{ fontSize: 11, fill: "var(--color-muted-foreground)" }} axisLine={false} tickLine={false} allowDecimals={false} />
@@ -665,9 +539,7 @@ export default function Dashboard() {
                   </ResponsiveContainer>
                 </div>
 
-                {/* Right column: pie + completion rates */}
                 <div className="space-y-4">
-                  {/* Task distribution pie */}
                   <div className="bg-card border border-border rounded-xl p-4 sm:p-5 shadow-sm">
                     <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">{t.taskDistribution}</h4>
                     <ResponsiveContainer width="100%" height={130}>
@@ -693,14 +565,13 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* Completion rates */}
                   <div className="bg-card border border-border rounded-xl p-4 sm:p-5 shadow-sm">
                     <div className="flex items-center gap-2 mb-3">
                       <Users className="w-3.5 h-3.5 text-muted-foreground" />
                       <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t.completionRate}</h4>
                     </div>
                     <div className="space-y-2.5">
-                      {memberStats.slice(0, 6).map((m) => (
+                      {memberPerformance.slice(0, 6).map((m) => (
                         <div key={m.name}>
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-xs text-foreground font-medium truncate flex-1">{m.name}</span>

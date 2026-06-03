@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
 import { Calendar, AlertCircle } from "lucide-react";
-import { useAllTasksQuery } from "@/hooks/useTaskQueries";
+import { useTimelineQuery } from "@/hooks/useTaskQueries";
 import { useSpaces } from "@/hooks/useSpaces";
 import { TaskStatusBadge } from "@/components/tasks/TaskStatusBadge";
 import { TaskPriorityBadge } from "@/components/tasks/TaskPriorityBadge";
@@ -13,11 +13,14 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function Timeline() {
-  const { data: tasks = [], isLoading: loading } = useAllTasksQuery();
   const { data: spaces = [] } = useSpaces();
   const [, navigate] = useLocation();
   const { t } = useLang();
   const [currentMonth, setCurrentMonth] = useState(new Date());
+
+  const monthKey = format(currentMonth, "yyyy-MM");
+  const { data: timelineData, isLoading: loading } = useTimelineQuery(monthKey);
+  const tasks = timelineData?.tasks ?? [];
 
   const monthDays = useMemo(() => {
     return eachDayOfInterval({
@@ -26,13 +29,10 @@ export default function Timeline() {
     });
   }, [currentMonth]);
 
-  const tasksWithDeadline = tasks.filter((tk) => tk.deadline && tk.status !== "done");
-
   const getTasksForDay = (day: Date) =>
-    tasksWithDeadline.filter((tk) => tk.deadline && isSameDay(new Date(tk.deadline), day));
+    tasks.filter((tk) => tk.deadline && isSameDay(new Date(tk.deadline), day));
 
-  const upcomingTasks = tasksWithDeadline
-    .sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime());
+  const upcomingTasks = [...tasks].sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime());
 
   if (loading) {
     return (

@@ -21,7 +21,9 @@ import { useMembers } from "@/hooks/useMembers";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
-    severityOptions,
+  priorityOptions,
+  priorityStateConfig,
+  severityOptions,
   severityStatusConfig,
   statusOptions,
   taskStatusConfig,
@@ -72,6 +74,7 @@ export function SpaceTasksTab({
   const statusConfig = taskStatusConfig(t);
   const severityConfig = severityStatusConfig(t);
   const taskConfig = taskTypeConfig(t);
+  const priorityConfig = priorityStateConfig(t);
 
   const [statusFilter, setStatusFilter] = useState<TaskStatus | "all">("all");
   const [form, setForm] = useState({ ...DEFAULT_FORM, type: createTaskType });
@@ -289,9 +292,9 @@ export function SpaceTasksTab({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {["low", "medium", "high", "urgent"].map((p) => (
+                      {priorityOptions.map((p) => (
                         <SelectItem key={p} value={p}>
-                          {p}
+                          {priorityConfig[p].label}
                         </SelectItem>
                       ))}
                     </SelectContent>

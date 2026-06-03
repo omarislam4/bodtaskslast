@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect, useRef } from "react";
 import { notificationsService } from "@/services/notifications";
 
 export type NotificationType = "assignment" | "mention" | "comment" | "status_change" | "reminder" | "system";
@@ -38,10 +39,24 @@ export const useNotifications = (userId?: string) => {
   const notifications = query.data ?? [];
   const unreadCount = notifications.filter((n) => !n.read).length;
 
+  const prevUnreadRef = useRef<number | null>(null);
+  const [hasNew, setHasNew] = useState(false);
+
+  useEffect(() => {
+    if (prevUnreadRef.current !== null && unreadCount > prevUnreadRef.current) {
+      setHasNew(true);
+    }
+    prevUnreadRef.current = unreadCount;
+  }, [unreadCount]);
+
+  const clearNew = () => setHasNew(false);
+
   return {
     notifications,
     loading: query.isLoading,
     unreadCount,
+    hasNew,
+    clearNew,
   };
 };
 

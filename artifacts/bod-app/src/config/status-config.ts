@@ -1,5 +1,5 @@
 import { Translations } from "@/locales";
-import { BugSeverity, TaskStatus, TaskType } from "@/types";
+import { BugSeverity, TaskPriority, TaskStatus, TaskType } from "@/types";
 
 type StatusItemType = {
   label: string;
@@ -104,3 +104,60 @@ export const taskTypes: (keyof ReturnType<typeof taskTypeConfig>)[] = [
   "feature",
   "improvement",
 ];
+
+export const priorityStateConfig = (
+  t: Translations,
+): Record<TaskPriority, StatusItemType> => ({
+  low: {
+    label: t.low,
+    className: "bg-sky-50 text-sky-600 dark:bg-sky-900/20 dark:text-sky-400",
+    color: "bg-sky-500",
+  },
+  medium: {
+    label: t.medium,
+    className:
+      "bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400",
+    color: "bg-amber-500",
+  },
+  high: {
+    label: t.high,
+    className:
+      "bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400",
+    color: "bg-orange-500",
+  },
+  urgent: {
+    label: t.urgent,
+    className: "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400",
+    color: "bg-red-500",
+  },
+});
+
+export const priorityOptions: (keyof ReturnType<typeof priorityStateConfig>)[] =
+  ["low", "medium", "high", "urgent"];
+
+export const recurrenceFrequencyStateConfig = (t: Translations) => ({
+  daily: {
+    label: t.daily,
+    className:
+      "bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400",
+  },
+  weekly: {
+    label: t.weekly,
+    className:
+      "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400",
+  },
+  monthly: {
+    label: t.monthly,
+    className:
+      "bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400",
+  },
+  yearly: {
+    label: t.yearly,
+    className:
+      "bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400",
+  },
+});
+
+export const recurrenceFrequencyOptions: (keyof ReturnType<
+  typeof recurrenceFrequencyStateConfig
+>)[] = ["daily", "weekly", "monthly", "yearly"];
