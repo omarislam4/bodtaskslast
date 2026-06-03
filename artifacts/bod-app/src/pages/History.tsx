@@ -9,6 +9,7 @@ import { TaskPriorityBadge } from "@/components/tasks/TaskPriorityBadge";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { useLang } from "@/contexts/LangContext";
 import { format } from "date-fns";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function History() {
   const { members } = useMembers();
@@ -46,17 +47,18 @@ export default function History() {
         </div>
         <div className="flex items-center gap-2">
           <Filter className="w-4 h-4 text-muted-foreground" />
-          <select
-            value={priorityFilter}
-            onChange={(e) => setPriorityFilter(e.target.value)}
-            className="px-3 py-2.5 text-sm bg-card border border-input rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
-          >
-            <option value="all">{t.allPriorities}</option>
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-            <option value="urgent">Urgent</option>
-          </select>
+          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+            <SelectTrigger className="w-36 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t.allPriorities}</SelectItem>
+              <SelectItem value="low">Low</SelectItem>
+              <SelectItem value="medium">Medium</SelectItem>
+              <SelectItem value="high">High</SelectItem>
+              <SelectItem value="urgent">Urgent</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

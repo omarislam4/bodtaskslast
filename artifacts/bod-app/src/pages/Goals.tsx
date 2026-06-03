@@ -7,6 +7,7 @@ import type { Goal, GoalType, GoalStatus } from "@/types";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const STATUS_CONFIG: Record<GoalStatus, { label: string; color: string; bg: string; icon: typeof CheckCircle2 }> = {
   on_track:  { label: "On Track",  color: "text-emerald-500", bg: "bg-emerald-500/10", icon: CheckCircle2 },
@@ -183,13 +184,15 @@ export default function Goals() {
                           onBlur={e => handleUpdateProgress(goal, Number(e.target.value))}
                           className="w-24 px-2 py-1 text-xs bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30" />
                       )}
-                      <select value={goal.status} onChange={e => handleStatusChange(goal, e.target.value as GoalStatus)}
-                        className="text-xs px-2 py-1 bg-background border border-input rounded-lg focus:outline-none ms-auto">
-                        <option value="on_track">On Track</option>
-                        <option value="at_risk">At Risk</option>
-                        <option value="off_track">Off Track</option>
-                        <option value="completed">Completed</option>
-                      </select>
+                      <Select value={goal.status} onValueChange={(v) => handleStatusChange(goal, v as GoalStatus)}>
+                        <SelectTrigger className="h-7 text-xs w-28 ms-auto"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="on_track">On Track</SelectItem>
+                          <SelectItem value="at_risk">At Risk</SelectItem>
+                          <SelectItem value="off_track">Off Track</SelectItem>
+                          <SelectItem value="completed">Completed</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <button onClick={() => handleDelete(goal.id)} className="p-1 text-muted-foreground hover:text-destructive transition-colors">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -229,22 +232,26 @@ export default function Goals() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs text-muted-foreground mb-1 block">{t.goalType}</label>
-                    <select value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value as GoalType }))}
-                      className="w-full px-3 py-2 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30">
-                      <option value="percent">{t.percentGoal}</option>
-                      <option value="number">{t.numberGoal}</option>
-                      <option value="boolean">{t.booleanGoal}</option>
-                      <option value="currency">{t.currencyGoal}</option>
-                    </select>
+                    <Select value={form.type} onValueChange={(v) => setForm(p => ({ ...p, type: v as GoalType }))}>
+                      <SelectTrigger className="w-full text-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="percent">{t.percentGoal}</SelectItem>
+                        <SelectItem value="number">{t.numberGoal}</SelectItem>
+                        <SelectItem value="boolean">{t.booleanGoal}</SelectItem>
+                        <SelectItem value="currency">{t.currencyGoal}</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
                     <label className="text-xs text-muted-foreground mb-1 block">{t.goalStatus}</label>
-                    <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value as GoalStatus }))}
-                      className="w-full px-3 py-2 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30">
-                      <option value="on_track">{t.onTrack}</option>
-                      <option value="at_risk">{t.atRisk}</option>
-                      <option value="off_track">{t.offTrack}</option>
-                    </select>
+                    <Select value={form.status} onValueChange={(v) => setForm(p => ({ ...p, status: v as GoalStatus }))}>
+                      <SelectTrigger className="w-full text-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="on_track">{t.onTrack}</SelectItem>
+                        <SelectItem value="at_risk">{t.atRisk}</SelectItem>
+                        <SelectItem value="off_track">{t.offTrack}</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 {form.type !== "boolean" && (

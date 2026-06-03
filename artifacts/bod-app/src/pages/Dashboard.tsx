@@ -22,6 +22,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useDashboard, useReassignTask, dashboardKeys } from "@/hooks/useDashboard";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const STATUS_COLORS: Record<string, string> = {
   todo: "#94a3b8",
@@ -76,8 +77,8 @@ export default function Dashboard() {
         { label: t.totalTasks, value: stats.total, icon: TrendingUp, color: "text-primary", bg: "bg-primary/10" },
         { label: t.inProgress, value: stats.inProgress, icon: Clock, color: "text-blue-500", bg: "bg-blue-500/10" },
         { label: t.completed, value: stats.done, icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-        { label: "Blocked", value: stats.blocked, icon: AlertCircle, color: "text-red-500", bg: "bg-red-500/10" },
-        { label: "Not Assigned", value: stats.unassigned, icon: Users, color: "text-amber-500", bg: "bg-amber-500/10" },
+        { label: t.blocked, value: stats.blocked, icon: AlertCircle, color: "text-red-500", bg: "bg-red-500/10" },
+        { label: t.notAssigned, value: stats.unassigned, icon: Users, color: "text-amber-500", bg: "bg-amber-500/10" },
         ...(isAdmin ? [{ label: t.bugs, value: stats.bugs, icon: Bug, color: "text-orange-500", bg: "bg-orange-500/10" }] : []),
       ]
     : [];
@@ -119,13 +120,13 @@ export default function Dashboard() {
             onClick={() => setView("overview")}
             className={cn("px-3 py-1.5 text-xs font-semibold rounded-lg transition-all", view === "overview" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground")}
           >
-            Overview
+            {t.overview}
           </button>
           <button
             onClick={() => setView("kanban")}
             className={cn("px-3 py-1.5 text-xs font-semibold rounded-lg transition-all", view === "kanban" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground")}
           >
-            Kanban
+            {t.kanban}
           </button>
         </div>
       </div>
@@ -501,14 +502,15 @@ export default function Dashboard() {
                     <p className="text-xs text-muted-foreground">{t.employeeStats}</p>
                   </div>
                 </div>
-                <select
-                  value={perfSpaceId}
-                  onChange={e => setPerfSpaceId(e.target.value)}
-                  className="text-xs px-3 py-1.5 bg-background border border-input rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/30"
-                >
-                  <option value="all">All Spaces</option>
-                  {spaces.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
+                <Select value={perfSpaceId} onValueChange={setPerfSpaceId}>
+                  <SelectTrigger className="w-36 text-xs h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Spaces</SelectItem>
+                    {spaces.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
               {memberPerformance.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-10 text-muted-foreground text-sm">

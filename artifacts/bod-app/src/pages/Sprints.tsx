@@ -12,6 +12,7 @@ import { TaskStatusBadge } from "@/components/tasks/TaskStatusBadge";
 import { TaskPriorityBadge } from "@/components/tasks/TaskPriorityBadge";
 import { toast } from "sonner";
 import { format, differenceInDays } from "date-fns";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
 import type { Sprint, SprintStatus, Task } from "@/types";
@@ -194,12 +195,12 @@ export default function Sprints() {
                       </div>
                       <TaskPriorityBadge priority={task.priority} />
                       {sprints.filter(s => s.status !== "completed").length > 0 && (
-                        <select onChange={e => { const sp = sprints.find(s => s.id === e.target.value); if (sp) handleAddTaskToSprint(sp, task); }}
-                          defaultValue=""
-                          className="text-xs px-2 py-1 bg-background border border-input rounded-lg focus:outline-none">
-                          <option value="" disabled>{t.addToSprint}</option>
-                          {sprints.filter(s => s.status !== "completed").map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                        </select>
+                        <Select value="" onValueChange={(spId) => { const sp = sprints.find(s => s.id === spId); if (sp) handleAddTaskToSprint(sp, task); }}>
+                          <SelectTrigger className="h-7 text-xs w-28"><SelectValue placeholder={t.addToSprint} /></SelectTrigger>
+                          <SelectContent>
+                            {sprints.filter(s => s.status !== "completed").map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
                       )}
                     </div>
                   );
@@ -252,11 +253,12 @@ export default function Sprints() {
                 <textarea value={form.goal} onChange={e => setForm(p => ({ ...p, goal: e.target.value }))}
                   placeholder={t.sprintGoal} rows={2}
                   className="w-full px-3 py-2.5 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
-                <select required value={form.spaceId} onChange={e => setForm(p => ({ ...p, spaceId: e.target.value }))}
-                  className="w-full px-3 py-2 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30">
-                  <option value="">Select Space...</option>
-                  {spaces.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
+                <Select value={form.spaceId} onValueChange={(v) => setForm(p => ({ ...p, spaceId: v }))}>
+                  <SelectTrigger className="w-full text-sm"><SelectValue placeholder="Select Space..." /></SelectTrigger>
+                  <SelectContent>
+                    {spaces.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
                 <div className="grid grid-cols-2 gap-3">
                   <div><label className="text-xs text-muted-foreground mb-1 block">{t.sprintStart}</label>
                     <input type="date" value={form.startDate} onChange={e => setForm(p => ({ ...p, startDate: e.target.value }))}

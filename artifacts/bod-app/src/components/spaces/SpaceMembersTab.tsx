@@ -7,6 +7,7 @@ import { useTasksBySpace } from "@/hooks/useTaskQueries";
 import { useLang } from "@/contexts/LangContext";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Props {
   spaceId: string;
@@ -57,18 +58,18 @@ export function SpaceMembersTab({ spaceId, isAdmin }: Props) {
             Add Member
           </h3>
           <div className="flex gap-2">
-            <select
-              value={selectedNewMember}
-              onChange={(e) => setSelectedNewMember(e.target.value)}
-              className="flex-1 px-3 py-2 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 min-w-0"
-            >
-              <option value="">{t.selectMember}</option>
-              {nonSpaceMembers.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.displayName || m.email} ({m.email})
-                </option>
-              ))}
-            </select>
+            <Select value={selectedNewMember} onValueChange={setSelectedNewMember}>
+              <SelectTrigger className="flex-1 text-sm min-w-0">
+                <SelectValue placeholder={t.selectMember} />
+              </SelectTrigger>
+              <SelectContent>
+                {nonSpaceMembers.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    {m.displayName || m.email} ({m.email})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <button
               onClick={handleAddMember}
               disabled={!selectedNewMember || addSpaceMember.isPending}

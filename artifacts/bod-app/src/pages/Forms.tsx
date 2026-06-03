@@ -8,6 +8,7 @@ import { useSpaces } from "@/hooks/useSpaces";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const FIELD_TYPE_CONFIG: Record<FormFieldType, { label: string; color: string }> = {
   text:     { label: "Text",     color: "text-blue-400" },
@@ -200,11 +201,13 @@ export default function Forms() {
                 <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
                   placeholder={t.description} rows={2}
                   className="w-full px-3 py-2.5 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
-                <select value={form.spaceId} onChange={e => setForm(p => ({ ...p, spaceId: e.target.value }))}
-                  className="w-full px-3 py-2 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30">
-                  <option value="">{t.formLinkedSpace} (optional)</option>
-                  {spaces.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
+                <Select value={form.spaceId} onValueChange={(v) => setForm(p => ({ ...p, spaceId: v }))}>
+                  <SelectTrigger className="w-full text-sm"><SelectValue placeholder={`${t.formLinkedSpace} (optional)`} /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">{t.formLinkedSpace} (optional)</SelectItem>
+                    {spaces.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
 
                 {/* Fields builder */}
                 <div>
@@ -223,10 +226,12 @@ export default function Forms() {
                             <ChevronDown className="w-3 h-3" />
                           </button>
                         </div>
-                        <select value={field.type} onChange={e => updateField(field.id, { type: e.target.value as FormFieldType })}
-                          className="text-xs px-2 py-1.5 bg-background border border-input rounded-lg focus:outline-none w-24">
-                          {Object.entries(FIELD_TYPE_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-                        </select>
+                        <Select value={field.type} onValueChange={(v) => updateField(field.id, { type: v as FormFieldType })}>
+                          <SelectTrigger className="h-7 text-xs w-24"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(FIELD_TYPE_CONFIG).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
                         <input value={field.label} onChange={e => updateField(field.id, { label: e.target.value })}
                           placeholder="Field label" className="flex-1 text-xs px-2 py-1.5 bg-background border border-input rounded-lg focus:outline-none" />
                         <label className="flex items-center gap-1 text-xs text-muted-foreground">

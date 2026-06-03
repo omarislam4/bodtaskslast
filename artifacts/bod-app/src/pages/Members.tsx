@@ -11,6 +11,7 @@ import { MemberRowSkeleton } from "@/components/shared/SkeletonLoader";
 import { useLang } from "@/contexts/LangContext";
 import { toast } from "sonner";
 import type { UserDoc } from "@/types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function Members() {
   const { members, loading } = useMembers();
@@ -141,13 +142,15 @@ export default function Members() {
             </div>
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-1.5">Role</label>
-              <select
-                value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value as "admin" | "member" }))}
-                className="px-3 py-2.5 text-sm bg-background border border-input rounded-xl focus:outline-none"
-              >
-                <option value="member">Member</option>
-                <option value="admin">Admin</option>
-              </select>
+              <Select value={form.role} onValueChange={(v) => setForm((f) => ({ ...f, role: v as "admin" | "member" }))}>
+                <SelectTrigger className="text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="member">Member</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex gap-3 justify-end">
               <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-muted-foreground">{t.cancel}</button>

@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import bodLogo from "@assets/bod-logo.png";
 
 import type { FormField, Form } from "@/hooks/useForms";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function PublicForm() {
   const { formId } = useParams<{ formId: string }>();
@@ -150,14 +151,12 @@ export default function PublicForm() {
                   />
                 )}
                 {field.type === "dropdown" && (
-                  <select
-                    value={values[field.id] as string || ""}
-                    onChange={e => setValues(p => ({ ...p, [field.id]: e.target.value }))}
-                    className="w-full px-3 py-2.5 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  >
-                    <option value="">Select...</option>
-                    {(field.options || []).map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                  </select>
+                  <Select value={values[field.id] as string || ""} onValueChange={(v) => setValues(p => ({ ...p, [field.id]: v }))}>
+                    <SelectTrigger className="w-full text-sm"><SelectValue placeholder="Select..." /></SelectTrigger>
+                    <SelectContent>
+                      {(field.options || []).map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 )}
                 {field.type === "checkbox" && (
                   <label className="flex items-center gap-2 cursor-pointer">

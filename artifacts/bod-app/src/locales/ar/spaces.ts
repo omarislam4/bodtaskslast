@@ -37,6 +37,7 @@ const spaces: Record<SpacesKeys, TranslationValue> = {
   makeAdmin: "تعيين مسؤولاً",
   removeAdminRole: "إزالة كمسؤول",
   subspacesTab: "المساحات الفرعية",
+  kanban: "كانبان",
 };
 
 export default spaces;

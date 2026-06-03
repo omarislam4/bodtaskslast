@@ -5,6 +5,7 @@ import { useAutomations, useCreateAutomation, useUpdateAutomation, useDeleteAuto
 import { useLang } from "@/contexts/LangContext";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const TRIGGER_TYPES = [
   { value: "status_changes",   label: "Status changes to" },
@@ -219,30 +220,33 @@ export default function Automations() {
                 {/* Trigger */}
                 <div className="p-3 bg-blue-500/5 border border-blue-500/20 rounded-xl space-y-3">
                   <p className="text-xs font-semibold text-blue-400 uppercase tracking-wide">{t.triggerLabel}</p>
-                  <select
-                    value={form.triggerType}
-                    onChange={(e) => setForm((p) => ({ ...p, triggerType: e.target.value }))}
-                    className="w-full px-3 py-2 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  >
-                    {TRIGGER_TYPES.map((tt) => <option key={tt.value} value={tt.value}>{tt.label}</option>)}
-                  </select>
+                  <Select value={form.triggerType} onValueChange={(v) => setForm((p) => ({ ...p, triggerType: v }))}>
+                    <SelectTrigger className="w-full text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TRIGGER_TYPES.map((tt) => <SelectItem key={tt.value} value={tt.value}>{tt.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                   {form.triggerType === "status_changes" && (
-                    <select
-                      value={form.triggerValue}
-                      onChange={(e) => setForm((p) => ({ ...p, triggerValue: e.target.value }))}
-                      className="w-full px-3 py-2 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    >
-                      {STATUS_VALUES.map((s) => <option key={s} value={s}>{s}</option>)}
-                    </select>
+                    <Select value={form.triggerValue} onValueChange={(v) => setForm((p) => ({ ...p, triggerValue: v }))}>
+                      <SelectTrigger className="w-full text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {STATUS_VALUES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                   )}
                   {form.triggerType === "priority_changes" && (
-                    <select
-                      value={form.triggerValue}
-                      onChange={(e) => setForm((p) => ({ ...p, triggerValue: e.target.value }))}
-                      className="w-full px-3 py-2 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    >
-                      {PRIORITY_VALUES.map((p) => <option key={p} value={p}>{p}</option>)}
-                    </select>
+                    <Select value={form.triggerValue} onValueChange={(v) => setForm((p) => ({ ...p, triggerValue: v }))}>
+                      <SelectTrigger className="w-full text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PRIORITY_VALUES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                   )}
                   {form.triggerType !== "status_changes" && form.triggerType !== "priority_changes" && (
                     <input
@@ -257,13 +261,14 @@ export default function Automations() {
                 {/* Action */}
                 <div className="p-3 bg-purple-500/5 border border-purple-500/20 rounded-xl space-y-3">
                   <p className="text-xs font-semibold text-purple-400 uppercase tracking-wide">{t.actionLabel}</p>
-                  <select
-                    value={form.actionType}
-                    onChange={(e) => setForm((p) => ({ ...p, actionType: e.target.value }))}
-                    className="w-full px-3 py-2 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  >
-                    {ACTION_TYPES.map((at) => <option key={at.value} value={at.value}>{at.label}</option>)}
-                  </select>
+                  <Select value={form.actionType} onValueChange={(v) => setForm((p) => ({ ...p, actionType: v }))}>
+                    <SelectTrigger className="w-full text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ACTION_TYPES.map((at) => <SelectItem key={at.value} value={at.value}>{at.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                   <input
                     value={form.actionValue}
                     onChange={(e) => setForm((p) => ({ ...p, actionValue: e.target.value }))}

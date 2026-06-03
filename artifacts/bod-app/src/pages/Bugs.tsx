@@ -16,6 +16,8 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { TaskStatus, TaskPriority, BugSeverity } from "@/types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { priorityOptions, statusOptions, severityOptions } from "@/config/status-config";
 
 const SEVERITY_CONFIG: Record<BugSeverity, { label: string; color: string; bg: string; border: string }> = {
   critical: { label: "Critical", color: "text-red-500", bg: "bg-red-500/10", border: "border-red-500/30" },
@@ -220,28 +222,30 @@ export default function Bugs() {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div>
                     <label className="text-xs text-muted-foreground block mb-1">{t.bugSeverity}</label>
-                    <select value={form.bugSeverity} onChange={(e) => setForm((f) => ({ ...f, bugSeverity: e.target.value as BugSeverity }))}
-                      className="w-full px-3 py-2 text-sm bg-background border border-input rounded-xl focus:outline-none">
-                      {(["critical", "high", "medium", "low"] as BugSeverity[]).map((s) => (
-                        <option key={s} value={s}>{SEVERITY_CONFIG[s].label}</option>
-                      ))}
-                    </select>
+                    <Select value={form.bugSeverity} onValueChange={(v) => setForm((f) => ({ ...f, bugSeverity: v as BugSeverity }))}>
+                      <SelectTrigger className="w-full text-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {severityOptions.map((s) => <SelectItem key={s} value={s}>{SEVERITY_CONFIG[s].label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
                     <label className="text-xs text-muted-foreground block mb-1">{t.priority}</label>
-                    <select value={form.priority} onChange={(e) => setForm((f) => ({ ...f, priority: e.target.value as TaskPriority }))}
-                      className="w-full px-3 py-2 text-sm bg-background border border-input rounded-xl focus:outline-none">
-                      {["low", "medium", "high", "urgent"].map((p) => <option key={p} value={p}>{p}</option>)}
-                    </select>
+                    <Select value={form.priority} onValueChange={(v) => setForm((f) => ({ ...f, priority: v as TaskPriority }))}>
+                      <SelectTrigger className="w-full text-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {priorityOptions.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
                     <label className="text-xs text-muted-foreground block mb-1">{t.status}</label>
-                    <select value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value as TaskStatus }))}
-                      className="w-full px-3 py-2 text-sm bg-background border border-input rounded-xl focus:outline-none">
-                      {(["todo", "in-progress", "review", "done", "blocked"] as TaskStatus[]).map((s) => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
-                    </select>
+                    <Select value={form.status} onValueChange={(v) => setForm((f) => ({ ...f, status: v as TaskStatus }))}>
+                      <SelectTrigger className="w-full text-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {statusOptions.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
                     <label className="text-xs text-muted-foreground block mb-1">{t.deadline}</label>
@@ -252,11 +256,12 @@ export default function Bugs() {
 
                 <div>
                   <label className="text-xs text-muted-foreground block mb-1">Space</label>
-                  <select value={form.spaceId} onChange={(e) => setForm((f) => ({ ...f, spaceId: e.target.value, assigneeIds: [] }))}
-                    required className="w-full px-3 py-2 text-sm bg-background border border-input rounded-xl focus:outline-none">
-                    <option value="">Select a space...</option>
-                    {spaces.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                  </select>
+                  <Select value={form.spaceId} onValueChange={(v) => setForm((f) => ({ ...f, spaceId: v, assigneeIds: [] }))}>
+                    <SelectTrigger className="w-full text-sm"><SelectValue placeholder="Select a space..." /></SelectTrigger>
+                    <SelectContent>
+                      {spaces.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {form.spaceId && spaceMembers.length > 0 && (
@@ -292,11 +297,13 @@ export default function Bugs() {
                 {senders.length > 0 && (
                   <div>
                     <label className="text-xs text-muted-foreground block mb-1">{t.senderFrom}</label>
-                    <select value={form.senderId} onChange={(e) => setForm((f) => ({ ...f, senderId: e.target.value }))}
-                      className="w-full px-3 py-2 text-sm bg-background border border-input rounded-xl focus:outline-none">
-                      <option value="">None</option>
-                      {senders.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                    </select>
+                    <Select value={form.senderId} onValueChange={(v) => setForm((f) => ({ ...f, senderId: v }))}>
+                      <SelectTrigger className="w-full text-sm"><SelectValue placeholder="None" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">None</SelectItem>
+                        {senders.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
 

@@ -6,6 +6,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { useUpdateProfile } from "@/hooks/useUserQueries";
 import { useAppSettings, useUpdateAppSettings } from "@/hooks/useSettingsQueries";
 import { useLang } from "@/contexts/LangContext";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 const COUNTRY_CODES = [
   { code: "+1", label: "🇺🇸 +1 (US/CA)" },
   { code: "+20", label: "🇪🇬 +20 (Egypt)" },
@@ -103,15 +104,16 @@ export default function Settings() {
             {lang === "ar" ? "يُستخدم لإرسال تذكيرات واتساب عند انتهاء وردية العمل." : "Used for WhatsApp reminders via n8n when your shift is ending."}
           </p>
           <div className="flex gap-2">
-            <select
-              value={countryCode}
-              onChange={(e) => setCountryCode(e.target.value)}
-              className="px-3 py-2.5 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 shrink-0"
-            >
-              {COUNTRY_CODES.map((c) => (
-                <option key={c.code} value={c.code}>{c.label}</option>
-              ))}
-            </select>
+            <Select value={countryCode} onValueChange={setCountryCode}>
+              <SelectTrigger className="w-40 text-sm shrink-0">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {COUNTRY_CODES.map((c) => (
+                  <SelectItem key={c.code} value={c.code}>{c.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <input
               value={phone}
               onChange={(e) => setPhone(e.target.value)}

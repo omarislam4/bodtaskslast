@@ -6,6 +6,7 @@ import { useLang } from "@/contexts/LangContext";
 import { EmptyState } from "@/components/shared/EmptyState";
 import type { SpaceDataItem } from "@/types";
 import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Props {
   spaceId: string;
@@ -128,16 +129,15 @@ export function SpaceDataTab({ spaceId, isAdmin }: Props) {
                 className="w-full px-3 py-2.5 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
               />
               {dataType === "link" && dataItems.filter((i) => i.type === "folder").length > 0 && (
-                <select
-                  value={dataParentId || ""}
-                  onChange={(e) => setDataParentId(e.target.value || null)}
-                  className="w-full px-3 py-2 text-sm bg-background border border-input rounded-xl focus:outline-none"
-                >
-                  <option value="">{t.rootFolder}</option>
-                  {dataItems.filter((i) => i.type === "folder").map((f) => (
-                    <option key={f.id} value={f.id}>{f.name}</option>
-                  ))}
-                </select>
+                <Select value={dataParentId || ""} onValueChange={(v) => setDataParentId(v || null)}>
+                  <SelectTrigger className="w-full text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">{t.rootFolder}</SelectItem>
+                    {dataItems.filter((i) => i.type === "folder").map((f) => (
+                      <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
               <div className="flex gap-3 justify-end">
                 <button

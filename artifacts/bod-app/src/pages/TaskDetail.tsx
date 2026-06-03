@@ -65,6 +65,7 @@ import { ProgressBar } from "@/components/shared/ProgressBar";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   priorityOptions,
   priorityStateConfig,
@@ -923,19 +924,14 @@ export default function TaskDetail() {
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-2">
               {t.status}
             </label>
-            <select
-              value={task.status}
-              onChange={(e) =>
-                updateTask.mutate({ status: e.target.value as TaskStatus })
-              }
-              className="w-full px-3 py-2 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
-            >
-              {Object.keys(statusConfig).map((s) => (
-                <option key={s} value={s}>
-                  {statusConfig[s as TaskStatus].label}
-                </option>
-              ))}
-            </select>
+            <Select value={task.status} onValueChange={(v) => updateTask.mutate({ status: v as TaskStatus })}>
+              <SelectTrigger className="w-full text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {Object.keys(statusConfig).map((s) => (
+                  <SelectItem key={s} value={s}>{statusConfig[s as TaskStatus].label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <div className="mt-2">
               <TaskStatusBadge status={task.status} />
             </div>
@@ -946,19 +942,14 @@ export default function TaskDetail() {
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-2">
               {t.priority}
             </label>
-            <select
-              value={task.priority}
-              onChange={(e) =>
-                updateTask.mutate({ priority: e.target.value as TaskPriority })
-              }
-              className="w-full px-3 py-2 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
-            >
-              {priorityOptions.map((p) => (
-                <option key={p} value={p}>
-                  {priorityConfig[p].label}
-                </option>
-              ))}
-            </select>
+            <Select value={task.priority} onValueChange={(v) => updateTask.mutate({ priority: v as TaskPriority })}>
+              <SelectTrigger className="w-full text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {priorityOptions.map((p) => (
+                  <SelectItem key={p} value={p}>{priorityConfig[p].label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <div className="mt-2">
               <TaskPriorityBadge priority={task.priority} />
             </div>
@@ -1282,28 +1273,23 @@ export default function TaskDetail() {
             </div>
             {showDepForm && (
               <div className="space-y-2 mb-3 p-3 bg-muted/50 rounded-xl">
-                <select
-                  value={depType}
-                  onChange={(e) => setDepType(e.target.value as DependencyType)}
-                  className="w-full px-2 py-1.5 text-sm bg-background border border-input rounded-lg focus:outline-none"
-                >
-                  <option value="blocking">{t.blockingLabel}</option>
-                  <option value="blocked_by">{t.blockedByLabel}</option>
-                  <option value="related">{t.relatedToLabel}</option>
-                  <option value="duplicate">{t.duplicateOfLabel}</option>
-                </select>
-                <select
-                  value={depTaskId}
-                  onChange={(e) => setDepTaskId(e.target.value)}
-                  className="w-full px-2 py-1.5 text-sm bg-background border border-input rounded-lg focus:outline-none"
-                >
-                  <option value="">{t.selectTask}</option>
-                  {otherTasks.map((ot) => (
-                    <option key={ot.id} value={ot.id}>
-                      {ot.title}
-                    </option>
-                  ))}
-                </select>
+                <Select value={depType} onValueChange={(v) => setDepType(v as DependencyType)}>
+                  <SelectTrigger className="w-full text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="blocking">{t.blockingLabel}</SelectItem>
+                    <SelectItem value="blocked_by">{t.blockedByLabel}</SelectItem>
+                    <SelectItem value="related">{t.relatedToLabel}</SelectItem>
+                    <SelectItem value="duplicate">{t.duplicateOfLabel}</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={depTaskId} onValueChange={setDepTaskId}>
+                  <SelectTrigger className="w-full text-sm"><SelectValue placeholder={t.selectTask} /></SelectTrigger>
+                  <SelectContent>
+                    {otherTasks.map((ot) => (
+                      <SelectItem key={ot.id} value={ot.id}>{ot.title}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <button
                   onClick={handleAddDependency}
                   disabled={!depTaskId}
