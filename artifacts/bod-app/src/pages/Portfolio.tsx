@@ -4,9 +4,7 @@ import { useLang } from "@/contexts/LangContext";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import type { HealthStatus as HS } from "@/services/portfolio";
-
-type HealthStatus = HS;
+import type { HealthStatus } from "@/services/portfolio";
 
 const HEALTH_CONFIG: Record<HealthStatus, { label: string; color: string; bg: string; border: string; icon: typeof CheckCircle2 }> = {
   on_track:  { label: "On Track",  color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/30", icon: CheckCircle2 },
