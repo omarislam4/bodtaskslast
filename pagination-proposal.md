@@ -63,7 +63,7 @@ Chat messages support an alternative cursor envelope — see its section below.
       "high": 15,
       "medium": 21,
       "low": 7
-    }
+    },
   }
 }
 ```

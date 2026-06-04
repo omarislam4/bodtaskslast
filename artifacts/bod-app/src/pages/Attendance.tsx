@@ -21,7 +21,7 @@ const N8N_MESSAGES: Record<AttendanceType, (now: string) => string> = {
 
 function fireN8nWebhook(
   type: AttendanceType,
-  payload: Record<string, string>
+  payload: Record<string, string>,
 ): void {
   fetch(N8N_URLS[type], {
     method: "POST",
@@ -65,21 +65,27 @@ export default function Attendance() {
           });
           if (type === "end") setEndShiftReport("");
         },
-      }
+      },
     );
   };
 
   return (
     <div className="p-4 sm:p-6 max-w-2xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-1">Attendance</h1>
-        <p className="text-sm text-muted-foreground">Record your attendance for the day</p>
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-1">
+          Attendance
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Record your attendance for the day
+        </p>
       </div>
 
       <div className="space-y-4">
         {/* Start Main Shift */}
         <motion.div
-          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
           className="bg-card border border-border rounded-2xl p-5 shadow-sm"
         >
           <div className="flex items-center gap-3 mb-4">
@@ -87,8 +93,12 @@ export default function Attendance() {
               <Clock className="w-5 h-5 text-emerald-500" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-foreground">Start Main Shift</h3>
-              <p className="text-xs text-muted-foreground">Record when your shift begins</p>
+              <h3 className="text-sm font-semibold text-foreground">
+                {t.startMainShift}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                {t.recordStartShift}
+              </p>
             </div>
           </div>
           <motion.button
@@ -98,13 +108,15 @@ export default function Attendance() {
             disabled={logAttendance.isPending}
             className="w-full py-3 bg-emerald-500 text-white text-sm font-semibold rounded-xl hover:bg-emerald-600 disabled:opacity-60 transition-colors shadow-sm"
           >
-            {isLoading("start") ? t.loading : "Start Main Shift"}
+            {isLoading("start") ? t.loading : t.startMainShift}
           </motion.button>
         </motion.div>
 
         {/* Mid Day Attendance */}
         <motion.div
-          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
           className="bg-card border border-border rounded-2xl p-5 shadow-sm"
         >
           <div className="flex items-center gap-3 mb-4">
@@ -112,8 +124,12 @@ export default function Attendance() {
               <CheckCircle2 className="w-5 h-5 text-blue-500" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-foreground">Mid Day Attendance</h3>
-              <p className="text-xs text-muted-foreground">Record your midday check-in</p>
+              <h3 className="text-sm font-semibold text-foreground">
+                {t.midDayAttendance}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                {t.recordMiddayCheckIn}
+              </p>
             </div>
           </div>
           <motion.button
@@ -123,13 +139,15 @@ export default function Attendance() {
             disabled={logAttendance.isPending}
             className="w-full py-3 bg-blue-500 text-white text-sm font-semibold rounded-xl hover:bg-blue-600 disabled:opacity-60 transition-colors shadow-sm"
           >
-            {isLoading("midday") ? t.loading : "Mid Day Attendance"}
+            {isLoading("midday") ? t.loading : t.midDayAttendance}
           </motion.button>
         </motion.div>
 
         {/* End Shift */}
         <motion.div
-          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
           className="bg-card border border-border rounded-2xl p-5 shadow-sm"
         >
           <div className="flex items-center gap-3 mb-4">
@@ -137,14 +155,18 @@ export default function Attendance() {
               <Send className="w-5 h-5 text-orange-500" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-foreground">End Shift</h3>
-              <p className="text-xs text-muted-foreground">Write a daily report and submit when your shift ends</p>
+              <h3 className="text-sm font-semibold text-foreground">
+                {t.endShift}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                {t.writeDailyReport}
+              </p>
             </div>
           </div>
           <textarea
             value={endShiftReport}
             onChange={(e) => setEndShiftReport(e.target.value)}
-            placeholder="Write your daily report... (What did you accomplish today? Any blockers?)"
+            placeholder={t.endShiftReportPlaceholder}
             rows={4}
             className="w-full px-4 py-3 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all resize-none mb-3"
           />
@@ -156,7 +178,7 @@ export default function Attendance() {
             className="w-full py-3 bg-orange-500 text-white text-sm font-semibold rounded-xl hover:bg-orange-600 disabled:opacity-60 transition-colors shadow-sm flex items-center justify-center gap-2"
           >
             <Send className="w-4 h-4" />
-            {isLoading("end") ? t.saving : "End Shift"}
+            {isLoading("end") ? t.saving : t.endShift}
           </motion.button>
         </motion.div>
       </div>

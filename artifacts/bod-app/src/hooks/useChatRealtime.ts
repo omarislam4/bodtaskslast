@@ -2,7 +2,8 @@ import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getEcho, isEchoEnabled } from "@/lib/echo";
 import { activeChatChannel } from "@/lib/activeChatChannel";
-import { chatKeys } from "@/hooks/useChatQueries";
+import { chatKeys } from "@/hooks/chatKeys";
+import { upsertMessage, hasReactionsPending } from "@/hooks/chatCache";
 import type { ChatMessage } from "@/types";
 
 // ─── Event shapes from the Laravel backend ────────────────────────────────────
@@ -28,18 +29,8 @@ export function useChatRealtime(channelId: string | null) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let echoChannel: any = null;
 
-    const upsert = (msg: ChatMessage) =>
-      queryClient.setQueryData<ChatMessage[]>(
-        chatKeys.messages(channelId),
-        (old) => {
-          if (!old) return [msg];
-          const idx = old.findIndex((m) => m.id === msg.id);
-          if (idx === -1) return [...old, msg];
-          const next = [...old];
-          next[idx] = msg;
-          return next;
-        },
-      );
+    const handle = ({ chatMessage }: ChatMessageEvent) =>
+      upsertMessage(queryClient, channelId, chatMessage);
 
     getEcho().then((echo) => {
       if (!echo) return;
@@ -48,21 +39,14 @@ export function useChatRealtime(channelId: string | null) {
       echoChannel = echo.private(`chat.channels.${channelId}`);
 
       echoChannel
-        .listen(".chat.message.created", ({ chatMessage }: ChatMessageEvent) => {
-          console.log("[Chat] ← message.created", chatMessage.id);
-          upsert(chatMessage);
-        })
-        .listen(".chat.message.updated", ({ chatMessage }: ChatMessageEvent) => {
-          console.log("[Chat] ← message.updated", chatMessage.id);
-          upsert(chatMessage);
-        })
-        .listen(".chat.message.deleted", ({ chatMessage }: ChatMessageEvent) => {
-          console.log("[Chat] ← message.deleted", chatMessage.id);
-          upsert(chatMessage);
-        })
-        .listen(".chat.message.reaction_updated", ({ chatMessage }: ChatMessageEvent) => {
-          console.log("[Chat] ← reaction_updated", chatMessage.id);
-          upsert(chatMessage);
+        .listen(".chat.message.created", (e: ChatMessageEvent) => { console.log("[Chat] ← message.created", e.chatMessage.id); handle(e); })
+        .listen(".chat.message.updated", (e: ChatMessageEvent) => { console.log("[Chat] ← message.updated", e.chatMessage.id); handle(e); })
+        .listen(".chat.message.deleted", (e: ChatMessageEvent) => { console.log("[Chat] ← message.deleted", e.chatMessage.id); handle(e); })
+        .listen(".chat.message.reaction_updated", (e: ChatMessageEvent) => {
+          console.log("[Chat] ← reaction_updated", e.chatMessage.id);
+          // Skip while optimistic mutations are in-flight; reactionMutationEnd
+          // will do a single confirming refetch once they all settle.
+          if (!hasReactionsPending(channelId)) handle(e);
         });
     });
 

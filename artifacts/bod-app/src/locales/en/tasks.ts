@@ -105,7 +105,12 @@ const tasks = {
   removeRecurrence: "Remove Recurrence",
   createYourFirstTask: "Create your first task to get started.",
   noTasksMatchThisFilter: "No tasks match this filter.",
+  noTasks: "No tasks",
+  dropHere: "Drop here",
+  noTasksWithDeadlines: "No tasks with deadlines",
+  noTasksInThisSprintYet: "No tasks in this sprint yet",
   noTasksMatchFilter: (filter: string) => `No ${filter} tasks`,
+
 } as const;
 
 export type TasksKeys = keyof typeof tasks;

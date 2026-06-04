@@ -2,18 +2,25 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { tasksService } from "@/services/tasks";
 import { useLang } from "@/contexts/LangContext";
 import { toast } from "sonner";
-import type { CreateTaskPayload, UpdateTaskPayload, TaskQueryParams, DependencyType } from "@/types";
+import type { Task, CreateTaskPayload, UpdateTaskPayload, TaskQueryParams, DependencyType } from "@/types";
+import { taskKeys } from "./taskKeys";
+import {
+  setTaskDetail,
+  applyTaskPatch,
+  applySubtaskPatch,
+  removeSubtask,
+  applyChecklistPatch,
+  removeChecklistItem,
+  applyWatcherAdd,
+  applyWatcherRemove,
+  removeTaskTag,
+  invalidateTaskDetail,
+  invalidateTaskList,
+} from "./taskCache";
 
-export const taskKeys = {
-  all: (params?: TaskQueryParams) =>
-    params ? (["tasks", params] as const) : (["tasks"] as const),
-  detail: (id: string) => ["task", id] as const,
-  myTasks: (params?: { scope?: string; search?: string }) =>
-    params ? (["my-tasks", params] as const) : (["my-tasks"] as const),
-  timeline: (month: string) => ["tasks-timeline", month] as const,
-  history: (params?: { search?: string; priority?: string }) =>
-    params ? (["history", params] as const) : (["history"] as const),
-};
+export { taskKeys };
+
+// ─── Queries ──────────────────────────────────────────────────────────────────
 
 export const useAllTasksQuery = (params?: TaskQueryParams) =>
   useQuery({
@@ -54,51 +61,57 @@ export const useTaskQuery = (id: string) =>
     enabled: !!id,
   });
 
+// ─── Task CRUD ────────────────────────────────────────────────────────────────
+
 export const useCreateTask = () => {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: (payload: CreateTaskPayload) => tasksService.create(payload),
     onSuccess: (task) => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.all({ spaceId: task.spaceId }) });
-      queryClient.invalidateQueries({ queryKey: taskKeys.all() });
+      invalidateTaskList(qc, task.spaceId);
+      invalidateTaskList(qc);
     },
   });
 };
 
 export const useUpdateTask = (id: string) => {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   const { t } = useLang();
   return useMutation({
     mutationFn: (payload: UpdateTaskPayload) => tasksService.update(id, payload),
-    onSuccess: (task) => {
-      queryClient.setQueryData(taskKeys.detail(id), task);
-      queryClient.invalidateQueries({ queryKey: taskKeys.all({ spaceId: task.spaceId }) });
+    onMutate: async (payload) => {
+      await qc.cancelQueries({ queryKey: taskKeys.detail(id) });
+      const previous = applyTaskPatch(qc, id, payload);
+      return { previous };
     },
-    onError: () => toast.error(t.errUpdateTask),
+    onSuccess: (task) => {
+      setTaskDetail(qc, id, task);
+      invalidateTaskList(qc, task.spaceId);
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) qc.setQueryData(taskKeys.detail(id), context.previous);
+      toast.error(t.errUpdateTask);
+    },
   });
 };
 
 export const useDeleteTask = () => {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => tasksService.remove(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.all() });
-    },
+    onSuccess: () => invalidateTaskList(qc),
   });
 };
 
-// ─── Task Detail Sub-resources ─────────────────────────────────────────────────
+// ─── Comments ─────────────────────────────────────────────────────────────────
 
 export const useAddComment = (taskId: string) => {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   const { t } = useLang();
   return useMutation({
     mutationFn: (payload: { text: string; mentions?: string[] }) =>
       tasksService.addComment(taskId, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.detail(taskId) });
-    },
+    onSuccess: () => invalidateTaskDetail(qc, taskId),
     onError: () => toast.error(t.errAddComment),
   });
 };
@@ -106,190 +119,220 @@ export const useAddComment = (taskId: string) => {
 export const useSendReminder = (taskId: string) => {
   const { t } = useLang();
   return useMutation({
-    mutationFn: (payload: { target: string }) =>
-      tasksService.sendReminder(taskId, payload),
+    mutationFn: (payload: { target: string }) => tasksService.sendReminder(taskId, payload),
     onError: () => toast.error(t.errGeneric),
   });
 };
 
+// ─── Checklist ────────────────────────────────────────────────────────────────
+
 export const useAddChecklistItem = (taskId: string) => {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   const { t } = useLang();
   return useMutation({
     mutationFn: (payload: { text: string; assigneeId?: string }) =>
       tasksService.addChecklistItem(taskId, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.detail(taskId) });
-    },
+    onSuccess: () => invalidateTaskDetail(qc, taskId),
     onError: () => toast.error(t.errUpdateTask),
   });
 };
 
 export const useUpdateChecklistItem = (taskId: string) => {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   const { t } = useLang();
   return useMutation({
     mutationFn: ({ itemId, payload }: { itemId: string; payload: { done?: boolean; text?: string } }) =>
       tasksService.updateChecklistItem(taskId, itemId, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.detail(taskId) });
+    onMutate: async ({ itemId, payload }) => {
+      await qc.cancelQueries({ queryKey: taskKeys.detail(taskId) });
+      const previous = applyChecklistPatch(qc, taskId, itemId, payload);
+      return { previous };
     },
-    onError: () => toast.error(t.errUpdateTask),
+    onSuccess: () => invalidateTaskDetail(qc, taskId),
+    onError: (_err, _vars, context) => {
+      if (context?.previous) qc.setQueryData(taskKeys.detail(taskId), context.previous);
+      toast.error(t.errUpdateTask);
+    },
   });
 };
 
 export const useDeleteChecklistItem = (taskId: string) => {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   const { t } = useLang();
   return useMutation({
-    mutationFn: (itemId: string) =>
-      tasksService.deleteChecklistItem(taskId, itemId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.detail(taskId) });
+    mutationFn: (itemId: string) => tasksService.deleteChecklistItem(taskId, itemId),
+    onMutate: async (itemId) => {
+      await qc.cancelQueries({ queryKey: taskKeys.detail(taskId) });
+      const previous = removeChecklistItem(qc, taskId, itemId);
+      return { previous };
     },
-    onError: () => toast.error(t.errUpdateTask),
+    onSuccess: () => invalidateTaskDetail(qc, taskId),
+    onError: (_err, _vars, context) => {
+      if (context?.previous) qc.setQueryData(taskKeys.detail(taskId), context.previous);
+      toast.error(t.errUpdateTask);
+    },
   });
 };
 
+// ─── Subtasks ─────────────────────────────────────────────────────────────────
+
 export const useAddSubtask = (taskId: string) => {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   const { t } = useLang();
   return useMutation({
-    mutationFn: (payload: { title: string }) =>
-      tasksService.addSubtask(taskId, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.detail(taskId) });
-    },
+    mutationFn: (payload: { title: string }) => tasksService.addSubtask(taskId, payload),
+    onSuccess: () => invalidateTaskDetail(qc, taskId),
     onError: () => toast.error(t.errUpdateTask),
   });
 };
 
 export const useUpdateSubtask = (taskId: string) => {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   const { t } = useLang();
   return useMutation({
     mutationFn: ({ subtaskId, payload }: { subtaskId: string; payload: { status?: string; title?: string } }) =>
       tasksService.updateSubtask(taskId, subtaskId, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.detail(taskId) });
+    onMutate: async ({ subtaskId, payload }) => {
+      await qc.cancelQueries({ queryKey: taskKeys.detail(taskId) });
+      const previous = applySubtaskPatch(qc, taskId, subtaskId, payload as { status?: Task["status"]; title?: string });
+      return { previous };
     },
-    onError: () => toast.error(t.errUpdateTask),
+    onSuccess: () => invalidateTaskDetail(qc, taskId),
+    onError: (_err, _vars, context) => {
+      if (context?.previous) qc.setQueryData(taskKeys.detail(taskId), context.previous);
+      toast.error(t.errUpdateTask);
+    },
   });
 };
 
 export const useDeleteSubtask = (taskId: string) => {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   const { t } = useLang();
   return useMutation({
-    mutationFn: (subtaskId: string) =>
-      tasksService.deleteSubtask(taskId, subtaskId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.detail(taskId) });
+    mutationFn: (subtaskId: string) => tasksService.deleteSubtask(taskId, subtaskId),
+    onMutate: async (subtaskId) => {
+      await qc.cancelQueries({ queryKey: taskKeys.detail(taskId) });
+      const previous = removeSubtask(qc, taskId, subtaskId);
+      return { previous };
     },
-    onError: () => toast.error(t.errUpdateTask),
+    onSuccess: () => invalidateTaskDetail(qc, taskId),
+    onError: (_err, _vars, context) => {
+      if (context?.previous) qc.setQueryData(taskKeys.detail(taskId), context.previous);
+      toast.error(t.errUpdateTask);
+    },
   });
 };
 
+// ─── Time entries ─────────────────────────────────────────────────────────────
+
 export const useAddTimeEntry = (taskId: string) => {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   const { t } = useLang();
   return useMutation({
-    mutationFn: (payload: {
-      duration: number;
-      note?: string;
-      billable?: boolean;
-      startTime?: number;
-      endTime?: number;
-    }) => tasksService.addTimeEntry(taskId, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.detail(taskId) });
-    },
+    mutationFn: (payload: { duration: number; note?: string; billable?: boolean; startTime?: number; endTime?: number }) =>
+      tasksService.addTimeEntry(taskId, payload),
+    onSuccess: () => invalidateTaskDetail(qc, taskId),
     onError: () => toast.error(t.errUpdateTask),
   });
 };
 
 export const useDeleteTimeEntry = (taskId: string) => {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   const { t } = useLang();
   return useMutation({
     mutationFn: (entryId: string) => tasksService.deleteTimeEntry(taskId, entryId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.detail(taskId) });
-    },
+    onSuccess: () => invalidateTaskDetail(qc, taskId),
     onError: () => toast.error(t.errUpdateTask),
   });
 };
 
+// ─── Dependencies ─────────────────────────────────────────────────────────────
+
 export const useAddDependency = (taskId: string) => {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   const { t } = useLang();
   return useMutation({
     mutationFn: (payload: { taskId: string; type: DependencyType }) =>
       tasksService.addDependency(taskId, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.detail(taskId) });
-    },
+    onSuccess: () => invalidateTaskDetail(qc, taskId),
     onError: () => toast.error(t.errUpdateTask),
   });
 };
 
 export const useDeleteDependency = (taskId: string) => {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   const { t } = useLang();
   return useMutation({
-    mutationFn: (depTaskId: string) =>
-      tasksService.deleteDependency(taskId, depTaskId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.detail(taskId) });
-    },
+    mutationFn: (depTaskId: string) => tasksService.deleteDependency(taskId, depTaskId),
+    onSuccess: () => invalidateTaskDetail(qc, taskId),
     onError: () => toast.error(t.errUpdateTask),
   });
 };
 
+// ─── Tags ─────────────────────────────────────────────────────────────────────
+
 export const useAddTag = (taskId: string) => {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   const { t } = useLang();
   return useMutation({
     mutationFn: (tag: string) => tasksService.addTag(taskId, { tag }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.detail(taskId) });
-    },
+    onSuccess: () => invalidateTaskDetail(qc, taskId),
     onError: () => toast.error(t.errUpdateTask),
   });
 };
 
 export const useDeleteTag = (taskId: string) => {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   const { t } = useLang();
   return useMutation({
     mutationFn: (tag: string) => tasksService.deleteTag(taskId, tag),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.detail(taskId) });
+    onMutate: async (tag) => {
+      await qc.cancelQueries({ queryKey: taskKeys.detail(taskId) });
+      const previous = removeTaskTag(qc, taskId, tag);
+      return { previous };
     },
-    onError: () => toast.error(t.errUpdateTask),
+    onSuccess: () => invalidateTaskDetail(qc, taskId),
+    onError: (_err, _vars, context) => {
+      if (context?.previous) qc.setQueryData(taskKeys.detail(taskId), context.previous);
+      toast.error(t.errUpdateTask);
+    },
   });
 };
 
+// ─── Watchers ─────────────────────────────────────────────────────────────────
+
 export const useAddWatcher = (taskId: string) => {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   const { t } = useLang();
   return useMutation({
     mutationFn: (userId: string) => tasksService.addWatcher(taskId, { userId }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.detail(taskId) });
+    onMutate: async (userId) => {
+      await qc.cancelQueries({ queryKey: taskKeys.detail(taskId) });
+      const previous = applyWatcherAdd(qc, taskId, userId);
+      return { previous };
     },
-    onError: () => toast.error(t.errUpdateTask),
+    onSuccess: () => invalidateTaskDetail(qc, taskId),
+    onError: (_err, _vars, context) => {
+      if (context?.previous) qc.setQueryData(taskKeys.detail(taskId), context.previous);
+      toast.error(t.errUpdateTask);
+    },
   });
 };
 
 export const useRemoveWatcher = (taskId: string) => {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   const { t } = useLang();
   return useMutation({
     mutationFn: (userId: string) => tasksService.removeWatcher(taskId, userId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.detail(taskId) });
+    onMutate: async (userId) => {
+      await qc.cancelQueries({ queryKey: taskKeys.detail(taskId) });
+      const previous = applyWatcherRemove(qc, taskId, userId);
+      return { previous };
     },
-    onError: () => toast.error(t.errUpdateTask),
+    onSuccess: () => invalidateTaskDetail(qc, taskId),
+    onError: (_err, _vars, context) => {
+      if (context?.previous) qc.setQueryData(taskKeys.detail(taskId), context.previous);
+      toast.error(t.errUpdateTask);
+    },
   });
 };

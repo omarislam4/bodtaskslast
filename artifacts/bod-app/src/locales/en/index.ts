@@ -17,7 +17,6 @@ import views from "./views";
 import attendance from "./attendance";
 import errors from "./errors";
 import success from "./success";
-import { TranslationKeys } from "..";
 
 const en = {
   ...common,

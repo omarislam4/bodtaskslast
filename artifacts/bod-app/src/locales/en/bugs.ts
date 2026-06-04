@@ -17,6 +17,12 @@ const bugs = {
   actualBehavior: "Actual Behavior",
   bugDetails: "Bug Details",
   bugTab: "Bugs",
+  SearchBugs: "Search bugs...",
+  totalBugs: "Total Bugs",
+  inProgressBugs: "In Progress",
+  criticalBugs: "Critical",
+  trackAndResolveBugs: "Track and resolve bugs across all spaces",
+  reportABug: "Report a Bug"
 } as const;
 
 export type BugsKeys = keyof typeof bugs;

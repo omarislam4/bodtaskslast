@@ -20,6 +20,12 @@ const bugs: Record<BugsKeys, TranslationValue> = {
   actualBehavior: "السلوك الفعلي",
   bugDetails: "تفاصيل الخطأ",
   bugTab: "الأخطاء",
+  SearchBugs: "ابحث عن اخطاء...",
+  totalBugs: "إجمالي الأخطاء",
+  inProgressBugs: "قيد التقدم",
+  criticalBugs: "حرج",
+  trackAndResolveBugs: "تتبع وحل الأخطاء عبر جميع المساحات",
+  reportABug: "الإبلاغ عن خطأ",
 };
 
 export default bugs;

@@ -35,6 +35,8 @@ const common: Record<CommonKeys, TranslationValue> = {
   of: "من",
   from: "من",
   all: "الكل",
+  total: "الإجمالي",
+  projectsOverview: "نظرة عامة على المشاريع",
 };
 
 export default common;

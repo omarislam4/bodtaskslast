@@ -20,6 +20,7 @@ const dashboard = {
   viewSpaces: "View spaces",
   completedTasks: "Completed",
   noDataYet: "No data yet",
+  viewAllSpaces: "View all spaces →",
   hereAreYourAssignedTasks: "Here are your assigned tasks",
 } as const;
 

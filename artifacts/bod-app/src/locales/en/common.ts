@@ -32,6 +32,8 @@ const common = {
   of: "of",
   from: "from",
   all: "All",
+  total: "Total",
+  projectsOverview: "Projects overview",
 } as const;
 
 export type CommonKeys = keyof typeof common;

@@ -7,6 +7,7 @@ import { useLang } from "@/contexts/LangContext";
 import { useSpaceChannels } from "@/hooks/useChatQueries";
 import { getEcho, isEchoEnabled } from "@/lib/echo";
 import { activeChatChannel } from "@/lib/activeChatChannel";
+import { requestPermission, showBrowserNotification } from "@/lib/browserNotifications";
 import type { ChatMessage, ChatChannel } from "@/types";
 
 export function useChatNotifications() {
@@ -14,6 +15,9 @@ export function useChatNotifications() {
   const { t } = useLang();
   const [location, navigate] = useLocation();
   const { data: channels = [] } = useSpaceChannels();
+
+  // Request OS notification permission once on mount.
+  useEffect(() => { requestPermission(); }, []);
 
   const channelsRef = useRef<ChatChannel[]>([]);
   channelsRef.current = channels;
@@ -49,6 +53,16 @@ export function useChatNotifications() {
         Array.isArray(chatMessage.mentions) &&
         !!userIdRef.current &&
         chatMessage.mentions.includes(userIdRef.current);
+
+      // OS / system notification — navigates to the channel on click.
+      showBrowserNotification(
+        isMentioned ? t.mentionedYou(chatMessage.senderName) : chatMessage.senderName,
+        {
+          body: `#${channelName}: ${preview}`,
+          tag: chatMessage.channelId, // collapses burst messages per channel
+          onClick: () => navigateRef.current(destination),
+        },
+      );
 
       if (isMentioned) {
         toast.custom(

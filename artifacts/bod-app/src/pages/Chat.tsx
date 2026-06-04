@@ -175,9 +175,9 @@ export default function Chat() {
               </div>
               {isAdmin && (
                 <button onClick={() => setShowDeleteConfirm(selectedChannel.id)}
-                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive transition-colors shrink-0 px-2 py-1 rounded-lg hover:bg-destructive/10">
+                  className="flex items-center gap-1.5 text-xs cursor-pointer text-muted-foreground hover:text-destructive transition-colors shrink-0 px-2 py-1 rounded-lg hover:bg-destructive/10">
                   <Trash2 className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Delete channel</span>
+                  <span className="hidden sm:inline">{t.deleteChannel}</span>
                 </button>
               )}
             </div>

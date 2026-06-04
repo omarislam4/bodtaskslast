@@ -101,6 +101,10 @@ const tasks: Record<TasksKeys, TranslationValue> = {
   removeRecurrence: "إزالة التكرار",
   createYourFirstTask: "أنشئ مهمتك الأولى للبدء.",
   noTasksMatchThisFilter: "لا توجد مهام مطابقة لهذا الفلتر.",
+  noTasks: "لا توجد مهام",
+  dropHere: "اسحب هنا",
+  noTasksWithDeadlines: "لا توجد مهام بمواعيد نهائية",
+  noTasksInThisSprintYet: "لا توجد مهام في هذا السبرينت بعد",
   noTasksMatchFilter: (filter: string) => `لا توجد مهام ${filter}`,
 };
 

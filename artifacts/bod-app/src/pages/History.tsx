@@ -37,7 +37,7 @@ export default function History() {
 
       <div className="flex gap-3 mb-6 flex-wrap">
         <div className="relative">
-          <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute inset-s-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -53,10 +53,10 @@ export default function History() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t.allPriorities}</SelectItem>
-              <SelectItem value="low">Low</SelectItem>
-              <SelectItem value="medium">Medium</SelectItem>
-              <SelectItem value="high">High</SelectItem>
-              <SelectItem value="urgent">Urgent</SelectItem>
+              <SelectItem value="low">{t.low}</SelectItem>
+              <SelectItem value="medium">{t.medium}</SelectItem>
+              <SelectItem value="high">{t.high}</SelectItem>
+              <SelectItem value="urgent">{t.urgent}</SelectItem>
             </SelectContent>
           </Select>
         </div>

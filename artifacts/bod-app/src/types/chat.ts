@@ -30,6 +30,8 @@ export interface ChatMessage {
   deleted: boolean;
   edited?: boolean;
   createdAt: string;
+  /** Client-only: true while the send API call is in-flight. */
+  pending?: boolean;
 }
 
 export interface CreateChannelPayload {
