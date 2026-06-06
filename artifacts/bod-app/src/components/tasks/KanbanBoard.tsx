@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import {
@@ -19,6 +19,7 @@ import { tasksService } from "@/services/tasks";
 import { toast } from "sonner";
 import type { Task, TaskStatus } from "@/types";
 import { UserDoc } from "@/contexts/AuthContext";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { TaskCard } from "./TaskCard";
 import { useLang } from "@/contexts/LangContext";
 
@@ -79,7 +80,7 @@ function DroppableColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`flex flex-col shrink-0 w-72 rounded-2xl border shadow-sm transition-colors ${
+      className={`flex flex-col shrink-0 w-84 rounded-2xl border shadow-sm transition-colors ${
         isOver ? "bg-primary/10 border-primary/40" : "bg-muted/40 border-border"
       }`}
     >
@@ -95,7 +96,7 @@ function DroppableColumn({
       </div>
 
       {/* Cards */}
-      <div className="flex-1 p-3 space-y-3 overflow-y-auto max-h-[calc(100vh-280px)] overflow-hidden">
+      <div className="flex-1 p-3 pb-0 space-y-3 overflow-y-auto max-h-[calc(100vh-320px)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {colTasks.length === 0 ? (
           <div
             className={`flex items-center justify-center h-24 rounded-xl border-2 border-dashed transition-colors ${
@@ -128,16 +129,60 @@ interface KanbanBoardProps {
   tasks: Task[];
   members: UserDoc[];
   spaceId?: string;
+  totalTasks?: number;
 }
 
-export function KanbanBoard({ tasks, members, spaceId }: KanbanBoardProps) {
+export function KanbanBoard({
+  tasks,
+  members,
+  spaceId,
+  totalTasks,
+}: KanbanBoardProps) {
   const [, navigate] = useLocation();
-  const { t } = useLang();
+  const { t, isRTL } = useLang();
   const qc = useQueryClient();
 
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [overId, setOverId] = useState<TaskStatus | null>(null);
   const [optimistic, setOptimistic] = useState<Record<string, TaskStatus>>({});
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const updateScrollState = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const max = el.scrollWidth - el.clientWidth;
+    const dist = isRTL
+      ? el.scrollLeft <= 0
+        ? -el.scrollLeft
+        : max - el.scrollLeft
+      : el.scrollLeft;
+    setCanScrollLeft(isRTL ? dist < max - 1 : dist > 1);
+    setCanScrollRight(isRTL ? dist > 1 : dist < max - 1);
+  }, [isRTL]);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    updateScrollState();
+    el.addEventListener("scroll", updateScrollState, { passive: true });
+    const ro = new ResizeObserver(updateScrollState);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", updateScrollState);
+      ro.disconnect();
+    };
+  }, [updateScrollState]);
+
+  const SCROLL_STEP = 510;
+  const scroll = useCallback((dir: "left" | "right") => {
+    scrollRef.current?.scrollBy({
+      left: dir === "left" ? -SCROLL_STEP : SCROLL_STEP,
+      behavior: "smooth",
+    });
+  }, []);
 
   const COLUMNS: { id: TaskStatus; label: string; color: string }[] = [
     { id: "todo", label: t.todo, color: "bg-slate-400" },
@@ -217,7 +262,33 @@ export function KanbanBoard({ tasks, members, spaceId }: KanbanBoardProps) {
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex gap-4 overflow-x-auto pb-4 min-h-100">
+      {/* Scroll arrows */}
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-xs text-muted-foreground">
+          {t.totalTasks} {totalTasks}
+        </span>
+        <div className="flex justify-end gap-1.5 rtl:flex-row-reverse rtl:justify-start">
+          <button
+            onClick={() => scroll("left")}
+            disabled={!canScrollLeft}
+            className="p-1.5 rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-muted transition-all disabled:opacity-30 disabled:pointer-events-none"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => scroll("right")}
+            disabled={!canScrollRight}
+            className="p-1.5 rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-muted transition-all disabled:opacity-30 disabled:pointer-events-none"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      <div
+        ref={scrollRef}
+        className="flex gap-4 overflow-x-auto pb-4 min-h-100 h-[calc(100vh-250px)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
         {COLUMNS.map((col) => {
           const colTasks = resolvedTasks.filter(
             (task) => task.status === col.id,

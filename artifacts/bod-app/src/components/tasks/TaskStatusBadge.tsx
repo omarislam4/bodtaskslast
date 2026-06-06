@@ -22,7 +22,7 @@ export const TaskStatusBadge = ({
     <motion.span
       layout
       className={cn(
-        "inline-flex items-center rounded-full font-medium transition-all duration-200",
+        "inline-flex items-center rounded-full font-medium transition-all duration-200 text-nowrap shrink-0",
         size === "sm" ? "px-2 py-0.5 text-xs" : "px-2.5 py-1 text-xs",
         config.className,
         className,

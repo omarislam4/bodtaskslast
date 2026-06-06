@@ -6,6 +6,26 @@ This contract is now implemented in the Laravel API for the Timeline page.
 
 ## `GET /api/tasks/timeline`
 
+Supports opt-in pagination with `page` and `perPage`. When pagination is requested, the response keeps `month` and returns paginated `tasks` with sibling `meta` and `links`. Without pagination parameters, it keeps returning the existing `{ month, tasks }` shape.
+
+### Pagination Examples
+
+Without pagination:
+
+```http
+GET /api/tasks/timeline?month=2026-05
+```
+
+Returns `{ month, tasks }`.
+
+With pagination:
+
+```http
+GET /api/tasks/timeline?month=2026-05&page=1&perPage=15
+```
+
+Returns `{ month, tasks, meta, links }`.
+
 Returns tasks with deadlines for the requested month.
 
 This endpoint is the backend replacement for the current `useAllTasks()` + client-side deadline filtering behavior used by the timeline page.

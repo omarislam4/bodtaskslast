@@ -4,8 +4,7 @@ import { FileText, Send } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
 import { useSubmitWeeklyReport } from "@/hooks/useAttendance";
-import { format } from "date-fns";
-import { formatDate } from "@/lib/date";
+import DateDisplay from "@/components/ui/date-display";
 
 const N8N_WEEKLY_URL = "https://n8n.athar-riyada.com/webhook/weekly-report";
 
@@ -68,7 +67,7 @@ export default function WeeklyReport() {
               {t.weeklyReport}
             </h3>
             <p className="text-xs text-muted-foreground">
-              Week of {formatDate(new Date(), "MMMM d, yyyy", lang)}
+              {t.weekOf} <DateDisplay date={new Date()} />
             </p>
           </div>
         </div>

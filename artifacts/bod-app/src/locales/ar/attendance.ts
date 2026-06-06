@@ -15,6 +15,7 @@ const attendance: Record<AttendanceKeys, TranslationValue> = {
   recordStartShift: "سجّل بداية ورديتك",
   endShiftReportPlaceholder:
     "اكتب تقريرك اليومي... (ماذا أنجزت اليوم؟ هل هناك أي عوائق؟)",
+  weekOf: "أسبوع",
   weeklyReport: "التقرير الأسبوعي",
   submitWeeklyReport: "قدم التقرير الأسبوعي إلى HR",
   weeklyReportPlaceholder:

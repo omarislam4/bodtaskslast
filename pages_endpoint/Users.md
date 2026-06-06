@@ -252,3 +252,25 @@ Status: `403 Forbidden`
 4. [UpdateUserRequest.php](C:/laragon/www/bod-app-api/app/Http/Requests/User/UpdateUserRequest.php) validates partial updates and blocks non-admin changes to privileged fields.
 5. [UserController.php](C:/laragon/www/bod-app-api/app/Http/Controllers/Api/UserController.php) returns normalized user payloads through [UserResource.php](C:/laragon/www/bod-app-api/app/Http/Resources/UserResource.php).
 6. Shared collaboration user discovery should use the space-members endpoints instead of direct `/api/users` listing.
+
+## Pagination
+
+`GET /api/users` supports opt-in pagination with `page` and `perPage`. Without pagination parameters, it keeps returning the existing plain array response.
+
+### Pagination Examples
+
+Without pagination:
+
+```http
+GET /api/users
+```
+
+Returns a plain user array.
+
+With pagination:
+
+```http
+GET /api/users?page=1&perPage=20
+```
+
+Returns `data`, `meta`, and `links`.

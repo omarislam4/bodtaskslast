@@ -50,3 +50,25 @@ None
 
 - This page is an aggregate over visible top-level spaces and their tasks.
 - It complements the shared `Spaces`, `Tasks`, and `Members` contracts.
+
+## Pagination
+
+`GET /api/portfolio` supports opt-in pagination for the `projects` array with `page` and `perPage`. When pagination is requested, the response keeps `summary` and adds top-level `meta` and `links`; without pagination parameters, `projects` keeps the existing plain array shape.
+
+### Pagination Examples
+
+Without pagination:
+
+```http
+GET /api/portfolio
+```
+
+Returns `{ summary, projects }`.
+
+With pagination:
+
+```http
+GET /api/portfolio?page=1&perPage=12
+```
+
+Returns `{ summary, projects, meta, links }`.

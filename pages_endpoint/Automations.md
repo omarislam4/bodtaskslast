@@ -26,6 +26,26 @@ This contract is now implemented in the Laravel API.
 
 ## `GET /api/automations`
 
+Supports opt-in pagination with `page` and `perPage`. Without pagination parameters, it keeps returning the existing plain array response.
+
+### Pagination Examples
+
+Without pagination:
+
+```http
+GET /api/automations
+```
+
+Returns a plain automation array.
+
+With pagination:
+
+```http
+GET /api/automations?page=1&perPage=10
+```
+
+Returns `data`, `meta`, and `links`.
+
 Lists automations created by the current user. Admins may see all automations.
 
 ### Payload

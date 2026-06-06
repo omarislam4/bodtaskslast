@@ -54,7 +54,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatDate } from "@/lib/date";
+import DateDisplay from "@/components/ui/date-display";
 
 const STATUS_COLORS: Record<string, string> = {
   todo: "#94a3b8",
@@ -828,9 +828,14 @@ export default function Dashboard() {
                             </span>
                           </td>
                           <td className="py-2.5 text-xs text-muted-foreground">
-                            {task.deadline
-                              ? formatDate(task.deadline, "MMMMMM d, yyyy", lang)
-                              : "—"}
+                            {task.deadline ? (
+                              <DateDisplay
+                                date={task.deadline}
+                                fmt="MMMMMM d, yyyy"
+                              />
+                            ) : (
+                              "—"
+                            )}
                           </td>
                         </tr>
                       );

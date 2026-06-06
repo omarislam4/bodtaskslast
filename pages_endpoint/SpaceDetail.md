@@ -394,6 +394,34 @@ See:
 
 The `chat`, `goals`, and `sprints` tabs are now backed by implemented shared endpoints. The goals tab uses `GET /api/goals?spaceId={spaceId}`, while chat and sprints use their own implemented page contracts.
 
+## Pagination
+
+Space detail collection endpoints support opt-in pagination with `page` and `perPage`. This includes `GET /api/spaces/{space}/subspaces`, `GET /api/spaces/{space}/members`, `GET /api/spaces/{space}/data-items`, and shared tab endpoints such as tasks, goals, forms, sprints, and chat lists filtered by `spaceId`. Without pagination parameters, they keep returning the existing plain array response.
+
+### Pagination Examples
+
+Without pagination:
+
+```http
+GET /api/spaces/5/members
+```
+
+Returns a plain member array.
+
+With pagination:
+
+```http
+GET /api/spaces/5/members?page=1&perPage=20
+```
+
+Returns `data`, `meta`, and `links`.
+
+Filtered shared tab example:
+
+```http
+GET /api/tasks?spaceId=5&page=1&perPage=15
+```
+
 ## Flow
 
 1. [SpaceController.php](C:/laragon/www/bod-app-api/app/Http/Controllers/Api/SpaceController.php) serves the base space and sub-space endpoints.

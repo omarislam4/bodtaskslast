@@ -182,3 +182,25 @@ None
 
 - `submissionCount` is incremented through the public submission endpoint, not by the internal forms page.
 - Public viewing and submission are documented in [PublicForm.md](C:/laragon/www/bod-app-api/docs/pages_endpoint/PublicForm.md).
+
+## Pagination
+
+`GET /api/forms` supports opt-in pagination with `page` and `perPage`. This also applies when filtering by `spaceId`. Without pagination parameters, it keeps returning the existing plain array response.
+
+### Pagination Examples
+
+Without pagination:
+
+```http
+GET /api/forms?spaceId=5
+```
+
+Returns a plain form array.
+
+With pagination:
+
+```http
+GET /api/forms?spaceId=5&page=1&perPage=10
+```
+
+Returns `data`, `meta`, and `links`.

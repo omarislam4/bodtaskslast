@@ -23,6 +23,26 @@ This contract is now implemented in the Laravel API.
 
 ## `GET /api/weekly-reports`
 
+Supports opt-in pagination with `page` and `perPage`. Without pagination parameters, it keeps returning the existing plain array response.
+
+### Pagination Examples
+
+Without pagination:
+
+```http
+GET /api/weekly-reports?userId=4
+```
+
+Returns a plain weekly report array.
+
+With pagination:
+
+```http
+GET /api/weekly-reports?userId=4&page=1&perPage=15
+```
+
+Returns `data`, `meta`, and `links`.
+
 Returns weekly reports for the current user. Admins may filter by `userId`.
 
 ### Payload

@@ -96,3 +96,33 @@ None
 - `mention` and `comment` notifications are generated from task comments.
 - `reminder` notifications are generated from the task detail reminder action.
 - The page still filters tabs like `unread`, `mentions`, and `assignments` client-side from the returned list.
+
+## Pagination
+
+`GET /api/inbox/notifications` supports opt-in pagination with `page` and `perPage`. Without pagination parameters, it keeps returning the existing plain array response.
+
+### Pagination Examples
+
+Without pagination:
+
+```http
+GET /api/inbox/notifications
+```
+
+Returns a plain notification array.
+
+With pagination:
+
+```http
+GET /api/inbox/notifications?page=1&perPage=15
+```
+
+Returns `data`, `meta`, `links`, and `unreadCount`.
+
+```json
+{
+  "unreadCount": 14
+}
+```
+
+`unreadCount` is computed over all notifications for the authenticated user, independent of the current page. `POST /api/inbox/notifications/mark-all-read` returns `unreadCount: 0`.

@@ -6,6 +6,41 @@ This contract is now implemented in the Laravel API for the My Tasks page.
 
 ## `GET /api/my-tasks`
 
+Supports opt-in pagination with `page` and `perPage`. Without pagination parameters, it keeps returning the existing plain array response.
+
+### Pagination Examples
+
+Without pagination:
+
+```http
+GET /api/my-tasks
+```
+
+Returns a plain task array.
+
+With pagination:
+
+```http
+GET /api/my-tasks?page=1&perPage=15
+```
+
+Returns `data`, `meta`, `links`, and `counts`.
+
+```json
+{
+  "counts": {
+    "today": 3,
+    "overdue": 5,
+    "upcoming": 8,
+    "all": 47,
+    "done": 18,
+    "inProgress": 11
+  }
+}
+```
+
+`counts` is computed over all tasks assigned to the authenticated user, independent of the current page and `scope` filter.
+
 Returns active tasks assigned to the authenticated user, sorted by nearest deadline.
 
 This endpoint is the backend replacement for the current `useMyTasks(userId)` Firebase hook behavior.

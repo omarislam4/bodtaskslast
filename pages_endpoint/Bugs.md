@@ -160,8 +160,31 @@ Used when the bug is edited from the list or task detail flow.
 
 ## Notes
 
-- The Bugs page uses the same task resource described in [Tasks.md](C:/laragon/www/bod-app-api/docs/pages_endpoint/Tasks.md).`r`n- Available `senderId` values come from the implemented sender directory in [Senders.md](C:/laragon/www/bod-app-api/docs/pages_endpoint/Senders.md).
+- The Bugs page uses the same task resource described in [Tasks.md](C:/laragon/www/bod-app-api/docs/pages_endpoint/Tasks.md).
+- Available `senderId` values come from the implemented sender directory in [Senders.md](C:/laragon/www/bod-app-api/docs/pages_endpoint/Senders.md).
 - The detail screen for a bug still follows the shared task detail contract in [TaskDetail.md](C:/laragon/www/bod-app-api/docs/pages_endpoint/TaskDetail.md).
 - The available assignee list is filtered by the selected space's `memberIds`, so bug creation only needs `spaceId` and `assigneeIds`; the backend does not need a separate bug-member endpoint.
+
+## Pagination
+
+The Bugs page uses `GET /api/tasks?type=bug`, so it supports the same opt-in pagination as the shared task list with `page` and `perPage`. Without pagination parameters, it keeps returning the existing plain array response.
+
+### Pagination Examples
+
+Without pagination:
+
+```http
+GET /api/tasks?type=bug&spaceId=5
+```
+
+Returns a plain bug task array.
+
+With pagination:
+
+```http
+GET /api/tasks?type=bug&spaceId=5&page=1&perPage=15
+```
+
+Returns `data`, `meta`, and `links`.
 
 

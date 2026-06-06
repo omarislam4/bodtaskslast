@@ -7,9 +7,8 @@ import { TaskPriorityBadge } from "./TaskPriorityBadge";
 import { AvatarGroup } from "@/components/shared/AvatarGroup";
 import { ProgressBar } from "@/components/shared/ProgressBar";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
-import { formatDate } from "@/lib/date";
 import { useLang } from "@/contexts/LangContext";
+import DateDisplay from "../ui/date-display";
 
 interface TaskCardProps {
   task: Task;
@@ -73,7 +72,7 @@ export const TaskCard = ({
             )}
           >
             <Calendar className="w-3 h-3" />
-            {formatDate(task.deadline, "MMMMMM d", lang)}
+            <DateDisplay date={task.deadline} fmt="MMMMMM d" />
           </span>
         )}
         {task.estimatedHours > 0 && (

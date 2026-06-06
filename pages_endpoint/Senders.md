@@ -23,6 +23,26 @@ The sender list is shared across bug and task creation flows, while the dedicate
 
 Returns the sender list used by the `Senders` page and by bug/task forms that need a `senderId`.
 
+Supports opt-in pagination with `page` and `perPage`. Without pagination parameters, it keeps returning the existing plain array response.
+
+### Pagination Examples
+
+Without pagination:
+
+```http
+GET /api/senders
+```
+
+Returns a plain sender array.
+
+With pagination:
+
+```http
+GET /api/senders?page=1&perPage=25
+```
+
+Returns `data`, `meta`, and `links`.
+
 ### Payload
 
 None

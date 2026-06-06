@@ -9,10 +9,175 @@ This file is the running backend contract for replacing the existing Firebase-dr
 - Base path: `/api`
 - Auth for protected endpoints: `Authorization: Bearer <token>`
 - Auth package: Laravel Sanctum
+- Realtime broadcaster: Laravel Reverb
+- Broadcast auth path for private channels: `POST /api/broadcasting/auth`
 - Response style: JSON only
 - Naming style:
   - Database columns use snake_case
   - API payloads and responses may use camelCase when the frontend docs already expect that shape
+
+## Pagination
+
+Collection endpoints support opt-in pagination with query parameters:
+
+- `page`: 1-based page number
+- `perPage`: items per page, clamped from `1` to `100`
+- `per_page`: accepted as an alias for `perPage`
+
+For backwards compatibility, list endpoints keep returning their original plain array shape when pagination parameters are omitted. When `page`, `perPage`, or `per_page` is present, the response shape is:
+
+```json
+{
+  "data": [],
+  "meta": {
+    "currentPage": 1,
+    "page": 1,
+    "perPage": 15,
+    "total": 0,
+    "lastPage": 1,
+    "from": null,
+    "to": null,
+    "hasMore": false
+  },
+  "links": {
+    "first": "http://127.0.0.1:8000/api/tasks?page=1",
+    "last": "http://127.0.0.1:8000/api/tasks?page=1",
+    "prev": null,
+    "next": null
+  }
+}
+```
+
+Nested list endpoints keep their existing wrapper key and add pagination metadata beside it. For example, `GET /api/tasks/timeline?page=1&perPage=15` returns `month`, `tasks`, `meta`, and `links`; `GET /api/dashboard?view=kanban&page=1&perPage=15` returns `kanbanTasks`, `kanbanMeta`, and `kanbanLinks`.
+
+### Pagination Examples
+
+Without pagination parameters, collection endpoints return the existing plain array response:
+
+```http
+GET /api/tasks
+Authorization: Bearer {token}
+```
+
+```json
+[
+  {
+    "id": "27",
+    "title": "Launch landing page"
+  }
+]
+```
+
+With pagination parameters, collection endpoints return `data`, `meta`, and `links`:
+
+```http
+GET /api/tasks?page=2&perPage=10
+Authorization: Bearer {token}
+```
+
+```json
+{
+  "data": [
+    {
+      "id": "27",
+      "title": "Launch landing page"
+    }
+  ],
+  "meta": {
+    "currentPage": 2,
+    "page": 2,
+    "perPage": 10,
+    "total": 26,
+    "lastPage": 3,
+    "from": 11,
+    "to": 20,
+    "hasMore": true
+  },
+  "links": {
+    "first": "http://127.0.0.1:8000/api/tasks?page=1&perPage=10",
+    "last": "http://127.0.0.1:8000/api/tasks?page=3&perPage=10",
+    "prev": "http://127.0.0.1:8000/api/tasks?page=1&perPage=10",
+    "next": "http://127.0.0.1:8000/api/tasks?page=3&perPage=10"
+  }
+}
+```
+
+`per_page` is also accepted:
+
+```http
+GET /api/tasks?page=1&per_page=25
+Authorization: Bearer {token}
+```
+
+Some paginated endpoints also return aggregates computed over the full matching dataset, not just the current page:
+
+| Endpoint | Extra fields |
+|---|---|
+| `GET /api/tasks` | `stats.total`, `stats.byType`, `stats.byStatus`, `stats.bySeverity` |
+| `GET /api/inbox/notifications` | `unreadCount` |
+| `GET /api/my-tasks` | `counts.today`, `counts.overdue`, `counts.upcoming`, `counts.all`, `counts.done`, `counts.inProgress` |
+| `GET /api/sprints` | `counts.total`, `counts.active`, `counts.planning`, `counts.completed` |
+| `GET /api/goals` | `stats.total`, `stats.onTrack`, `stats.atRisk`, `stats.offTrack`, `stats.completed` |
+| `GET /api/history` | `meta.total` is the unfiltered completed-task total, `meta.filteredTotal` is the filtered total |
+
+## Realtime Setup
+
+Chat realtime uses private Reverb channels. Local development needs these environment values:
+
+```env
+BROADCAST_CONNECTION=reverb
+REVERB_APP_ID=local
+REVERB_APP_KEY=local
+REVERB_APP_SECRET=local
+REVERB_HOST=127.0.0.1
+REVERB_PORT=8080
+REVERB_SCHEME=http
+REVERB_SERVER_HOST=0.0.0.0
+REVERB_SERVER_PORT=8080
+
+VITE_REVERB_APP_KEY=local
+VITE_REVERB_HOST=127.0.0.1
+VITE_REVERB_PORT=8080
+VITE_REVERB_SCHEME=http
+```
+
+Run the API, Reverb, queue worker if queued jobs are used elsewhere, and the frontend dev server:
+
+```sh
+php artisan serve
+php artisan reverb:start
+php artisan queue:listen --tries=1
+npm run dev
+```
+
+After env changes, rebuild or restart Vite so the `VITE_REVERB_*` values are available to the frontend.
+
+## Frontend Realtime Usage
+
+Use the same Axios instance that sends the Sanctum bearer token. Echo is configured in `resources/js/echo.js` to authorize private channels through `/api/broadcasting/auth`.
+
+```js
+const channel = window.Echo.private(`chat.channels.${channelId}`);
+
+channel
+    .listen('.chat.message.created', ({ chatMessage }) => {
+        upsertMessage(chatMessage);
+    })
+    .listen('.chat.message.updated', ({ chatMessage }) => {
+        upsertMessage(chatMessage);
+    })
+    .listen('.chat.message.deleted', ({ chatMessage }) => {
+        upsertMessage(chatMessage);
+    })
+    .listen('.chat.message.reaction_updated', ({ chatMessage }) => {
+        upsertMessage(chatMessage);
+    });
+
+// When leaving the page or switching channels:
+window.Echo.leave(`chat.channels.${channelId}`);
+```
+
+Send, edit, delete, and react through the REST endpoints documented in [Chat.md](C:/laragon/www/bod-app-api/docs/pages_endpoint/Chat.md). The broadcast is the realtime confirmation for every other open client, while the REST response can update the sender immediately.
 
 ## Documentation Standard
 
@@ -121,6 +286,8 @@ Implemented task contract shape used by the current task-related frontend pages:
   "activityLog": []
 }
 ```
+
+Tasks with unfinished `blocked_by` or `related` dependencies cannot move to `in-progress`, `review`, or `done`. When a blocking task is marked `done`, waiting dependent tasks in `todo` or `blocked` are automatically moved to `in-progress`.
 
 ## Sprint Shape
 

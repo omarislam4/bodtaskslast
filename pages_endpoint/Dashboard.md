@@ -174,4 +174,26 @@ Used by the dashboard admin quick-action that reassigns a task, optionally moves
 - The dashboard still depends on the shared task shape documented in [Tasks.md](C:/laragon/www/bod-app-api/docs/pages_endpoint/Tasks.md).
 - Task detail links still open the shared task detail flow documented in [TaskDetail.md](C:/laragon/www/bod-app-api/docs/pages_endpoint/TaskDetail.md).
 
+## Pagination
+
+`GET /api/dashboard?view=kanban` supports opt-in pagination for `kanbanTasks` with `page` and `perPage`. When pagination is requested, the response includes `kanbanMeta` and `kanbanLinks`; without pagination parameters, `kanbanTasks` keeps the existing plain array shape.
+
+### Pagination Examples
+
+Without pagination:
+
+```http
+GET /api/dashboard?view=kanban&spaceId=5
+```
+
+Returns dashboard stats with `kanbanTasks` as a plain task array.
+
+With pagination:
+
+```http
+GET /api/dashboard?view=kanban&spaceId=5&page=1&perPage=15
+```
+
+Returns dashboard stats with `kanbanTasks`, `kanbanMeta`, and `kanbanLinks`.
+
 

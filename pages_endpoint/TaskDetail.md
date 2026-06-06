@@ -309,6 +309,8 @@ None
 }
 ```
 
+When `type` is `blocked_by` or `related`, the current task waits for the referenced task. The waiting task cannot be moved to `in-progress`, `review`, or `done` until every blocking dependency is done. If a blocking dependency is added to an already-started task, the task is moved back to `blocked`.
+
 ### `DELETE /api/tasks/{id}/dependencies/{dependencyTaskId}`
 
 #### Payload

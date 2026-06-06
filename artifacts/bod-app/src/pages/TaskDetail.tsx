@@ -73,7 +73,7 @@ import {
   recurrenceFrequencyStateConfig,
   taskStatusConfig,
 } from "@/config/status-config";
-import { formatDate } from "@/lib/date";
+import DateDisplay from "@/components/ui/date-display";
 
 const DEP_TYPE_CONFIG: Record<
   DependencyType,
@@ -1452,13 +1452,13 @@ export default function TaskDetail() {
           <div className="px-4 py-3 text-xs text-muted-foreground space-y-1">
             <p>
               {t.created}{" "}
-              {formatDate(task.createdAt, "MMMMMMMMMM d, yyyy", lang)}
+              <DateDisplay date={task.createdAt} />
             </p>
             {task.completedAt && (
               <p className="flex items-center gap-1 text-emerald-500">
                 <CheckCircle2 className="w-3 h-3" />
                 {t.completed}{" "}
-                {formatDate(task.completedAt, "MMMMMMMMMM d, yyyy", lang)}
+                <DateDisplay date={task.completedAt} />
               </p>
             )}
           </div>

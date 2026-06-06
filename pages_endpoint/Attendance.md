@@ -24,6 +24,26 @@ This contract is now implemented in the Laravel API.
 
 ## `GET /api/attendance`
 
+Supports opt-in pagination with `page` and `perPage`. Without pagination parameters, it keeps returning the existing plain array response.
+
+### Pagination Examples
+
+Without pagination:
+
+```http
+GET /api/attendance?userId=4
+```
+
+Returns a plain attendance record array.
+
+With pagination:
+
+```http
+GET /api/attendance?userId=4&page=1&perPage=15
+```
+
+Returns `data`, `meta`, and `links`.
+
 Returns attendance records for the current user. Admins may filter by `userId`.
 
 ### Payload

@@ -49,6 +49,56 @@ The shared chat system supports:
 }
 ```
 
+## Realtime Broadcasts
+
+Chat messages are broadcast through Laravel Reverb on a private channel:
+
+```txt
+private-chat.channels.{channelId}
+```
+
+The frontend must authorize this private channel by posting to:
+
+```txt
+POST /api/broadcasting/auth
+```
+
+Use the same Sanctum bearer token as the protected API endpoints. The channel authorization uses the same visibility rules as `GET /api/chat/channels/{id}/messages`.
+
+### Events
+
+All chat events use the same payload shape:
+
+```json
+{
+  "action": "created",
+  "channelId": "1",
+  "chatMessage": {
+    "id": "7",
+    "channelId": "1",
+    "spaceId": null,
+    "senderId": "12",
+    "senderName": "Jane Doe",
+    "text": "Hello team",
+    "createdAt": "2026-05-21T09:05:00.000Z",
+    "edited": false,
+    "deleted": false,
+    "mentions": [],
+    "replyTo": null,
+    "reactions": {}
+  }
+}
+```
+
+Listen for these event names:
+
+- `.chat.message.created`
+- `.chat.message.updated`
+- `.chat.message.deleted`
+- `.chat.message.reaction_updated`
+
+Frontend state should upsert messages by `chatMessage.id`; delete events are soft deletes and include the updated message with `deleted: true`.
+
 ## `GET /api/chat/channels`
 
 Returns visible channels for the authenticated user.
@@ -294,3 +344,29 @@ Toggles the current user's reaction on a message.
 - The `SpaceDetail` chat tab uses the same channel and message endpoints with a non-null `spaceId`.
 - Message delete is soft delete so clients can preserve timeline order.
 - Mention IDs are stored on the message resource; this pass does not add a separate server-side notification delivery pipeline.
+- Realtime requires `BROADCAST_CONNECTION=reverb`, a running Reverb server, and Echo configured with the same `VITE_REVERB_*` values.
+- `GET /api/chat/channels` and `GET /api/chat/channels/{id}/messages` support opt-in pagination with `page` and `perPage`. Without pagination parameters, they keep returning the existing plain array response.
+
+## Pagination Examples
+
+Without pagination:
+
+```http
+GET /api/chat/channels?spaceId=5
+```
+
+Returns a plain channel array.
+
+With pagination:
+
+```http
+GET /api/chat/channels?spaceId=5&page=1&perPage=15
+```
+
+Returns `data`, `meta`, and `links`.
+
+Message pagination:
+
+```http
+GET /api/chat/channels/12/messages?page=1&perPage=30
+```

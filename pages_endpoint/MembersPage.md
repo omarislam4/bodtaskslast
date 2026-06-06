@@ -14,6 +14,28 @@ None
 
 See [Users.md](C:/laragon/www/bod-app-api/docs/pages_endpoint/Users.md).
 
+## Pagination
+
+The member list endpoints support opt-in pagination with `page` and `perPage`. `GET /api/users` returns the shared paginated user list for admin member management, and `GET /api/members-directory` returns the accessible member directory. Without pagination parameters, they keep returning the existing plain array response.
+
+### Pagination Examples
+
+Without pagination:
+
+```http
+GET /api/members-directory
+```
+
+Returns a plain member array.
+
+With pagination:
+
+```http
+GET /api/members-directory?page=1&perPage=20
+```
+
+Returns `data`, `meta`, and `links`.
+
 ### `POST /api/users`
 
 #### Payload

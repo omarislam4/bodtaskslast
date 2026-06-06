@@ -221,3 +221,38 @@ None
 - The sprint contract stores both `taskIds` on the sprint and `sprintId` on the task. The backend should keep those two relations in sync.
 - Backlog tasks are tasks where `sprintId` is `null` and `status` is not `done`.
 
+## Pagination
+
+`GET /api/sprints` supports opt-in pagination with `page` and `perPage`. This also applies when filtering by `spaceId`. Without pagination parameters, it keeps returning the existing plain array response.
+
+### Pagination Examples
+
+Without pagination:
+
+```http
+GET /api/sprints?spaceId=5
+```
+
+Returns a plain sprint array.
+
+With pagination:
+
+```http
+GET /api/sprints?spaceId=5&page=1&perPage=10
+```
+
+Returns `data`, `meta`, `links`, and `counts`.
+
+```json
+{
+  "counts": {
+    "total": 42,
+    "active": 2,
+    "planning": 1,
+    "completed": 39
+  }
+}
+```
+
+`counts` is computed over all sprints matching the active filters, independent of the current page.
+

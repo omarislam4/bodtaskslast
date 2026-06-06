@@ -371,9 +371,57 @@ None
 ## Notes
 
 - `TaskDetail.tsx` expects the full task resource shape, including arrays for `activityLog`, `checklistItems`, `subtasks`, `timeEntries`, and `dependencies`.
-- The bug-specific usage of this resource is documented in [Bugs.md](C:/laragon/www/bod-app-api/docs/pages_endpoint/Bugs.md).`r`n- Sender options used by bug and task forms come from [Senders.md](C:/laragon/www/bod-app-api/docs/pages_endpoint/Senders.md).
+- A task with unfinished `blocked_by` or `related` dependencies cannot move to `in-progress`, `review`, or `done`. When the blocking task becomes `done`, waiting dependent tasks in `todo` or `blocked` move to `in-progress`.
+- The bug-specific usage of this resource is documented in [Bugs.md](C:/laragon/www/bod-app-api/docs/pages_endpoint/Bugs.md).
+- Sender options used by bug and task forms come from [Senders.md](C:/laragon/www/bod-app-api/docs/pages_endpoint/Senders.md).
 - The dashboard aggregate and reassignment flow that sit on top of this resource are documented in [Dashboard.md](C:/laragon/www/bod-app-api/docs/pages_endpoint/Dashboard.md).
 - `Spaces.tsx` and `Dashboard.tsx` both depend on task counts grouped by `spaceId`.
 - Sprint membership and the `sprintId` relation are documented in [Sprints.md](C:/laragon/www/bod-app-api/docs/pages_endpoint/Sprints.md).
+- `GET /api/tasks` supports opt-in pagination with `page` and `perPage`. Without pagination parameters, it keeps returning the existing plain array response.
 
+### Pagination Examples
 
+Without pagination:
+
+```http
+GET /api/tasks?spaceId=5
+```
+
+Returns a plain task array.
+
+With pagination:
+
+```http
+GET /api/tasks?spaceId=5&page=1&perPage=15
+```
+
+Returns `data`, `meta`, `links`, and `stats`.
+
+```json
+{
+  "stats": {
+    "total": 148,
+    "byType": {
+      "task": 20,
+      "bug": 50,
+      "feature": 30,
+      "improvement": 48
+    },
+    "byStatus": {
+      "todo": 45,
+      "in-progress": 38,
+      "review": 12,
+      "done": 40,
+      "blocked": 13
+    },
+    "bySeverity": {
+      "critical": 9,
+      "high": 15,
+      "medium": 21,
+      "low": 7
+    }
+  }
+}
+```
+
+`stats` is computed over all matching records after filters such as `spaceId`, `type`, `status`, `bugSeverity`, `assigneeId`, `search`, and `sprintId`.

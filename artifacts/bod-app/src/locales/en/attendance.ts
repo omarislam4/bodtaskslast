@@ -12,6 +12,7 @@ const attendance = {
   recordStartShift: "Record when your shift begins",
   endShiftReportPlaceholder:
     "Write your daily report... (What did you accomplish today? Any blockers?)",
+  weekOf: "Week of",
   weeklyReport: "Weekly Report",
   submitWeeklyReport: "Submit Weekly Report",
   weeklyReportPlaceholder:

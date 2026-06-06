@@ -18,6 +18,26 @@ See [AuthEndpoints.md](C:/laragon/www/bod-app-api/docs/pages_endpoint/AuthEndpoi
 
 ## `GET /api/my-tasks`
 
+Supports opt-in pagination with `page` and `perPage` through the shared My Tasks endpoint. Without pagination parameters, it keeps returning the existing plain array response.
+
+### Pagination Examples
+
+Without pagination:
+
+```http
+GET /api/my-tasks
+```
+
+Returns a plain task array.
+
+With pagination:
+
+```http
+GET /api/my-tasks?page=1&perPage=15
+```
+
+Returns `data`, `meta`, and `links`.
+
 ### Payload
 
 None

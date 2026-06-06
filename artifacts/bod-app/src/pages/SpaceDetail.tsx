@@ -66,7 +66,9 @@ export default function SpaceDetail() {
   const [activeTab, setActiveTab] = useState<Tab>("tasks");
   const [showCreate, setShowCreate] = useState(false);
   const [createTaskType, setCreateTaskType] = useState<TaskType>("task");
-  const [initialChatChannelId, setInitialChatChannelId] = useState<string | undefined>();
+  const [initialChatChannelId, setInitialChatChannelId] = useState<
+    string | undefined
+  >();
   const search = useSearch();
 
   useEffect(() => {
@@ -320,17 +322,9 @@ export default function SpaceDetail() {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="p-4 sm:p-6"
+              className="p-4 pb-0 sm:p-6 sm:pb-0"
             >
-              <div className="flex items-center justify-between mb-5">
-                <h2 className="text-sm font-semibold text-foreground">
-                  Kanban Board
-                </h2>
-                <span className="text-xs text-muted-foreground">
-                  {tasks.length} total tasks
-                </span>
-              </div>
-              <KanbanBoard tasks={tasks} members={members} spaceId={spaceId} />
+              <KanbanBoard tasks={tasks} members={members} spaceId={spaceId} totalTasks={tasks.length} />
             </motion.div>
           )}
 

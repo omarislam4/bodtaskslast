@@ -163,3 +163,39 @@ None
 - The top-level `Goals` page uses `GET /api/goals`.
 - The `SpaceDetail` goals tab uses the same endpoint with `?spaceId={spaceId}`.
 - `linkedTaskIds` keeps the relation between a goal and relevant tasks.
+
+## Pagination
+
+`GET /api/goals` supports opt-in pagination with `page` and `perPage`. This also applies when filtering by `spaceId`. Without pagination parameters, it keeps returning the existing plain array response.
+
+### Pagination Examples
+
+Without pagination:
+
+```http
+GET /api/goals?spaceId=5
+```
+
+Returns a plain goal array.
+
+With pagination:
+
+```http
+GET /api/goals?spaceId=5&page=1&perPage=10
+```
+
+Returns `data`, `meta`, `links`, and `stats`.
+
+```json
+{
+  "stats": {
+    "total": 24,
+    "onTrack": 14,
+    "atRisk": 6,
+    "offTrack": 2,
+    "completed": 2
+  }
+}
+```
+
+`stats` is computed over all goals matching the active filters, independent of the current page.
