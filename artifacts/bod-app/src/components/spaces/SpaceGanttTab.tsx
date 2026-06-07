@@ -1,11 +1,13 @@
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Layers } from "lucide-react";
-import { useTasksBySpace } from "@/hooks/useTaskQueries";
+import { GanttRowSkeleton } from "@/components/shared/SkeletonLoader";
+import { useAllTasksInfiniteQuery } from "@/hooks/useTaskQueries";
 import type { Task } from "@/types";
 import { format, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useLang } from "@/contexts/LangContext";
+import { useInView } from "react-intersection-observer";
 
 interface Props {
   spaceId: string;
@@ -13,7 +15,16 @@ interface Props {
 
 export function SpaceGanttTab({ spaceId }: Props) {
   const [, navigate] = useLocation();
-  const { data: tasks = [] } = useTasksBySpace(spaceId);
+  const { data, isFetchingNextPage, fetchNextPage, hasNextPage } =
+    useAllTasksInfiniteQuery({ spaceId });
+  const tasks = data?.pages.flatMap((p) => p.data) ?? [];
+
+  const { ref: sentinelRef } = useInView({
+    threshold: 0.1,
+    onChange: (inView) => {
+      if (inView && hasNextPage && !isFetchingNextPage) fetchNextPage();
+    },
+  });
 
   return (
     <motion.div
@@ -24,6 +35,12 @@ export function SpaceGanttTab({ spaceId }: Props) {
       className="p-4 sm:p-6 overflow-x-auto"
     >
       <GanttView tasks={tasks} spaceId={spaceId} onNavigate={navigate} />
+      <div ref={sentinelRef} className="h-4 mt-2" />
+      {isFetchingNextPage && (
+        <div className="space-y-2 mt-2">
+          {[1, 2].map((i) => <GanttRowSkeleton key={i} />)}
+        </div>
+      )}
     </motion.div>
   );
 }

@@ -1,9 +1,12 @@
 import api from "./api";
-import type { Goal, CreateGoalPayload, UpdateGoalPayload } from "@/types";
+import type { Goal, CreateGoalPayload, UpdateGoalPayload, PaginatedGoalsResponse } from "@/types";
 
 export const goalsService = {
   list: (spaceId?: string): Promise<Goal[]> =>
     api.get<Goal[]>("/goals", { params: spaceId ? { spaceId } : undefined }).then((r) => r.data),
+
+  listPaginated: (params: { spaceId?: string; page: number; perPage: number }): Promise<PaginatedGoalsResponse> =>
+    api.get<PaginatedGoalsResponse>("/goals", { params }).then((r) => r.data),
 
   create: (payload: CreateGoalPayload): Promise<Goal> =>
     api

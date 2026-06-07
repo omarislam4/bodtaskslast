@@ -11,16 +11,18 @@ import {
   Trash2,
   Pencil,
 } from "lucide-react";
+import { TaskRowSkeleton } from "@/components/shared/SkeletonLoader";
 import { useLang } from "@/contexts/LangContext";
 import {
-  useSprints,
+  useSprintsInfiniteQuery,
   useCreateSprint,
   useUpdateSprint,
   useDeleteSprint,
   useAddTaskToSprint,
   useRemoveTaskFromSprint,
 } from "@/hooks/useSprintQueries";
-import { useTasksBySpace } from "@/hooks/useTaskQueries";
+import { useAllTasksInfiniteQuery } from "@/hooks/useTaskQueries";
+import { useInView } from "react-intersection-observer";
 import type { Sprint, SprintStatus, Task } from "@/types";
 import { TaskStatusBadge } from "@/components/tasks/TaskStatusBadge";
 import { TaskPriorityBadge } from "@/components/tasks/TaskPriorityBadge";
@@ -55,8 +57,34 @@ interface Props {
 
 export function SpaceSprintsTab({ spaceId }: Props) {
   const { t } = useLang();
-  const { data: sprints = [], isLoading: loading } = useSprints(spaceId);
-  const { data: tasks = [] } = useTasksBySpace(spaceId);
+
+  const {
+    data: sprintsData,
+    isLoading: loading,
+    isFetchingNextPage: fetchingMoreSprints,
+    fetchNextPage: fetchMoreSprints,
+    hasNextPage: hasMoreSprints,
+  } = useSprintsInfiniteQuery(spaceId);
+  const sprints = sprintsData?.pages.flatMap((p) => p.data) ?? [];
+  const sprintCounts = sprintsData?.pages[0]?.counts;
+
+  const {
+    data: tasksData,
+    isFetchingNextPage: fetchingMoreTasks,
+    fetchNextPage: fetchMoreTasks,
+    hasNextPage: hasMoreTasks,
+  } = useAllTasksInfiniteQuery({ spaceId });
+  const tasks = tasksData?.pages.flatMap((p) => p.data) ?? [];
+
+  const { ref: sentinelRef } = useInView({
+    threshold: 0.1,
+    onChange: (inView) => {
+      if (inView) {
+        if (hasMoreSprints && !fetchingMoreSprints) fetchMoreSprints();
+        if (hasMoreTasks && !fetchingMoreTasks) fetchMoreTasks();
+      }
+    },
+  });
   const createSprint = useCreateSprint();
   const updateSprint = useUpdateSprint();
   const deleteSprint = useDeleteSprint();
@@ -186,7 +214,7 @@ export function SpaceSprintsTab({ spaceId }: Props) {
           <div>
             <h2 className="text-base font-bold text-foreground">{t.sprints}</h2>
             <p className="text-xs text-muted-foreground">
-              {sprints.length} sprints · {backlogTasks.length} in backlog
+              {sprintCounts?.total ?? sprints.length} sprints · {backlogTasks.length} in backlog
             </p>
           </div>
         </div>
@@ -337,6 +365,13 @@ export function SpaceSprintsTab({ spaceId }: Props) {
               <Zap className="w-10 h-10 opacity-20 mb-3" />
               <p className="font-semibold">{t.noSprints}</p>
               <p className="text-sm">{t.noSprintsDesc}</p>
+            </div>
+          )}
+
+          <div ref={sentinelRef} className="h-4" />
+          {(fetchingMoreSprints || fetchingMoreTasks) && (
+            <div className="space-y-2">
+              {[1, 2].map((i) => <TaskRowSkeleton key={i} />)}
             </div>
           )}
         </div>

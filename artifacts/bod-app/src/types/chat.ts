@@ -47,3 +47,9 @@ export interface SendMessagePayload {
   mentions?: string[];
   replyTo?: ReplyTo | null;
 }
+
+export interface PaginatedMessagesResponse {
+  data: ChatMessage[];
+  meta: { total: number; page: number; perPage: number; lastPage: number };
+  links: Record<string, string | null>;
+}

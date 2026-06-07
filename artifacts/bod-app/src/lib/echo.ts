@@ -52,7 +52,8 @@ export async function getEcho(): Promise<EchoInstance | null> {
     forceTLS: scheme === "https",
     enabledTransports: ["ws", "wss"],
     authEndpoint: `${apiBaseUrl}/api/broadcasting/auth`,
-    authorizer: (channel: { name: string }) => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    authorizer: ((channel: { name: string }) => ({
       authorize: (
         socketId: string,
         callback: (error: boolean, data: unknown) => void,
@@ -65,7 +66,7 @@ export async function getEcho(): Promise<EchoInstance | null> {
           .then((response) => { console.log("[Echo] Auth success"); callback(false, response.data); })
           .catch((error) => { console.error("[Echo] Auth failed", error); callback(true, error); });
       },
-    }),
+    })) as any,
   });
 
   instance.connector.pusher.connection.bind("connected", () =>

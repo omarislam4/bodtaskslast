@@ -1,5 +1,5 @@
 import api from "./api";
-import type { ChatChannel, ChatMessage, CreateChannelPayload, SendMessagePayload } from "@/types";
+import type { ChatChannel, ChatMessage, CreateChannelPayload, SendMessagePayload, PaginatedMessagesResponse } from "@/types";
 
 export const chatService = {
   listChannels: (spaceId?: string): Promise<ChatChannel[]> =>
@@ -17,6 +17,9 @@ export const chatService = {
 
   listMessages: (channelId: string): Promise<ChatMessage[]> =>
     api.get<ChatMessage[]>(`/chat/channels/${channelId}/messages`).then((r) => r.data),
+
+  listMessagesPaginated: (channelId: string, params: { page: number; perPage: number }): Promise<PaginatedMessagesResponse> =>
+    api.get<PaginatedMessagesResponse>(`/chat/channels/${channelId}/messages`, { params }).then((r) => r.data),
 
   sendMessage: (channelId: string, payload: SendMessagePayload): Promise<ChatMessage> =>
     api

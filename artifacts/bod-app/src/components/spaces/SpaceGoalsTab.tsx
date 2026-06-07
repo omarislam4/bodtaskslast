@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Target, Plus, AlertTriangle, XCircle, CheckCircle2, X, Trash2 } from "lucide-react";
+import { GoalCardSkeleton } from "@/components/shared/SkeletonLoader";
 import { useLang } from "@/contexts/LangContext";
-import { useGoals, useCreateGoal, useUpdateGoal, useDeleteGoal } from "@/hooks/useGoalQueries";
+import { useGoalsInfiniteQuery, useCreateGoal, useUpdateGoal, useDeleteGoal } from "@/hooks/useGoalQueries";
 import type { Goal, GoalType, GoalStatus } from "@/types";
+import { useInView } from "react-intersection-observer";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -27,10 +29,25 @@ interface Props { spaceId: string; }
 
 export function SpaceGoalsTab({ spaceId }: Props) {
   const { t } = useLang();
-  const { data: goals = [], isLoading: loading } = useGoals(spaceId);
+  const {
+    data,
+    isLoading: loading,
+    isFetchingNextPage,
+    fetchNextPage,
+    hasNextPage,
+  } = useGoalsInfiniteQuery(spaceId);
+  const goals = data?.pages.flatMap((p) => p.data) ?? [];
+  const apiStats = data?.pages[0]?.stats;
   const createGoal = useCreateGoal();
   const updateGoal = useUpdateGoal();
   const deleteGoal = useDeleteGoal();
+
+  const { ref: sentinelRef } = useInView({
+    threshold: 0.1,
+    onChange: (inView) => {
+      if (inView && hasNextPage && !isFetchingNextPage) fetchNextPage();
+    },
+  });
 
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({
@@ -84,10 +101,10 @@ export function SpaceGoalsTab({ spaceId }: Props) {
   };
 
   const stats = {
-    total: goals.length,
-    onTrack: goals.filter(g => g.status === "on_track").length,
-    atRisk: goals.filter(g => g.status === "at_risk").length,
-    completed: goals.filter(g => g.status === "completed").length,
+    total:     apiStats?.total     ?? 0,
+    onTrack:   apiStats?.onTrack   ?? 0,
+    atRisk:    apiStats?.atRisk    ?? 0,
+    completed: apiStats?.completed ?? 0,
   };
 
   return (
@@ -135,6 +152,7 @@ export function SpaceGoalsTab({ spaceId }: Props) {
           <p className="text-sm">{t.noGoalsDesc}</p>
         </div>
       ) : (
+        <>
         <div className="space-y-3">
           {goals.map(goal => {
             const pct = getProgress(goal);
@@ -201,6 +219,13 @@ export function SpaceGoalsTab({ spaceId }: Props) {
             );
           })}
         </div>
+        <div ref={sentinelRef} className="h-4 mt-2" />
+        {isFetchingNextPage && (
+          <div className="space-y-3">
+            {[1, 2].map((i) => <GoalCardSkeleton key={i} />)}
+          </div>
+        )}
+        </>
       )}
 
       {/* Create Modal */}

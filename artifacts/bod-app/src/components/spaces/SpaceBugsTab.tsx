@@ -1,13 +1,15 @@
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Bug, AlertTriangle } from "lucide-react";
-import { useAllTasksQuery } from "@/hooks/useTaskQueries";
+import { useAllTasksInfiniteQuery } from "@/hooks/useTaskQueries";
 import type { BugSeverity } from "@/types";
 import { useMembers } from "@/hooks/useMembers";
 import { useLang } from "@/contexts/LangContext";
 import { TaskStatusBadge } from "@/components/tasks/TaskStatusBadge";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useInView } from "react-intersection-observer";
+import { TaskRowSkeleton } from "@/components/shared/SkeletonLoader";
 
 const SEVERITY_CONFIG: Record<BugSeverity, { label: string; color: string; bg: string; border: string }> = {
   critical: { label: "Critical", color: "text-red-500", bg: "bg-red-500/10", border: "border-red-500/30" },
@@ -24,14 +26,28 @@ interface Props {
 
 export function SpaceBugsTab({ spaceId, isInSpace, onReportBug }: Props) {
   const [, navigate] = useLocation();
-  const { data: bugs = [] } = useAllTasksQuery({ type: "bug", spaceId });
+  const {
+    data,
+    isFetchingNextPage,
+    fetchNextPage,
+    hasNextPage,
+  } = useAllTasksInfiniteQuery({ type: "bug", spaceId });
+  const bugs = data?.pages.flatMap((p) => p.data) ?? [];
+  const apiStats = data?.pages[0]?.stats;
   const { members } = useMembers();
   const { t } = useLang();
 
+  const { ref: sentinelRef } = useInView({
+    threshold: 0.1,
+    onChange: (inView) => {
+      if (inView && hasNextPage && !isFetchingNextPage) fetchNextPage();
+    },
+  });
+
   const bugCounts = {
-    total: bugs.length,
-    open: bugs.filter((b) => b.status === "todo").length,
-    critical: bugs.filter((b) => b.bugSeverity === "critical").length,
+    total: apiStats?.total ?? 0,
+    open: apiStats?.byStatus?.["todo"] ?? 0,
+    critical: apiStats?.bySeverity?.["critical"] ?? 0,
   };
 
   return (
@@ -75,6 +91,7 @@ export function SpaceBugsTab({ spaceId, isInSpace, onReportBug }: Props) {
           <p className="text-xs mt-1">Report a bug to start tracking issues.</p>
         </div>
       ) : (
+        <>
         <div className="space-y-2">
           {bugs.map((bug) => {
             const assigned = bug.assigneeIds
@@ -114,6 +131,13 @@ export function SpaceBugsTab({ spaceId, isInSpace, onReportBug }: Props) {
             );
           })}
         </div>
+        <div ref={sentinelRef} className="h-4 mt-2" />
+        {isFetchingNextPage && (
+          <div className="space-y-2 mt-2">
+            {[1, 2].map((i) => <TaskRowSkeleton key={i} />)}
+          </div>
+        )}
+        </>
       )}
     </motion.div>
   );

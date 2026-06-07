@@ -1,4 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { chatService } from "@/services/chat";
 import { useLang } from "@/contexts/LangContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -30,8 +35,10 @@ export const useCreateChannel = () => {
   const qc = useQueryClient();
   const { t } = useLang();
   return useMutation({
-    mutationFn: (payload: CreateChannelPayload) => chatService.createChannel(payload),
-    onSuccess: (channel) => invalidateChannels(qc, channel.spaceId ?? undefined),
+    mutationFn: (payload: CreateChannelPayload) =>
+      chatService.createChannel(payload),
+    onSuccess: (channel) =>
+      invalidateChannels(qc, channel.spaceId ?? undefined),
     onError: () => toast.error(t.errCreateChannel),
   });
 };
@@ -44,14 +51,35 @@ export const useChannelMessages = (channelId: string) =>
     staleTime: 0,
   });
 
+export const useChannelMessagesInfiniteQuery = (channelId: string) =>
+  useInfiniteQuery({
+    queryKey: chatKeys.messagesInfinite(channelId),
+    // page=1 returns the newest batch; higher pages are progressively older
+    queryFn: ({ pageParam }) =>
+      chatService.listMessagesPaginated(channelId, {
+        page: pageParam,
+        perPage: 30,
+      }),
+    getNextPageParam: (lastPage) =>
+      lastPage.meta.page < lastPage.meta.lastPage
+        ? lastPage.meta.page + 1
+        : undefined,
+    initialPageParam: 1,
+    enabled: !!channelId,
+    staleTime: 0,
+  });
+
 export const useSendMessage = (channelId: string) => {
   const qc = useQueryClient();
   const { t } = useLang();
   const { userDoc } = useAuth();
   return useMutation({
-    mutationFn: (payload: SendMessagePayload) => chatService.sendMessage(channelId, payload),
+    mutationFn: (payload: SendMessagePayload) =>
+      chatService.sendMessage(channelId, payload),
     onMutate: async (payload) => {
-      await qc.cancelQueries({ queryKey: chatKeys.messages(channelId) });
+      await qc.cancelQueries({
+        queryKey: chatKeys.messagesInfinite(channelId),
+      });
       const tempId = `pending_${Date.now()}_${Math.random().toString(36).slice(2)}`;
       addPendingMessage(qc, channelId, {
         id: tempId,
@@ -72,6 +100,7 @@ export const useSendMessage = (channelId: string) => {
       confirmPendingMessage(qc, channelId, context.tempId, serverMsg);
     },
     onError: (_err, _vars, context) => {
+      if (!context) return;
       removePendingMessage(qc, channelId, context.tempId);
       toast.error(t.errGeneric);
     },
@@ -121,7 +150,9 @@ export const useToggleReaction = (channelId: string) => {
       // Apply optimistically before the first await so the UI updates in the
       // same render cycle with zero visible delay.
       applyReactionToggle(qc, channelId, msgId, emoji, uid);
-      await qc.cancelQueries({ queryKey: chatKeys.messages(channelId) });
+      await qc.cancelQueries({
+        queryKey: chatKeys.messagesInfinite(channelId),
+      });
     },
     onError: (_err, { msgId, emoji }) => {
       // Re-toggling is its own inverse — no snapshot needed, and it is safe

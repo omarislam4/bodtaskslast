@@ -1,9 +1,12 @@
 import api from "./api";
-import type { Sprint, CreateSprintPayload, UpdateSprintPayload } from "@/types";
+import type { Sprint, CreateSprintPayload, UpdateSprintPayload, PaginatedSprintsResponse } from "@/types";
 
 export const sprintsService = {
   list: (spaceId?: string): Promise<Sprint[]> =>
     api.get<Sprint[]>("/sprints", { params: spaceId ? { spaceId } : undefined }).then((r) => r.data),
+
+  listPaginated: (params: { spaceId?: string; page: number; perPage: number }): Promise<PaginatedSprintsResponse> =>
+    api.get<PaginatedSprintsResponse>("/sprints", { params }).then((r) => r.data),
 
   create: (payload: CreateSprintPayload): Promise<Sprint> =>
     api

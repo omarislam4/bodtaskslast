@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { useTasksBySpace } from "@/hooks/useTaskQueries";
+import { TableRowSkeleton } from "@/components/shared/SkeletonLoader";
+import { useAllTasksInfiniteQuery } from "@/hooks/useTaskQueries";
 import { useMembers } from "@/hooks/useMembers";
 import { useLang } from "@/contexts/LangContext";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { Task } from "@/types";
+import { useInView } from "react-intersection-observer";
 
 interface Props {
   spaceId: string;
@@ -14,9 +16,19 @@ interface Props {
 
 export function SpaceTableTab({ spaceId }: Props) {
   const [, navigate] = useLocation();
-  const { data: tasks = [] } = useTasksBySpace(spaceId);
+  const { data, isFetchingNextPage, fetchNextPage, hasNextPage } =
+    useAllTasksInfiniteQuery({ spaceId });
+  const tasks = data?.pages.flatMap((p) => p.data) ?? [];
+  const total = data?.pages[0]?.stats?.total ?? tasks.length;
   const { members } = useMembers();
   const { t } = useLang();
+
+  const { ref: sentinelRef } = useInView({
+    threshold: 0.1,
+    onChange: (inView) => {
+      if (inView && hasNextPage && !isFetchingNextPage) fetchNextPage();
+    },
+  });
 
   return (
     <motion.div
@@ -28,23 +40,36 @@ export function SpaceTableTab({ spaceId }: Props) {
     >
       <TableView
         tasks={tasks}
+        total={total}
         members={members}
         spaceId={spaceId}
         onNavigate={navigate}
         tableView={t.tableView}
       />
+      <div ref={sentinelRef} className="h-4 mt-2" />
+      {isFetchingNextPage && (
+        <div className="rounded-xl border border-border overflow-hidden mt-2">
+          <table className="w-full text-sm">
+            <tbody className="divide-y divide-border">
+              {[1, 2].map((i) => <TableRowSkeleton key={i} />)}
+            </tbody>
+          </table>
+        </div>
+      )}
     </motion.div>
   );
 }
 
 function TableView({
   tasks,
+  total,
   members,
   spaceId,
   onNavigate,
   tableView,
 }: {
   tasks: Task[];
+  total: number;
   members: { id: string; displayName?: string; email?: string }[];
   spaceId?: string;
   onNavigate: (p: string) => void;
@@ -112,7 +137,7 @@ function TableView({
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-semibold text-foreground">{tableView}</h2>
         <span className="text-xs text-muted-foreground">
-          {tasks.length} tasks
+          {total} tasks
         </span>
       </div>
       <div className="rounded-xl border border-border overflow-hidden">

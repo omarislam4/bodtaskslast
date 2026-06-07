@@ -31,7 +31,6 @@ import {
   Legend,
 } from "recharts";
 import { useQueryClient } from "@tanstack/react-query";
-import { useAllTasksQuery } from "@/hooks/useTaskQueries";
 import { useMembers } from "@/hooks/useMembers";
 import { DashboardStatSkeleton } from "@/components/shared/SkeletonLoader";
 import { TaskStatusBadge } from "@/components/tasks/TaskStatusBadge";
@@ -87,8 +86,6 @@ export default function Dashboard() {
   const { data, isLoading } = useDashboard(perfSpaceId);
   const reassignMutation = useReassignTask();
 
-  // Kanban only loads when that view is active
-  const { data: allTasks = [] } = useAllTasksQuery();
 
   const [reassigning, setReassigning] = useState<string | null>(null);
   const [reassignTarget, setReassignTarget] = useState<Record<string, string>>(
@@ -292,7 +289,7 @@ export default function Dashboard() {
           <h3 className="text-sm font-semibold text-foreground mb-4">
             All Tasks — Kanban
           </h3>
-          <KanbanBoard tasks={allTasks} members={members} />
+          <KanbanBoard members={members} />
         </motion.div>
       )}
 

@@ -30,3 +30,17 @@ export interface UpdateSprintPayload {
   startDate?: string | null;
   endDate?: string | null;
 }
+
+export interface SprintCounts {
+  total: number;
+  active: number;
+  planning: number;
+  completed: number;
+}
+
+export interface PaginatedSprintsResponse {
+  data: Sprint[];
+  meta: { total: number; page: number; perPage: number; lastPage: number };
+  links: Record<string, string | null>;
+  counts: SprintCounts;
+}

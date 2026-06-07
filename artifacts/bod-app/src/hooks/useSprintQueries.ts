@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { sprintsService } from "@/services/sprints";
 import { useLang } from "@/contexts/LangContext";
 import { toast } from "sonner";
@@ -7,12 +7,23 @@ import type { CreateSprintPayload, UpdateSprintPayload } from "@/types";
 export const sprintKeys = {
   all: () => ["sprints"] as const,
   bySpace: (spaceId: string) => ["sprints", spaceId] as const,
+  infinite: (spaceId?: string) => ["sprints-infinite", spaceId] as const,
 };
 
 export const useSprints = (spaceId?: string) =>
   useQuery({
     queryKey: spaceId ? sprintKeys.bySpace(spaceId) : sprintKeys.all(),
     queryFn: () => sprintsService.list(spaceId),
+  });
+
+export const useSprintsInfiniteQuery = (spaceId?: string) =>
+  useInfiniteQuery({
+    queryKey: sprintKeys.infinite(spaceId),
+    queryFn: ({ pageParam }) =>
+      sprintsService.listPaginated({ spaceId, page: pageParam, perPage: 20 }),
+    getNextPageParam: (lastPage) =>
+      lastPage.meta.page < lastPage.meta.lastPage ? lastPage.meta.page + 1 : undefined,
+    initialPageParam: 1,
   });
 
 export const useCreateSprint = () => {

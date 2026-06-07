@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import {
@@ -9,13 +9,15 @@ import {
   Clock,
   XCircle,
   Filter,
-  Layers,
   UserCheck,
   Calendar,
   X,
   Search,
 } from "lucide-react";
-import { useAllTasksQuery, useCreateTask } from "@/hooks/useTaskQueries";
+import { useAllTasksInfiniteQuery, useCreateTask } from "@/hooks/useTaskQueries";
+import { useInView } from "react-intersection-observer";
+import { useDebounce } from "@/hooks/useDebounce";
+import { TaskCardSkeleton } from "@/components/shared/SkeletonLoader";
 import { useSpaces, useSpaceMembers } from "@/hooks/useSpaces";
 import { useMembers } from "@/hooks/useMembers";
 import { useSenders } from "@/hooks/useSenders";
@@ -90,10 +92,6 @@ function SeverityBadge({ severity }: { severity?: BugSeverity }) {
 }
 
 export default function Bugs() {
-  const { data: tasks = [], isLoading: loading } = useAllTasksQuery({
-    type: "bug",
-  });
-  const createBug = useCreateTask();
   const { data: spaces = [] } = useSpaces();
   const { members } = useMembers();
   const { senders } = useSenders();
@@ -103,13 +101,11 @@ export default function Bugs() {
   const severityConfig = severityStatusConfig(t);
   const statusConfig = taskStatusConfig(t);
   const priorityConfig = priorityStateConfig(t);
-
-  const [severityFilter, setSeverityFilter] = useState<BugSeverity | "all">(
-    "all",
-  );
+  const [severityFilter, setSeverityFilter] = useState<BugSeverity | "all">("all");
   const [statusFilter, setStatusFilter] = useState<TaskStatus | "all">("all");
   const [spaceFilter, setSpaceFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery);
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({
     title: "",
@@ -128,48 +124,49 @@ export default function Bugs() {
     progress: 0,
   });
 
-  const stats = useMemo(() => {
-    const total = tasks.length;
-    const open = tasks.filter((b) => b.status === "todo").length;
-    const inProgress = tasks.filter((b) => b.status === "in-progress").length;
-    const resolved = tasks.filter((b) => b.status === "done").length;
-    const critical = tasks.filter((b) => b.bugSeverity === "critical").length;
-    const blocked = tasks.filter((b) => b.status === "blocked").length;
-    return { total, open, inProgress, resolved, critical, blocked };
-  }, [tasks]);
+  const queryParams = {
+    type: "bug" as const,
+    ...(severityFilter !== "all" ? { bugSeverity: severityFilter } : {}),
+    ...(statusFilter !== "all" ? { status: statusFilter } : {}),
+    ...(spaceFilter !== "all" ? { spaceId: spaceFilter } : {}),
+    ...(debouncedSearch ? { search: debouncedSearch } : {}),
+  };
 
-  const filtered = useMemo(() => {
-    let result = tasks;
-    if (severityFilter !== "all")
-      result = result.filter((b) => b.bugSeverity === severityFilter);
-    if (statusFilter !== "all")
-      result = result.filter((b) => b.status === statusFilter);
-    if (spaceFilter !== "all")
-      result = result.filter((b) => b.spaceId === spaceFilter);
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(
-        (b) =>
-          b.title.toLowerCase().includes(q) ||
-          b.description?.toLowerCase().includes(q),
-      );
-    }
-    return result;
-  }, [tasks, severityFilter, statusFilter, spaceFilter, searchQuery]);
+  const {
+    data,
+    isLoading: loading,
+    isFetchingNextPage,
+    fetchNextPage,
+    hasNextPage,
+  } = useAllTasksInfiniteQuery(queryParams);
 
-  const { data: spaceMembers = [] } = useSpaceMembers(
-    form.spaceId || undefined,
-  );
+  const bugs = data?.pages.flatMap((p) => p.data) ?? [];
+  const apiStats = data?.pages[0]?.stats;
+
+  const stats = {
+    total: apiStats?.total ?? 0,
+    open: apiStats?.byStatus?.["todo"] ?? 0,
+    inProgress: apiStats?.byStatus?.["in-progress"] ?? 0,
+    resolved: apiStats?.byStatus?.["done"] ?? 0,
+    critical: apiStats?.bySeverity?.["critical"] ?? 0,
+    blocked: apiStats?.byStatus?.["blocked"] ?? 0,
+  };
+
+  const { ref: sentinelRef } = useInView({
+    threshold: 0.1,
+    onChange: (inView) => {
+      if (inView && hasNextPage && !isFetchingNextPage) fetchNextPage();
+    },
+  });
+
+  const { data: spaceMembers = [] } = useSpaceMembers(form.spaceId || undefined);
+  const createBug = useCreateTask();
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title.trim() || !form.spaceId) return;
     createBug.mutate(
-      {
-        ...form,
-        type: "bug",
-        deadline: form.deadline || null,
-      },
+      { ...form, type: "bug", deadline: form.deadline || null },
       {
         onSuccess: () => {
           toast.success("Bug reported successfully");
@@ -197,48 +194,14 @@ export default function Bugs() {
   };
 
   const statCards = [
-    {
-      label: t.totalBugs,
-      value: stats.total,
-      icon: Bug,
-      color: "text-primary",
-      bg: "bg-primary/10",
-    },
-    {
-      label: t.openBugs,
-      value: stats.open,
-      icon: Clock,
-      color: "text-blue-400",
-      bg: "bg-blue-400/10",
-    },
-    {
-      label: t.inProgressBugs,
-      value: stats.inProgress,
-      icon: AlertTriangle,
-      color: "text-yellow-500",
-      bg: "bg-yellow-500/10",
-    },
-    {
-      label: t.criticalBugs,
-      value: stats.critical,
-      icon: XCircle,
-      color: "text-red-500",
-      bg: "bg-red-500/10",
-    },
-    {
-      label: t.resolvedBugs,
-      value: stats.resolved,
-      icon: CheckCircle2,
-      color: "text-emerald-500",
-      bg: "bg-emerald-500/10",
-    },
+    { label: t.totalBugs,    value: stats.total,      icon: Bug,          color: "text-primary",    bg: "bg-primary/10" },
+    { label: t.openBugs,     value: stats.open,       icon: Clock,        color: "text-blue-400",   bg: "bg-blue-400/10" },
+    { label: t.inProgressBugs, value: stats.inProgress, icon: AlertTriangle, color: "text-yellow-500", bg: "bg-yellow-500/10" },
+    { label: t.criticalBugs, value: stats.critical,   icon: XCircle,      color: "text-red-500",    bg: "bg-red-500/10" },
+    { label: t.resolvedBugs, value: stats.resolved,   icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-500/10" },
   ];
 
-  const severityOptionsSelect: (BugSeverity | "all")[] = [
-    "all",
-    ...severityOptions,
-  ];
-
+  const severityOptionsSelect: (BugSeverity | "all")[] = ["all", ...severityOptions];
   const statusOptionsSelect: (TaskStatus | "all")[] = ["all", ...statusOptions];
 
   return (
@@ -250,13 +213,9 @@ export default function Bugs() {
             <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center">
               <Bug className="w-4 h-4 text-red-500" />
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold text-foreground">
-              {t.bugTracker}
-            </h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground">{t.bugTracker}</h1>
           </div>
-          <p className="text-sm text-muted-foreground">
-            {t.trackAndResolveBugs}
-          </p>
+          <p className="text-sm text-muted-foreground">{t.trackAndResolveBugs}</p>
         </div>
         {isAdmin && (
           <motion.button
@@ -281,12 +240,8 @@ export default function Bugs() {
             className="bg-card border border-border rounded-xl p-4 shadow-sm"
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-muted-foreground">
-                {card.label}
-              </span>
-              <div
-                className={`w-7 h-7 rounded-lg ${card.bg} flex items-center justify-center`}
-              >
+              <span className="text-xs font-medium text-muted-foreground">{card.label}</span>
+              <div className={`w-7 h-7 rounded-lg ${card.bg} flex items-center justify-center`}>
                 <card.icon className={`w-3.5 h-3.5 ${card.color}`} />
               </div>
             </div>
@@ -303,9 +258,7 @@ export default function Bugs() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-            onClick={(e) => {
-              if (e.target === e.currentTarget) setShowCreate(false);
-            }}
+            onClick={(e) => { if (e.target === e.currentTarget) setShowCreate(false); }}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -318,14 +271,9 @@ export default function Bugs() {
                   <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center">
                     <Bug className="w-4 h-4 text-red-500" />
                   </div>
-                  <h2 className="text-base font-bold text-foreground">
-                    {t.reportABug}
-                  </h2>
+                  <h2 className="text-base font-bold text-foreground">{t.reportABug}</h2>
                 </div>
-                <button
-                  onClick={() => setShowCreate(false)}
-                  className="text-muted-foreground hover:text-foreground"
-                >
+                <button onClick={() => setShowCreate(false)} className="text-muted-foreground hover:text-foreground">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -333,9 +281,7 @@ export default function Bugs() {
               <form onSubmit={handleCreate} className="space-y-4">
                 <input
                   value={form.title}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, title: e.target.value }))
-                  }
+                  onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                   placeholder="Bug title..."
                   required
                   autoFocus
@@ -343,20 +289,14 @@ export default function Bugs() {
                 />
                 <textarea
                   value={form.description}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, description: e.target.value }))
-                  }
+                  onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                   placeholder="Describe the bug..."
                   rows={2}
                   className="w-full px-3 py-2.5 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/30 resize-none"
                 />
-
-                {/* Bug-specific fields */}
                 <textarea
                   value={form.stepsToReproduce}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, stepsToReproduce: e.target.value }))
-                  }
+                  onChange={(e) => setForm((f) => ({ ...f, stepsToReproduce: e.target.value }))}
                   placeholder="Steps to reproduce: 1. Go to... 2. Click on... 3. See error"
                   rows={3}
                   className="w-full px-3 py-2.5 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/30 resize-none"
@@ -364,21 +304,14 @@ export default function Bugs() {
                 <div className="grid grid-cols-2 gap-3">
                   <textarea
                     value={form.expectedBehavior}
-                    onChange={(e) =>
-                      setForm((f) => ({
-                        ...f,
-                        expectedBehavior: e.target.value,
-                      }))
-                    }
+                    onChange={(e) => setForm((f) => ({ ...f, expectedBehavior: e.target.value }))}
                     placeholder="Expected behavior..."
                     rows={2}
                     className="w-full px-3 py-2.5 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/30 resize-none"
                   />
                   <textarea
                     value={form.actualBehavior}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, actualBehavior: e.target.value }))
-                    }
+                    onChange={(e) => setForm((f) => ({ ...f, actualBehavior: e.target.value }))}
                     placeholder="Actual behavior..."
                     rows={2}
                     className="w-full px-3 py-2.5 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/30 resize-none"
@@ -387,107 +320,56 @@ export default function Bugs() {
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div>
-                    <label className="text-xs text-muted-foreground block mb-1">
-                      {t.bugSeverity}
-                    </label>
-                    <Select
-                      value={form.bugSeverity}
-                      onValueChange={(v) =>
-                        setForm((f) => ({
-                          ...f,
-                          bugSeverity: v as BugSeverity,
-                        }))
-                      }
-                    >
-                      <SelectTrigger className="w-full text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
+                    <label className="text-xs text-muted-foreground block mb-1">{t.bugSeverity}</label>
+                    <Select value={form.bugSeverity} onValueChange={(v) => setForm((f) => ({ ...f, bugSeverity: v as BugSeverity }))}>
+                      <SelectTrigger className="w-full text-sm"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {severityOptions.map((s) => (
-                          <SelectItem key={s} value={s}>
-                            {severityConfig[s].label}
-                          </SelectItem>
+                          <SelectItem key={s} value={s}>{severityConfig[s].label}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground block mb-1">
-                      {t.priority}
-                    </label>
-                    <Select
-                      value={form.priority}
-                      onValueChange={(v) =>
-                        setForm((f) => ({ ...f, priority: v as TaskPriority }))
-                      }
-                    >
-                      <SelectTrigger className="w-full text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
+                    <label className="text-xs text-muted-foreground block mb-1">{t.priority}</label>
+                    <Select value={form.priority} onValueChange={(v) => setForm((f) => ({ ...f, priority: v as TaskPriority }))}>
+                      <SelectTrigger className="w-full text-sm"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {priorityOptions.map((p) => (
-                          <SelectItem key={p} value={p}>
-                            {priorityConfig[p].label}
-                          </SelectItem>
+                          <SelectItem key={p} value={p}>{priorityConfig[p].label}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground block mb-1">
-                      {t.status}
-                    </label>
-                    <Select
-                      value={form.status}
-                      onValueChange={(v) =>
-                        setForm((f) => ({ ...f, status: v as TaskStatus }))
-                      }
-                    >
-                      <SelectTrigger className="w-full text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
+                    <label className="text-xs text-muted-foreground block mb-1">{t.status}</label>
+                    <Select value={form.status} onValueChange={(v) => setForm((f) => ({ ...f, status: v as TaskStatus }))}>
+                      <SelectTrigger className="w-full text-sm"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {statusOptions.map((s) => (
-                          <SelectItem key={s} value={s}>
-                            {statusConfig[s].label}
-                          </SelectItem>
+                          <SelectItem key={s} value={s}>{statusConfig[s].label}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground block mb-1">
-                      {t.deadline}
-                    </label>
+                    <label className="text-xs text-muted-foreground block mb-1">{t.deadline}</label>
                     <input
                       type="date"
                       value={form.deadline}
-                      onChange={(e) =>
-                        setForm((f) => ({ ...f, deadline: e.target.value }))
-                      }
+                      onChange={(e) => setForm((f) => ({ ...f, deadline: e.target.value }))}
                       className="w-full px-3 py-2 text-sm bg-background border border-input rounded-xl focus:outline-none"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-xs text-muted-foreground block mb-1">
-                    Space
-                  </label>
-                  <Select
-                    value={form.spaceId}
-                    onValueChange={(v) =>
-                      setForm((f) => ({ ...f, spaceId: v, assigneeIds: [] }))
-                    }
-                  >
-                    <SelectTrigger className="w-full text-sm">
-                      <SelectValue placeholder="Select a space..." />
-                    </SelectTrigger>
+                  <label className="text-xs text-muted-foreground block mb-1">Space</label>
+                  <Select value={form.spaceId} onValueChange={(v) => setForm((f) => ({ ...f, spaceId: v, assigneeIds: [] }))}>
+                    <SelectTrigger className="w-full text-sm"><SelectValue placeholder="Select a space..." /></SelectTrigger>
                     <SelectContent>
                       {spaces.map((s) => (
-                        <SelectItem key={s.id} value={s.id}>
-                          {s.name}
-                        </SelectItem>
+                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -495,9 +377,7 @@ export default function Bugs() {
 
                 {form.spaceId && spaceMembers.length > 0 && (
                   <div>
-                    <label className="text-xs text-muted-foreground block mb-1.5">
-                      {t.assignMembers}
-                    </label>
+                    <label className="text-xs text-muted-foreground block mb-1.5">{t.assignMembers}</label>
                     <div className="flex flex-wrap gap-2">
                       {spaceMembers.map((m) => (
                         <button
@@ -530,24 +410,13 @@ export default function Bugs() {
 
                 {senders.length > 0 && (
                   <div>
-                    <label className="text-xs text-muted-foreground block mb-1">
-                      {t.senderFrom}
-                    </label>
-                    <Select
-                      value={form.senderId}
-                      onValueChange={(v) =>
-                        setForm((f) => ({ ...f, senderId: v }))
-                      }
-                    >
-                      <SelectTrigger className="w-full text-sm">
-                        <SelectValue placeholder="None" />
-                      </SelectTrigger>
+                    <label className="text-xs text-muted-foreground block mb-1">{t.senderFrom}</label>
+                    <Select value={form.senderId} onValueChange={(v) => setForm((f) => ({ ...f, senderId: v }))}>
+                      <SelectTrigger className="w-full text-sm"><SelectValue placeholder="None" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="">None</SelectItem>
                         {senders.map((s) => (
-                          <SelectItem key={s.id} value={s.id}>
-                            {s.name}
-                          </SelectItem>
+                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -555,11 +424,7 @@ export default function Bugs() {
                 )}
 
                 <div className="flex gap-3 justify-end pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowCreate(false)}
-                    className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground"
-                  >
+                  <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground">
                     {t.cancel}
                   </button>
                   <button
@@ -578,7 +443,6 @@ export default function Bugs() {
 
       {/* Filters */}
       <div className="bg-card border border-border rounded-xl p-4 mb-5 shadow-sm space-y-3">
-        {/* Search */}
         <div className="relative">
           <Search className="absolute inset-s-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
           <input
@@ -592,9 +456,7 @@ export default function Bugs() {
         <div className="flex flex-wrap gap-2">
           <div className="flex items-center gap-1">
             <Filter className="w-3.5 h-3.5 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground font-medium">
-              {t.bugSeverity}:
-            </span>
+            <span className="text-xs text-muted-foreground font-medium">{t.bugSeverity}:</span>
           </div>
           {severityOptionsSelect.map((s) => (
             <button
@@ -616,9 +478,7 @@ export default function Bugs() {
 
         <div className="flex flex-wrap gap-2">
           <div className="flex items-center gap-1">
-            <span className="text-xs text-muted-foreground font-medium">
-              {t.status}:
-            </span>
+            <span className="text-xs text-muted-foreground font-medium">{t.status}:</span>
           </div>
           {statusOptionsSelect.map((s) => (
             <button
@@ -638,16 +498,12 @@ export default function Bugs() {
 
         {spaces.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            <span className="text-xs text-muted-foreground font-medium self-center">
-              {t.spaces}:
-            </span>
+            <span className="text-xs text-muted-foreground font-medium self-center">{t.spaces}:</span>
             <button
               onClick={() => setSpaceFilter("all")}
               className={cn(
                 "px-3 py-1 text-xs font-medium rounded-lg transition-all",
-                spaceFilter === "all"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:text-foreground",
+                spaceFilter === "all" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground",
               )}
             >
               {t.all}
@@ -658,15 +514,10 @@ export default function Bugs() {
                 onClick={() => setSpaceFilter(space.id)}
                 className={cn(
                   "px-3 py-1 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5",
-                  spaceFilter === space.id
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:text-foreground",
+                  spaceFilter === space.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground",
                 )}
               >
-                <span
-                  className="w-1.5 h-1.5 rounded-full"
-                  style={{ backgroundColor: space.color || "#6366f1" }}
-                />
+                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: space.color || "#6366f1" }} />
                 {space.name}
               </button>
             ))}
@@ -677,97 +528,95 @@ export default function Bugs() {
       {/* Bug list */}
       {loading ? (
         <div className="space-y-3">
-          {Array(5)
-            .fill(0)
-            .map((_, i) => (
-              <div key={i} className="h-20 bg-muted rounded-xl animate-pulse" />
-            ))}
+          {Array(5).fill(0).map((_, i) => (
+            <div key={i} className="h-20 bg-muted rounded-xl animate-pulse" />
+          ))}
         </div>
-      ) : filtered.length === 0 ? (
+      ) : bugs.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
           <Bug className="w-12 h-12 mb-3 opacity-20" />
           <p className="text-sm font-medium">
-            {tasks.length === 0 ? t.noBugsYet : "No bugs match your filters"}
+            {!debouncedSearch && severityFilter === "all" && statusFilter === "all" && spaceFilter === "all"
+              ? t.noBugsYet
+              : "No bugs match your filters"}
           </p>
           <p className="text-xs mt-1">
-            {tasks.length === 0
+            {!debouncedSearch && severityFilter === "all" && statusFilter === "all" && spaceFilter === "all"
               ? t.noBugsDesc
               : "Try adjusting the filters above."}
           </p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {filtered.map((bug, i) => {
-            const space = spaces.find((s) => s.id === bug.spaceId);
-            const assigned = bug.assigneeIds
-              .map((id) => members.find((m) => m.id === id))
-              .filter(Boolean) as typeof members;
-            return (
-              <motion.div
-                key={bug.id}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.03 }}
-                onClick={() =>
-                  navigate(`/spaces/${bug.spaceId}/tasks/${bug.id}`)
-                }
-                className="bg-card border border-border rounded-xl p-4 cursor-pointer hover:border-primary/30 hover:shadow-md transition-all group"
-              >
-                <div className="flex items-start gap-3 flex-wrap sm:flex-nowrap">
-                  <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
-                    <Bug className="w-4 h-4 text-red-400 shrink-0" />
-                    <SeverityBadge severity={bug.bugSeverity ?? undefined} />
-                  </div>
+        <>
+          <div className="space-y-2">
+            {bugs.map((bug, i) => {
+              const space = spaces.find((s) => s.id === bug.spaceId);
+              const assigned = bug.assigneeIds
+                .map((id) => members.find((m) => m.id === id))
+                .filter(Boolean) as typeof members;
+              return (
+                <motion.div
+                  key={bug.id}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: Math.min(i * 0.03, 0.3) }}
+                  onClick={() => navigate(`/spaces/${bug.spaceId}/tasks/${bug.id}`)}
+                  className="bg-card border border-border rounded-xl p-4 cursor-pointer hover:border-primary/30 hover:shadow-md transition-all group"
+                >
+                  <div className="flex items-start gap-3 flex-wrap sm:flex-nowrap">
+                    <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+                      <Bug className="w-4 h-4 text-red-400 shrink-0" />
+                      <SeverityBadge severity={bug.bugSeverity ?? undefined} />
+                    </div>
 
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors truncate">
-                      {bug.title}
-                    </h3>
-                    {bug.description && (
-                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                        {bug.description}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-3 mt-2 flex-wrap">
-                      {space && (
-                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <span
-                            className="w-1.5 h-1.5 rounded-full shrink-0"
-                            style={{
-                              backgroundColor: space.color || "#6366f1",
-                            }}
-                          />
-                          {space.name}
-                        </span>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors truncate">
+                        {bug.title}
+                      </h3>
+                      {bug.description && (
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{bug.description}</p>
                       )}
-                      {assigned.length > 0 && (
-                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <UserCheck className="w-3 h-3" />
-                          {assigned
-                            .map((m) => m.displayName || m.email)
-                            .join(", ")}
-                        </span>
-                      )}
-                      {bug.deadline && (
-                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Calendar className="w-3 h-3" />
-                          {format(new Date(bug.deadline), "MMM d, yyyy")}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-3 mt-2 flex-wrap">
+                        {space && (
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: space.color || "#6366f1" }} />
+                            {space.name}
+                          </span>
+                        )}
+                        {assigned.length > 0 && (
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <UserCheck className="w-3 h-3" />
+                            {assigned.map((m) => m.displayName || m.email).join(", ")}
+                          </span>
+                        )}
+                        {bug.deadline && (
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Calendar className="w-3 h-3" />
+                            {format(new Date(bug.deadline), "MMM d, yyyy")}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <TaskStatusBadge status={bug.status} size="sm" />
+                      {bug.status === "done" && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
                     </div>
                   </div>
+                </motion.div>
+              );
+            })}
+          </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    <TaskStatusBadge status={bug.status} size="sm" />
-                    {bug.status === "done" && (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
+          {/* Infinite scroll sentinel */}
+          <div ref={sentinelRef} className="h-4 mt-2" />
+
+          {isFetchingNextPage && (
+            <div className="space-y-2">
+              {[1, 2].map((i) => <TaskCardSkeleton key={i} />)}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

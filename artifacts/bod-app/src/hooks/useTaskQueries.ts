@@ -1,8 +1,19 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { tasksService } from "@/services/tasks";
 import { useLang } from "@/contexts/LangContext";
 import { toast } from "sonner";
-import type { Task, CreateTaskPayload, UpdateTaskPayload, TaskQueryParams, DependencyType } from "@/types";
+import type {
+  Task,
+  CreateTaskPayload,
+  UpdateTaskPayload,
+  TaskQueryParams,
+  DependencyType,
+} from "@/types";
 import { taskKeys } from "./taskKeys";
 import {
   setTaskDetail,
@@ -28,10 +39,45 @@ export const useAllTasksQuery = (params?: TaskQueryParams) =>
     queryFn: () => tasksService.list(params),
   });
 
-export const useMyTasksQuery = (params?: { scope?: "today" | "overdue" | "upcoming" | "all"; search?: string }) =>
+export const useAllTasksInfiniteQuery = (params?: TaskQueryParams) =>
+  useInfiniteQuery({
+    queryKey: taskKeys.allInfinite(params),
+    queryFn: ({ pageParam }) =>
+      tasksService.listPaginated({ ...params, page: pageParam, perPage: 20 }),
+    getNextPageParam: (lastPage) =>
+      lastPage.meta.page < lastPage.meta.lastPage
+        ? lastPage.meta.page + 1
+        : undefined,
+    initialPageParam: 1,
+  });
+
+export const useMyTasksQuery = (params?: {
+  scope?: "today" | "overdue" | "upcoming" | "all";
+  search?: string;
+}) =>
   useQuery({
     queryKey: taskKeys.myTasks(params),
     queryFn: () => tasksService.myTasks(params),
+  });
+
+export const useMyTasksInfiniteQuery = (params?: {
+  scope?: "today" | "overdue" | "upcoming" | "all";
+  search?: string;
+}) =>
+  useInfiniteQuery({
+    queryKey: taskKeys.myTasksInfinite(params),
+    queryFn: ({ pageParam }) =>
+      tasksService.myTasksPaginated({
+        ...params,
+        page: pageParam,
+        perPage: 20,
+      }),
+    getNextPageParam: (lastPage) =>
+      lastPage.meta.page < lastPage.meta.lastPage
+        ? lastPage.meta.page + 1
+        : undefined,
+    initialPageParam: 1,
+    placeholderData: (prevData) => prevData,
   });
 
 export const useTimelineQuery = (month: string) =>
@@ -41,10 +87,32 @@ export const useTimelineQuery = (month: string) =>
     enabled: !!month,
   });
 
-export const useHistoryQuery = (params?: { search?: string; priority?: string }) =>
+export const useHistoryQuery = (params?: {
+  search?: string;
+  priority?: string;
+}) =>
   useQuery({
     queryKey: taskKeys.history(params),
     queryFn: () => tasksService.history(params),
+  });
+
+export const useHistoryInfiniteQuery = (params?: {
+  search?: string;
+  priority?: string;
+}) =>
+  useInfiniteQuery({
+    queryKey: taskKeys.historyInfinite(params),
+    queryFn: ({ pageParam }) =>
+      tasksService.historyPaginated({
+        ...params,
+        page: pageParam,
+        perPage: 20,
+      }),
+    getNextPageParam: (lastPage) =>
+      lastPage.meta.page < lastPage.meta.lastPage
+        ? lastPage.meta.page + 1
+        : undefined,
+    initialPageParam: 1,
   });
 
 export const useTasksBySpace = (spaceId: string) =>
@@ -78,7 +146,8 @@ export const useUpdateTask = (id: string) => {
   const qc = useQueryClient();
   const { t } = useLang();
   return useMutation({
-    mutationFn: (payload: UpdateTaskPayload) => tasksService.update(id, payload),
+    mutationFn: (payload: UpdateTaskPayload) =>
+      tasksService.update(id, payload),
     onMutate: async (payload) => {
       await qc.cancelQueries({ queryKey: taskKeys.detail(id) });
       const previous = applyTaskPatch(qc, id, payload);
@@ -89,7 +158,8 @@ export const useUpdateTask = (id: string) => {
       invalidateTaskList(qc, task.spaceId);
     },
     onError: (_err, _vars, context) => {
-      if (context?.previous) qc.setQueryData(taskKeys.detail(id), context.previous);
+      if (context?.previous)
+        qc.setQueryData(taskKeys.detail(id), context.previous);
       toast.error(t.errUpdateTask);
     },
   });
@@ -119,7 +189,8 @@ export const useAddComment = (taskId: string) => {
 export const useSendReminder = (taskId: string) => {
   const { t } = useLang();
   return useMutation({
-    mutationFn: (payload: { target: string }) => tasksService.sendReminder(taskId, payload),
+    mutationFn: (payload: { target: string }) =>
+      tasksService.sendReminder(taskId, payload),
     onError: () => toast.error(t.errGeneric),
   });
 };
@@ -141,8 +212,13 @@ export const useUpdateChecklistItem = (taskId: string) => {
   const qc = useQueryClient();
   const { t } = useLang();
   return useMutation({
-    mutationFn: ({ itemId, payload }: { itemId: string; payload: { done?: boolean; text?: string } }) =>
-      tasksService.updateChecklistItem(taskId, itemId, payload),
+    mutationFn: ({
+      itemId,
+      payload,
+    }: {
+      itemId: string;
+      payload: { done?: boolean; text?: string };
+    }) => tasksService.updateChecklistItem(taskId, itemId, payload),
     onMutate: async ({ itemId, payload }) => {
       await qc.cancelQueries({ queryKey: taskKeys.detail(taskId) });
       const previous = applyChecklistPatch(qc, taskId, itemId, payload);
@@ -150,7 +226,8 @@ export const useUpdateChecklistItem = (taskId: string) => {
     },
     onSuccess: () => invalidateTaskDetail(qc, taskId),
     onError: (_err, _vars, context) => {
-      if (context?.previous) qc.setQueryData(taskKeys.detail(taskId), context.previous);
+      if (context?.previous)
+        qc.setQueryData(taskKeys.detail(taskId), context.previous);
       toast.error(t.errUpdateTask);
     },
   });
@@ -160,7 +237,8 @@ export const useDeleteChecklistItem = (taskId: string) => {
   const qc = useQueryClient();
   const { t } = useLang();
   return useMutation({
-    mutationFn: (itemId: string) => tasksService.deleteChecklistItem(taskId, itemId),
+    mutationFn: (itemId: string) =>
+      tasksService.deleteChecklistItem(taskId, itemId),
     onMutate: async (itemId) => {
       await qc.cancelQueries({ queryKey: taskKeys.detail(taskId) });
       const previous = removeChecklistItem(qc, taskId, itemId);
@@ -168,7 +246,8 @@ export const useDeleteChecklistItem = (taskId: string) => {
     },
     onSuccess: () => invalidateTaskDetail(qc, taskId),
     onError: (_err, _vars, context) => {
-      if (context?.previous) qc.setQueryData(taskKeys.detail(taskId), context.previous);
+      if (context?.previous)
+        qc.setQueryData(taskKeys.detail(taskId), context.previous);
       toast.error(t.errUpdateTask);
     },
   });
@@ -180,7 +259,8 @@ export const useAddSubtask = (taskId: string) => {
   const qc = useQueryClient();
   const { t } = useLang();
   return useMutation({
-    mutationFn: (payload: { title: string }) => tasksService.addSubtask(taskId, payload),
+    mutationFn: (payload: { title: string }) =>
+      tasksService.addSubtask(taskId, payload),
     onSuccess: () => invalidateTaskDetail(qc, taskId),
     onError: () => toast.error(t.errUpdateTask),
   });
@@ -190,16 +270,27 @@ export const useUpdateSubtask = (taskId: string) => {
   const qc = useQueryClient();
   const { t } = useLang();
   return useMutation({
-    mutationFn: ({ subtaskId, payload }: { subtaskId: string; payload: { status?: string; title?: string } }) =>
-      tasksService.updateSubtask(taskId, subtaskId, payload),
+    mutationFn: ({
+      subtaskId,
+      payload,
+    }: {
+      subtaskId: string;
+      payload: { status?: string; title?: string };
+    }) => tasksService.updateSubtask(taskId, subtaskId, payload),
     onMutate: async ({ subtaskId, payload }) => {
       await qc.cancelQueries({ queryKey: taskKeys.detail(taskId) });
-      const previous = applySubtaskPatch(qc, taskId, subtaskId, payload as { status?: Task["status"]; title?: string });
+      const previous = applySubtaskPatch(
+        qc,
+        taskId,
+        subtaskId,
+        payload as { status?: Task["status"]; title?: string },
+      );
       return { previous };
     },
     onSuccess: () => invalidateTaskDetail(qc, taskId),
     onError: (_err, _vars, context) => {
-      if (context?.previous) qc.setQueryData(taskKeys.detail(taskId), context.previous);
+      if (context?.previous)
+        qc.setQueryData(taskKeys.detail(taskId), context.previous);
       toast.error(t.errUpdateTask);
     },
   });
@@ -209,7 +300,8 @@ export const useDeleteSubtask = (taskId: string) => {
   const qc = useQueryClient();
   const { t } = useLang();
   return useMutation({
-    mutationFn: (subtaskId: string) => tasksService.deleteSubtask(taskId, subtaskId),
+    mutationFn: (subtaskId: string) =>
+      tasksService.deleteSubtask(taskId, subtaskId),
     onMutate: async (subtaskId) => {
       await qc.cancelQueries({ queryKey: taskKeys.detail(taskId) });
       const previous = removeSubtask(qc, taskId, subtaskId);
@@ -217,7 +309,8 @@ export const useDeleteSubtask = (taskId: string) => {
     },
     onSuccess: () => invalidateTaskDetail(qc, taskId),
     onError: (_err, _vars, context) => {
-      if (context?.previous) qc.setQueryData(taskKeys.detail(taskId), context.previous);
+      if (context?.previous)
+        qc.setQueryData(taskKeys.detail(taskId), context.previous);
       toast.error(t.errUpdateTask);
     },
   });
@@ -229,8 +322,13 @@ export const useAddTimeEntry = (taskId: string) => {
   const qc = useQueryClient();
   const { t } = useLang();
   return useMutation({
-    mutationFn: (payload: { duration: number; note?: string; billable?: boolean; startTime?: number; endTime?: number }) =>
-      tasksService.addTimeEntry(taskId, payload),
+    mutationFn: (payload: {
+      duration: number;
+      note?: string;
+      billable?: boolean;
+      startTime?: number;
+      endTime?: number;
+    }) => tasksService.addTimeEntry(taskId, payload),
     onSuccess: () => invalidateTaskDetail(qc, taskId),
     onError: () => toast.error(t.errUpdateTask),
   });
@@ -240,7 +338,8 @@ export const useDeleteTimeEntry = (taskId: string) => {
   const qc = useQueryClient();
   const { t } = useLang();
   return useMutation({
-    mutationFn: (entryId: string) => tasksService.deleteTimeEntry(taskId, entryId),
+    mutationFn: (entryId: string) =>
+      tasksService.deleteTimeEntry(taskId, entryId),
     onSuccess: () => invalidateTaskDetail(qc, taskId),
     onError: () => toast.error(t.errUpdateTask),
   });
@@ -263,7 +362,8 @@ export const useDeleteDependency = (taskId: string) => {
   const qc = useQueryClient();
   const { t } = useLang();
   return useMutation({
-    mutationFn: (depTaskId: string) => tasksService.deleteDependency(taskId, depTaskId),
+    mutationFn: (depTaskId: string) =>
+      tasksService.deleteDependency(taskId, depTaskId),
     onSuccess: () => invalidateTaskDetail(qc, taskId),
     onError: () => toast.error(t.errUpdateTask),
   });
@@ -293,7 +393,8 @@ export const useDeleteTag = (taskId: string) => {
     },
     onSuccess: () => invalidateTaskDetail(qc, taskId),
     onError: (_err, _vars, context) => {
-      if (context?.previous) qc.setQueryData(taskKeys.detail(taskId), context.previous);
+      if (context?.previous)
+        qc.setQueryData(taskKeys.detail(taskId), context.previous);
       toast.error(t.errUpdateTask);
     },
   });
@@ -313,7 +414,8 @@ export const useAddWatcher = (taskId: string) => {
     },
     onSuccess: () => invalidateTaskDetail(qc, taskId),
     onError: (_err, _vars, context) => {
-      if (context?.previous) qc.setQueryData(taskKeys.detail(taskId), context.previous);
+      if (context?.previous)
+        qc.setQueryData(taskKeys.detail(taskId), context.previous);
       toast.error(t.errUpdateTask);
     },
   });
@@ -331,7 +433,8 @@ export const useRemoveWatcher = (taskId: string) => {
     },
     onSuccess: () => invalidateTaskDetail(qc, taskId),
     onError: (_err, _vars, context) => {
-      if (context?.previous) qc.setQueryData(taskKeys.detail(taskId), context.previous);
+      if (context?.previous)
+        qc.setQueryData(taskKeys.detail(taskId), context.previous);
       toast.error(t.errUpdateTask);
     },
   });

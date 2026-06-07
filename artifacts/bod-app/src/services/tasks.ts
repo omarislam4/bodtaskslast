@@ -9,20 +9,32 @@ import type {
   TimeEntry,
   DependencyType,
   ActivityLog,
+  PaginatedMyTasksResponse,
+  PaginatedHistoryResponse,
+  PaginatedTasksResponse,
 } from "@/types";
 
 export const tasksService = {
   list: (params?: TaskQueryParams): Promise<Task[]> =>
     api.get<Task[]>("/tasks", { params }).then((r) => r.data),
 
+  listPaginated: (params: TaskQueryParams & { page: number; perPage: number }): Promise<PaginatedTasksResponse> =>
+    api.get<PaginatedTasksResponse>("/tasks", { params }).then((r) => r.data),
+
   myTasks: (params?: { scope?: "today" | "overdue" | "upcoming" | "all"; search?: string }): Promise<Task[]> =>
     api.get<Task[]>("/my-tasks", { params }).then((r) => r.data),
+
+  myTasksPaginated: (params: { scope?: "today" | "overdue" | "upcoming" | "all"; search?: string; page: number; perPage: number }): Promise<PaginatedMyTasksResponse> =>
+    api.get<PaginatedMyTasksResponse>("/my-tasks", { params }).then((r) => r.data),
 
   timeline: (month: string): Promise<{ month: string; tasks: Task[] }> =>
     api.get("/tasks/timeline", { params: { month } }).then((r) => r.data),
 
   history: (params?: { search?: string; priority?: string }): Promise<Task[]> =>
     api.get<Task[]>("/history", { params }).then((r) => r.data),
+
+  historyPaginated: (params: { search?: string; priority?: string; page: number; perPage: number }): Promise<PaginatedHistoryResponse> =>
+    api.get<PaginatedHistoryResponse>("/history", { params }).then((r) => r.data),
 
   get: (id: string): Promise<Task> =>
     api.get<Task>(`/tasks/${id}`).then((r) => r.data),

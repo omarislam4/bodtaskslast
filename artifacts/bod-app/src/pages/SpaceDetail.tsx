@@ -19,7 +19,6 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
-import { useTasksBySpace } from "@/hooks/useTaskQueries";
 import type { TaskType } from "@/types";
 import {
   useSpaceQuery,
@@ -85,7 +84,6 @@ export default function SpaceDetail() {
 
   const { data: space, isLoading: spaceLoading } = useSpaceQuery(spaceId);
   const { data: spaceMembers = [] } = useSpaceMembers(spaceId);
-  const { data: tasks = [] } = useTasksBySpace(spaceId ?? "");
   const { members } = useMembers();
   const deleteSpace = useDeleteSpace();
 
@@ -145,7 +143,7 @@ export default function SpaceDetail() {
     { id: "members", label: t.membersTab, icon: Users },
     { id: "data", label: t.data, icon: FolderOpen },
     { id: "subspaces", label: t.subspacesTab, icon: Layers },
-    { id: "chat", label: "Chat", icon: MessageCircle },
+    { id: "chat", label: t.chat, icon: MessageCircle },
   ];
 
   const visibleTabs = tabs.filter((tab) => !tab.adminOnly || isAdmin);
@@ -263,11 +261,6 @@ export default function SpaceDetail() {
                 <tab.icon className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
                 <span className="hidden sm:inline">{tab.label}</span>
                 <span className="sm:hidden">{tab.label.split(" ")[0]}</span>
-                {tab.id === "tasks" && tasks.length > 0 && (
-                  <span className="text-xs bg-muted text-muted-foreground rounded-full px-1.5 py-0.5 leading-none hidden sm:inline">
-                    {tasks.length}
-                  </span>
-                )}
               </button>
             ))}
           </div>
@@ -324,7 +317,7 @@ export default function SpaceDetail() {
               exit={{ opacity: 0 }}
               className="p-4 pb-0 sm:p-6 sm:pb-0"
             >
-              <KanbanBoard tasks={tasks} members={members} spaceId={spaceId} totalTasks={tasks.length} />
+              <KanbanBoard members={members} spaceId={spaceId} />
             </motion.div>
           )}
 

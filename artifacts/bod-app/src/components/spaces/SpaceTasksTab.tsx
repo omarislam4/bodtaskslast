@@ -10,8 +10,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useLang } from "@/contexts/LangContext";
-import { useTasksBySpace, useCreateTask } from "@/hooks/useTaskQueries";
+import {
+  useAllTasksInfiniteQuery,
+  useCreateTask,
+} from "@/hooks/useTaskQueries";
 import type { TaskStatus, TaskPriority, TaskType, BugSeverity } from "@/types";
+import { useInView } from "react-intersection-observer";
 import { useSpaceMembers } from "@/hooks/useSpaces";
 import { useSenders } from "@/hooks/useSenders";
 import { TaskCard } from "@/components/tasks/TaskCard";
@@ -65,8 +69,39 @@ export function SpaceTasksTab({
 }: Props) {
   const { t } = useLang();
   const [, navigate] = useLocation();
-  const { data: tasks = [], isLoading: tasksLoading } =
-    useTasksBySpace(spaceId);
+  const [statusFilter, setStatusFilter] = useState<TaskStatus | "all">("all");
+  const [form, setForm] = useState({ ...DEFAULT_FORM, type: createTaskType });
+
+  useEffect(() => {
+    setForm((f) => ({ ...f, type: createTaskType }));
+  }, [createTaskType]);
+
+  // Untasks query — always runs for accurate tab counts from stats.byStatus
+  const { data: statsData } = useAllTasksInfiniteQuery({ spaceId });
+  const apiStats = statsData?.pages[0]?.stats;
+
+  // Filtered query — same key as statsData when "all", different key when a status is active
+  const listParams = statusFilter !== "all"
+    ? { spaceId, status: statusFilter as TaskStatus }
+    : { spaceId };
+
+  const {
+    data,
+    isLoading: tasksLoading,
+    isFetchingNextPage,
+    fetchNextPage,
+    hasNextPage,
+  } = useAllTasksInfiniteQuery(listParams);
+
+  const tasks = data?.pages.flatMap((p) => p.data) ?? [];
+
+  const { ref: sentinelRef } = useInView({
+    threshold: 0.1,
+    onChange: (inView) => {
+      if (inView && hasNextPage && !isFetchingNextPage) fetchNextPage();
+    },
+  });
+
   const createTask = useCreateTask();
   const { members } = useMembers();
   const { senders } = useSenders();
@@ -76,24 +111,14 @@ export function SpaceTasksTab({
   const taskConfig = taskTypeConfig(t);
   const priorityConfig = priorityStateConfig(t);
 
-  const [statusFilter, setStatusFilter] = useState<TaskStatus | "all">("all");
-  const [form, setForm] = useState({ ...DEFAULT_FORM, type: createTaskType });
-
-  useEffect(() => {
-    setForm((f) => ({ ...f, type: createTaskType }));
-  }, [createTaskType]);
-
-  const filtered =
-    statusFilter === "all"
-      ? tasks
-      : tasks.filter((tk) => tk.status === statusFilter);
   const statusCounts = statusOptions.reduce(
     (acc, s) => {
-      acc[s] = tasks.filter((tk) => tk.status === s).length;
+      acc[s] = apiStats?.byStatus?.[s] ?? 0;
       return acc;
     },
     {} as Record<TaskStatus, number>,
   );
+  const totalCount = apiStats?.total ?? tasks.length;
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -431,7 +456,7 @@ export function SpaceTasksTab({
               : "bg-muted text-muted-foreground hover:text-foreground",
           )}
         >
-          <Filter className="w-3 h-3" /> {t.all} ({tasks.length})
+          <Filter className="w-3 h-3" /> {t.all} ({totalCount})
         </button>
         {statusOptions.map((s) => (
           <button
@@ -457,7 +482,7 @@ export function SpaceTasksTab({
               <TaskCardSkeleton key={i} />
             ))}
         </div>
-      ) : filtered.length === 0 ? (
+      ) : tasks.length === 0 ? (
         <EmptyState
           icon={CheckCircle2}
           title={
@@ -478,17 +503,22 @@ export function SpaceTasksTab({
           }
         />
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((task, i) => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              members={members}
-              index={i}
-              onClick={() => navigate(`/spaces/${spaceId}/tasks/${task.id}`)}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {tasks.map((task, i) => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                members={members}
+                index={i}
+                onClick={() => navigate(`/spaces/${spaceId}/tasks/${task.id}`)}
+              />
+            ))}
+            {isFetchingNextPage &&
+              [1, 2, 3].map((i) => <TaskCardSkeleton key={i} />)}
+          </div>
+          <div ref={sentinelRef} className="h-4 mt-2" />
+        </>
       )}
     </motion.div>
   );

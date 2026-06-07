@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { goalsService } from "@/services/goals";
 import { useLang } from "@/contexts/LangContext";
 import { toast } from "sonner";
@@ -7,12 +7,23 @@ import type { CreateGoalPayload, UpdateGoalPayload } from "@/types";
 export const goalKeys = {
   all: () => ["goals"] as const,
   bySpace: (spaceId: string) => ["goals", spaceId] as const,
+  infinite: (spaceId?: string) => ["goals-infinite", spaceId] as const,
 };
 
 export const useGoals = (spaceId?: string) =>
   useQuery({
     queryKey: spaceId ? goalKeys.bySpace(spaceId) : goalKeys.all(),
     queryFn: () => goalsService.list(spaceId),
+  });
+
+export const useGoalsInfiniteQuery = (spaceId?: string) =>
+  useInfiniteQuery({
+    queryKey: goalKeys.infinite(spaceId),
+    queryFn: ({ pageParam }) =>
+      goalsService.listPaginated({ spaceId, page: pageParam, perPage: 20 }),
+    getNextPageParam: (lastPage) =>
+      lastPage.meta.page < lastPage.meta.lastPage ? lastPage.meta.page + 1 : undefined,
+    initialPageParam: 1,
   });
 
 export const useCreateGoal = () => {

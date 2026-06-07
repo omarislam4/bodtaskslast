@@ -1,38 +1,75 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
-import { History as HistoryIcon, Search, CheckCircle2, Calendar, Filter } from "lucide-react";
-import { useHistoryQuery } from "@/hooks/useTaskQueries";
+import {
+  History as HistoryIcon,
+  Search,
+  CheckCircle2,
+  Calendar,
+  Filter,
+} from "lucide-react";
+import { TaskRowSkeleton } from "@/components/shared/SkeletonLoader";
+import { useHistoryInfiniteQuery } from "@/hooks/useTaskQueries";
 import { useMembers } from "@/hooks/useMembers";
 import { useSpaces } from "@/hooks/useSpaces";
 import { TaskPriorityBadge } from "@/components/tasks/TaskPriorityBadge";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { useLang } from "@/contexts/LangContext";
 import { format } from "date-fns";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { formatDate } from "@/lib/date";
+import DateDisplay from "@/components/ui/date-display";
+import { useInView } from "react-intersection-observer";
+import { useDebounce } from "@/hooks/useDebounce";
 
 export default function History() {
   const { members } = useMembers();
   const { spaces } = useSpaces();
   const [, navigate] = useLocation();
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [search, setSearch] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const debouncedSearch = useDebounce(search);
 
-  const { data: completedTasks = [], isLoading: loading } = useHistoryQuery(
-    priorityFilter !== "all" ? { priority: priorityFilter } : undefined
-  );
+  const queryParams = {
+    ...(debouncedSearch ? { search: debouncedSearch } : {}),
+    ...(priorityFilter !== "all" ? { priority: priorityFilter } : {}),
+  };
 
-  const filtered = completedTasks.filter((tk) => {
-    return (tk.title ?? "").toLowerCase().includes(search.toLowerCase()) ||
-      (tk.description ?? "").toLowerCase().includes(search.toLowerCase());
+  const { data, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage } =
+    useHistoryInfiniteQuery(queryParams);
+
+  const completedTasks = data?.pages.flatMap((p) => p.data) ?? [];
+  const firstMeta = data?.pages[0]?.meta;
+
+  const { ref: sentinelRef } = useInView({
+    threshold: 0.1,
+    onChange: (inView) => {
+      if (inView && hasNextPage && !isFetchingNextPage) fetchNextPage();
+    },
   });
+
+  const totalLabel = firstMeta
+    ? debouncedSearch || priorityFilter !== "all"
+      ? `${firstMeta.filteredTotal ?? completedTasks.length} of ${firstMeta.total}`
+      : `${firstMeta.total}`
+    : null;
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">{t.history}</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">{completedTasks.length} {t.completed.toLowerCase()}</p>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          {totalLabel
+            ? `${totalLabel} ${t.completed.toLowerCase()}`
+            : `— ${t.completed.toLowerCase()}`}
+        </p>
       </div>
 
       <div className="flex gap-3 mb-6 flex-wrap">
@@ -62,60 +99,98 @@ export default function History() {
         </div>
       </div>
 
-      {loading ? (
+      {isLoading ? (
         <div className="space-y-3">
-          {Array(6).fill(0).map((_, i) => <div key={i} className="h-16 bg-muted rounded-xl animate-pulse" />)}
+          {Array(6)
+            .fill(0)
+            .map((_, i) => (
+              <div key={i} className="h-16 bg-muted rounded-xl animate-pulse" />
+            ))}
         </div>
-      ) : filtered.length === 0 ? (
+      ) : completedTasks.length === 0 ? (
         <EmptyState
           icon={HistoryIcon}
-          title={completedTasks.length === 0 ? t.noCompletedTasks : t.noMatchingTasks}
-          description={completedTasks.length === 0 ? t.completedTasksTry : t.adjustFilters}
+          title={
+            !debouncedSearch && priorityFilter === "all"
+              ? t.noCompletedTasks
+              : t.noMatchingTasks
+          }
+          description={
+            !debouncedSearch && priorityFilter === "all"
+              ? t.completedTasksTry
+              : t.adjustFilters
+          }
         />
       ) : (
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
-          {filtered.map((task, i) => {
-            const space = spaces.find((s) => s.id === task.spaceId);
-            const assignees = task.assigneeIds.map((id) => members.find((m) => m.id === id)?.displayName).filter(Boolean);
-            return (
-              <motion.div
-                key={task.id}
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.03 }}
-                onClick={() => navigate(`/spaces/${task.spaceId}/tasks/${task.id}`)}
-                className="flex items-center gap-4 p-4 border-b border-border last:border-0 hover:bg-muted/30 cursor-pointer transition-colors group"
-              >
-                <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate">{task.title}</p>
-                  <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-                    {space && (
-                      <div className="flex items-center gap-1">
-                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: space.color || "#6366f1" }} />
-                        <span className="text-xs text-muted-foreground">{space.name}</span>
-                      </div>
-                    )}
-                    {assignees.length > 0 && (
-                      <span className="text-xs text-muted-foreground">{assignees.slice(0, 2).join(", ")}</span>
+        <>
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
+            {completedTasks.map((task, i) => {
+              const space = spaces.find((s) => s.id === task.spaceId);
+              const assignees = task.assigneeIds
+                .map((id) => members.find((m) => m.id === id)?.displayName)
+                .filter(Boolean);
+              return (
+                <motion.div
+                  key={task.id}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: Math.min(i * 0.03, 0.3) }}
+                  onClick={() =>
+                    navigate(`/spaces/${task.spaceId}/tasks/${task.id}`)
+                  }
+                  className="flex items-center gap-4 p-4 border-b border-border last:border-0 hover:bg-muted/30 cursor-pointer transition-colors group"
+                >
+                  <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate">
+                      {task.title}
+                    </p>
+                    <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                      {space && (
+                        <div className="flex items-center gap-1">
+                          <div
+                            className="w-1.5 h-1.5 rounded-full"
+                            style={{
+                              backgroundColor: space.color || "#6366f1",
+                            }}
+                          />
+                          <span className="text-xs text-muted-foreground">
+                            {space.name}
+                          </span>
+                        </div>
+                      )}
+                      {assignees.length > 0 && (
+                        <span className="text-xs text-muted-foreground">
+                          {assignees.slice(0, 2).join(", ")}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <TaskPriorityBadge priority={task.priority} size="sm" />
+                    {task.completedAt && (
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        <DateDisplay date={task.completedAt} />
+                      </span>
                     )}
                   </div>
-                </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <TaskPriorityBadge priority={task.priority} size="sm" />
-                  {task.completedAt && (
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      {format(new Date(task.completedAt), "MMM d, yyyy")}
-                    </span>
-                  )}
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
+                </motion.div>
+              );
+            })}
+          </div>
+
+          {/* Infinite scroll sentinel */}
+          <div ref={sentinelRef} className="h-4 mt-2" />
+
+          {isFetchingNextPage && (
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              {[1, 2].map((i) => <TaskRowSkeleton key={i} />)}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

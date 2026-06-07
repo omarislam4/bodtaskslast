@@ -22,6 +22,14 @@ import { UserDoc } from "@/contexts/AuthContext";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { TaskCard } from "./TaskCard";
 import { useLang } from "@/contexts/LangContext";
+import { useAllTasksInfiniteQuery } from "@/hooks/useTaskQueries";
+import { KanbanColumnSkeleton, TaskCardSkeleton } from "@/components/shared/SkeletonLoader";
+import { useInView } from "react-intersection-observer";
+import {
+  applyTaskUpdateToInfiniteList,
+  invalidateTaskListInfinite,
+  invalidateMyTasksInfinite,
+} from "@/hooks/taskCache";
 
 // ─── Draggable Task Card ───────────────────────────────────────────────────────
 
@@ -44,14 +52,17 @@ function DraggableTaskCard({
       data: { task },
     });
 
-  const style = {
-    transform: CSS.Translate.toString(transform),
-    opacity: isDragging ? 0.4 : 1,
-    cursor: isDragging ? "grabbing" : "grab",
-  };
-
   return (
-    <div ref={setNodeRef} style={style} {...listeners} {...attributes}>
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Translate.toString(transform),
+        opacity: isDragging ? 0.4 : 1,
+        cursor: isDragging ? "grabbing" : "grab",
+      }}
+      {...listeners}
+      {...attributes}
+    >
       <TaskCard task={task} members={members} index={index} onClick={onClick} />
     </div>
   );
@@ -62,20 +73,33 @@ function DraggableTaskCard({
 interface DroppableColumnProps {
   col: { id: TaskStatus; label: string; color: string };
   colTasks: Task[];
+  colTotal: number;
   members: UserDoc[];
   isOver: boolean;
   onNavigate: (task: Task) => void;
+  onLoadMore?: () => void;
+  isLoadingMore?: boolean;
 }
 
 function DroppableColumn({
   col,
   colTasks,
+  colTotal,
   members,
   isOver,
   onNavigate,
+  onLoadMore,
+  isLoadingMore,
 }: DroppableColumnProps) {
   const { t } = useLang();
   const { setNodeRef } = useDroppable({ id: col.id });
+
+  const { ref: sentinelRef } = useInView({
+    threshold: 0.1,
+    onChange: (inView) => {
+      if (inView && onLoadMore) onLoadMore();
+    },
+  });
 
   return (
     <div
@@ -91,7 +115,7 @@ function DroppableColumn({
           {col.label}
         </span>
         <span className="ml-auto text-xs bg-muted text-muted-foreground rounded-full px-2 py-0.5 font-medium">
-          {colTasks.length}
+          {colTotal}
         </span>
       </div>
 
@@ -108,15 +132,19 @@ function DroppableColumn({
             </p>
           </div>
         ) : (
-          colTasks.map((task, i) => (
-            <DraggableTaskCard
-              key={task.id}
-              task={task}
-              members={members}
-              index={i}
-              onClick={() => onNavigate(task)}
-            />
-          ))
+          <>
+            {colTasks.map((task, i) => (
+              <DraggableTaskCard
+                key={task.id}
+                task={task}
+                members={members}
+                index={i}
+                onClick={() => onNavigate(task)}
+              />
+            ))}
+            <div ref={sentinelRef} className="h-2" />
+            {isLoadingMore && <TaskCardSkeleton />}
+          </>
         )}
       </div>
     </div>
@@ -126,21 +154,20 @@ function DroppableColumn({
 // ─── Kanban Board ─────────────────────────────────────────────────────────────
 
 interface KanbanBoardProps {
-  tasks: Task[];
   members: UserDoc[];
   spaceId?: string;
-  totalTasks?: number;
 }
 
-export function KanbanBoard({
-  tasks,
-  members,
-  spaceId,
-  totalTasks,
-}: KanbanBoardProps) {
+export function KanbanBoard({ members, spaceId }: KanbanBoardProps) {
   const [, navigate] = useLocation();
   const { t, isRTL } = useLang();
   const qc = useQueryClient();
+
+  const { data, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage } =
+    useAllTasksInfiniteQuery(spaceId ? { spaceId } : undefined);
+
+  const tasks = data?.pages.flatMap((p) => p.data) ?? [];
+  const apiStats = data?.pages[0]?.stats;
 
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [overId, setOverId] = useState<TaskStatus | null>(null);
@@ -200,17 +227,14 @@ export function KanbanBoard({
     mutationFn: ({ id, status }: { id: string; status: TaskStatus }) =>
       tasksService.update(id, { status }),
     onSuccess: (task) => {
-      qc.setQueriesData<Task[]>({ queryKey: ["tasks"] }, (old) =>
-        old?.map((t) => (t.id === task.id ? task : t)),
-      );
+      applyTaskUpdateToInfiniteList(qc, task);
       setOptimistic((prev) => {
         const next = { ...prev };
         delete next[task.id];
         return next;
       });
-      // Background sync — cache is already correct so this causes no flicker.
-      qc.invalidateQueries({ queryKey: ["tasks"] });
-      qc.invalidateQueries({ queryKey: ["my-tasks"] });
+      invalidateTaskListInfinite(qc);
+      invalidateMyTasksInfinite(qc);
     },
     onError: (_err, vars) => {
       setOptimistic((prev) => {
@@ -236,24 +260,33 @@ export function KanbanBoard({
       const { active, over } = event;
       setActiveTask(null);
       setOverId(null);
-
       if (!over) return;
-
       const task = active.data.current?.task as Task | undefined;
       const newStatus = over.id as TaskStatus;
       if (!task || task.status === newStatus) return;
-
-      // Optimistic update
       setOptimistic((prev) => ({ ...prev, [task.id]: newStatus }));
       updateStatus({ id: task.id, status: newStatus });
     },
     [updateStatus],
   );
 
-  // Merge optimistic overrides into tasks
   const resolvedTasks = tasks.map((task) =>
     optimistic[task.id] ? { ...task, status: optimistic[task.id] } : task,
   );
+
+  const handleLoadMore = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  if (isLoading) {
+    return (
+      <div className="flex gap-4 overflow-x-hidden pb-4 min-h-100 h-[calc(100vh-250px)]">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <KanbanColumnSkeleton key={i} />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <DndContext
@@ -262,10 +295,10 @@ export function KanbanBoard({
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      {/* Scroll arrows */}
+      {/* Board header */}
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs text-muted-foreground">
-          {t.totalTasks} {totalTasks}
+          {t.totalTasks} {apiStats?.total ?? tasks.length}
         </span>
         <div className="flex justify-end gap-1.5 rtl:flex-row-reverse rtl:justify-start">
           <button
@@ -293,22 +326,25 @@ export function KanbanBoard({
           const colTasks = resolvedTasks.filter(
             (task) => task.status === col.id,
           );
+          const colTotal = apiStats?.byStatus?.[col.id] ?? colTasks.length;
           return (
             <DroppableColumn
               key={col.id}
               col={col}
               colTasks={colTasks}
+              colTotal={colTotal}
               members={members}
               isOver={overId === col.id}
               onNavigate={(task) =>
                 navigate(`/spaces/${task.spaceId}/tasks/${task.id}`)
               }
+              onLoadMore={hasNextPage ? handleLoadMore : undefined}
+              isLoadingMore={isFetchingNextPage}
             />
           );
         })}
       </div>
 
-      {/* Drag overlay – ghost card following the cursor */}
       <DragOverlay>
         {activeTask && (
           <div className="rotate-2 opacity-95 shadow-2xl">

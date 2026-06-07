@@ -36,3 +36,18 @@ export interface UpdateGoalPayload {
   currentValue?: number;
   dueDate?: string | null;
 }
+
+export interface GoalStats {
+  total: number;
+  onTrack: number;
+  atRisk: number;
+  offTrack: number;
+  completed: number;
+}
+
+export interface PaginatedGoalsResponse {
+  data: Goal[];
+  meta: { total: number; page: number; perPage: number; lastPage: number };
+  links: Record<string, string | null>;
+  stats: GoalStats;
+}

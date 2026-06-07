@@ -134,9 +134,56 @@ export interface TaskQueryParams {
   assigneeId?: string;
   type?: TaskType;
   status?: TaskStatus;
+  bugSeverity?: BugSeverity;
   search?: string;
   includeCompleted?: boolean;
   deadlineFrom?: string;
   deadlineTo?: string;
   sprintId?: string;
+  page?: number;
+  perPage?: number;
+}
+
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  perPage: number;
+  lastPage: number;
+  filteredTotal?: number;
+}
+
+export interface TaskCounts {
+  today: number;
+  overdue: number;
+  upcoming: number;
+  all: number;
+  done: number;
+  inProgress: number;
+}
+
+export interface TaskStats {
+  total: number;
+  byType: Record<string, number>;
+  byStatus: Record<string, number>;
+  bySeverity?: Record<string, number>;
+}
+
+export interface PaginatedMyTasksResponse {
+  data: Task[];
+  meta: PaginationMeta;
+  links: Record<string, string | null>;
+  counts: TaskCounts;
+}
+
+export interface PaginatedHistoryResponse {
+  data: Task[];
+  meta: PaginationMeta;
+  links: Record<string, string | null>;
+}
+
+export interface PaginatedTasksResponse {
+  data: Task[];
+  meta: PaginationMeta;
+  links: Record<string, string | null>;
+  stats: TaskStats;
 }

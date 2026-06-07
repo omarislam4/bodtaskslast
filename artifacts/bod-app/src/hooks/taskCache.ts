@@ -1,5 +1,5 @@
-import type { QueryClient } from "@tanstack/react-query";
-import type { Task, UpdateTaskPayload, ChecklistItem, Subtask } from "@/types";
+import type { QueryClient, InfiniteData } from "@tanstack/react-query";
+import type { Task, UpdateTaskPayload, ChecklistItem, Subtask, PaginatedTasksResponse } from "@/types";
 import { taskKeys } from "./taskKeys";
 
 // ─── Confirmed-state setters ──────────────────────────────────────────────────
@@ -136,4 +136,31 @@ export function invalidateTaskDetail(qc: QueryClient, taskId: string) {
 
 export function invalidateTaskList(qc: QueryClient, spaceId?: string) {
   qc.invalidateQueries({ queryKey: taskKeys.all(spaceId ? { spaceId } : undefined) });
+}
+
+export function invalidateTaskListInfinite(qc: QueryClient) {
+  qc.invalidateQueries({ queryKey: taskKeys.allInfinite() });
+}
+
+export function invalidateMyTasksInfinite(qc: QueryClient) {
+  qc.invalidateQueries({ queryKey: taskKeys.myTasksInfinite() });
+}
+
+// ─── Infinite list updaters ───────────────────────────────────────────────────
+
+/** Replaces a single task in every page of the tasks-infinite cache. */
+export function applyTaskUpdateToInfiniteList(qc: QueryClient, task: Task) {
+  qc.setQueriesData<InfiniteData<PaginatedTasksResponse>>(
+    { queryKey: taskKeys.allInfinite() },
+    (old) => {
+      if (!old) return old;
+      return {
+        ...old,
+        pages: old.pages.map((page) => ({
+          ...page,
+          data: page.data.map((t) => (t.id === task.id ? task : t)),
+        })),
+      };
+    },
+  );
 }
