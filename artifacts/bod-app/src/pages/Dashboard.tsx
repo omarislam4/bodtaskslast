@@ -32,13 +32,18 @@ import {
 } from "recharts";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMembers } from "@/hooks/useMembers";
-import { DashboardStatSkeleton } from "@/components/shared/SkeletonLoader";
+import {
+  DashboardStatSkeleton,
+  TableRowSkeleton,
+} from "@/components/shared/SkeletonLoader";
+import { DataPagination } from "@/components/shared/DataPagination";
 import { TaskStatusBadge } from "@/components/tasks/TaskStatusBadge";
 import { TaskPriorityBadge } from "@/components/tasks/TaskPriorityBadge";
 import { KanbanBoard } from "@/components/tasks/KanbanBoard";
 import { useLang } from "@/contexts/LangContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
+import { useTasksPageQuery } from "@/hooks/useTaskQueries";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -54,6 +59,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import DateDisplay from "@/components/ui/date-display";
+import { formatDate } from "@/lib/date";
 
 const STATUS_COLORS: Record<string, string> = {
   todo: "#94a3b8",
@@ -78,14 +84,31 @@ export default function Dashboard() {
   const queryClient = useQueryClient();
   const { members } = useMembers();
   const [, navigate] = useLocation();
-  const { t, lang } = useLang();
+  const { t } = useLang();
   const { isAdmin } = useAuth();
   const [view, setView] = useState<DashView>("overview");
   const [perfSpaceId, setPerfSpaceId] = useState("all");
+  const [overduePage, setOverduePage] = useState(1);
+  const [recentPage, setRecentPage] = useState(1);
 
   const { data, isLoading } = useDashboard(perfSpaceId);
   const reassignMutation = useReassignTask();
 
+  const todayStr = format(subDays(new Date(), 1), "yyyy-MM-dd");
+  const { data: overduePageData } = useTasksPageQuery({
+    deadlineTo: todayStr,
+    page: overduePage,
+    perPage: 8,
+  });
+  const { data: recentPageData } = useTasksPageQuery({
+    page: recentPage,
+    perPage: 4,
+  });
+
+  const overdueList = overduePageData?.data ?? [];
+  const overdueMeta = overduePageData?.meta;
+  const recentList = recentPageData?.data ?? [];
+  const recentMeta = recentPageData?.meta;
 
   const [reassigning, setReassigning] = useState<string | null>(null);
   const [reassignTarget, setReassignTarget] = useState<Record<string, string>>(
@@ -103,8 +126,6 @@ export default function Dashboard() {
   const stats = data?.stats;
   const statusBreakdown = data?.statusBreakdown ?? [];
   const upcoming = data?.upcoming ?? [];
-  const overdue = data?.overdue ?? [];
-  const recent = data?.recent ?? [];
   const spaces = data?.spaces ?? [];
   const memberPerformance = data?.memberPerformance ?? [];
   const memberPieData = memberPerformance.map((m) => ({
@@ -397,8 +418,9 @@ export default function Dashboard() {
                         </span>
                       </div>
                       <span className="text-xs text-muted-foreground shrink-0 ml-2">
-                        {task.deadline &&
-                          format(new Date(task.deadline), "MMM d")}
+                        {task.deadline && (
+                          <DateDisplay date={task.deadline} fmt="MMMM d" />
+                        )}
                       </span>
                     </div>
                   ))}
@@ -473,28 +495,30 @@ export default function Dashboard() {
           </div>
 
           {/* OVERDUE TASKS */}
-          {overdue.length > 0 && (
+          {(overdueMeta?.total ?? 0) > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.32 }}
               className="mt-5 sm:mt-6 bg-card border border-red-200 dark:border-red-900/30 rounded-xl p-4 sm:p-5 shadow-sm"
             >
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center">
-                  <AlertCircle className="w-4 h-4 text-red-500" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-foreground">
-                    Overdue Tasks
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    {overdue.length} tasks past deadline — review & reassign
-                  </p>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center">
+                    <AlertCircle className="w-4 h-4 text-red-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground">
+                      {t.overdueTasks}
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      {overdueMeta?.total ?? 0} {t.tasksPastDeadline}
+                    </p>
+                  </div>
                 </div>
               </div>
               <div className="space-y-4">
-                {overdue.slice(0, 10).map((task) => {
+                {overdueList.map((task) => {
                   const assigned = (task.assigneeIds ?? [])
                     .map(
                       (id) =>
@@ -544,7 +568,7 @@ export default function Dashboard() {
                             )}
                             {task.deadline && (
                               <span className="text-red-500 font-medium">
-                                Due {format(new Date(task.deadline), "MMM d")}
+                                {t.due} <DateDisplay date={task.deadline} />
                               </span>
                             )}
                           </div>
@@ -577,8 +601,8 @@ export default function Dashboard() {
                                     members.find(
                                       (m) => m.id === reassignTarget[task.id],
                                     )?.email ||
-                                    "Member"
-                                  : "Reassign to..."}
+                                    t.member
+                                  : t.assignMembers}
                               </span>
                               <Search className="w-3 h-3 text-muted-foreground shrink-0" />
                             </button>
@@ -640,7 +664,7 @@ export default function Dashboard() {
                                       ))
                                     ) : (
                                       <p className="text-xs text-muted-foreground text-center py-3">
-                                        No members found
+                                        {t.noMembersFound}
                                       </p>
                                     );
                                   })()}
@@ -669,7 +693,7 @@ export default function Dashboard() {
                                     [task.id]: e.target.value,
                                   }))
                                 }
-                                placeholder="Reason for reassigning... (optional)"
+                                placeholder={t.reasonForReassigning}
                                 rows={2}
                                 className="flex-1 text-xs px-2.5 py-1.5 bg-background border border-input rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/30 resize-none"
                               />
@@ -714,12 +738,15 @@ export default function Dashboard() {
                     </div>
                   );
                 })}
-                {overdue.length > 10 && (
-                  <p className="text-xs text-muted-foreground text-center pt-1">
-                    +{overdue.length - 10} more overdue tasks
-                  </p>
-                )}
               </div>
+              {overdueMeta && (
+                <DataPagination
+                  page={overduePage}
+                  lastPage={overdueMeta.lastPage}
+                  onPageChange={setOverduePage}
+                  className="mt-2"
+                />
+              )}
             </motion.div>
           )}
 
@@ -733,20 +760,26 @@ export default function Dashboard() {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-foreground">
                 {t.tasksTab}
+                {recentMeta && (
+                  <span className="ms-2 text-xs font-normal text-muted-foreground">
+                    {recentMeta.total} total
+                  </span>
+                )}
               </h3>
             </div>
             {isLoading ? (
-              <div className="space-y-2">
-                {Array(4)
-                  .fill(0)
-                  .map((_, i) => (
-                    <div
-                      key={i}
-                      className="h-10 bg-muted rounded-lg animate-pulse"
-                    />
-                  ))}
+              <div className="rounded-xl border border-border overflow-hidden">
+                <table className="w-full text-sm">
+                  <tbody className="divide-y divide-border">
+                    {Array(4)
+                      .fill(0)
+                      .map((_, i) => (
+                        <TableRowSkeleton key={i} />
+                      ))}
+                  </tbody>
+                </table>
               </div>
-            ) : recent.length > 0 ? (
+            ) : recentList.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm min-w-125">
                   <thead>
@@ -769,7 +802,7 @@ export default function Dashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {recent.map((task) => {
+                    {recentList.map((task) => {
                       const assigned = (task.assigneeIds ?? [])
                         .map(
                           (id) =>
@@ -844,6 +877,13 @@ export default function Dashboard() {
               <p className="text-sm text-muted-foreground text-center py-8">
                 {t.noTasksYet}
               </p>
+            )}
+            {recentMeta && (
+              <DataPagination
+                page={recentPage}
+                lastPage={recentMeta.lastPage}
+                onPageChange={setRecentPage}
+              />
             )}
           </motion.div>
 

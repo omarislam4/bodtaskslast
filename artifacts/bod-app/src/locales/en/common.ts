@@ -33,6 +33,8 @@ const common = {
   from: "from",
   all: "All",
   total: "Total",
+  next: "Next",
+  previous: "Previous",
   projectsOverview: "Projects overview",
 } as const;
 

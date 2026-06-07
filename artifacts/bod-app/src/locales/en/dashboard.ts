@@ -22,6 +22,13 @@ const dashboard = {
   noDataYet: "No data yet",
   viewAllSpaces: "View all spaces →",
   hereAreYourAssignedTasks: "Here are your assigned tasks",
+  overdueTasks: "Overdue Tasks",
+  tasksPastDeadline: "tasks past deadline",
+  reviewAndReassign: "review & reassign",
+  member: "Member",
+  noMembersFound: "No members found",
+  reasonForReassigning: "Reason for reassigning... (optional)",
+  due: "Due",
 } as const;
 
 export type DashboardKeys = keyof typeof dashboard;

@@ -25,6 +25,14 @@ const dashboard: Record<DashboardKeys, TranslationValue> = {
   viewSpaces: "عرض المساحات",
   hereAreYourAssignedTasks: "هذه هي المهام المعينة لك",
   viewAllSpaces: "عرض كل المساحات →",
+  overdueTasks: "المهام المتأخرة",
+  tasksPastDeadline: "المهام المتأخرة عن الموعد النهائي",
+  reviewAndReassign: "مراجعة وإعادة التعيين",
+  member: "عضو",
+  noMembersFound: "لا توجد أعضاء",
+  reasonForReassigning: "سبب إعادة التعيين... (اختياري)",
+
+  due: "مستحق",
 };
 
 export default dashboard;

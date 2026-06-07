@@ -208,11 +208,11 @@ None
 
 ### Query Parameters
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `limit` | integer | `50` | Max messages per page (1–100) |
-| `before` | string (message id) | — | Return messages **older** than this ID (scroll-up / load history) |
-| `after` | string (message id) | — | Return messages **newer** than this ID (reconnect catch-up) |
+| Parameter | Type                | Default | Description                                                       |
+| --------- | ------------------- | ------- | ----------------------------------------------------------------- |
+| `limit`   | integer             | `50`    | Max messages per page (1–100)                                     |
+| `before`  | string (message id) | —       | Return messages **older** than this ID (scroll-up / load history) |
+| `after`   | string (message id) | —       | Return messages **newer** than this ID (reconnect catch-up)       |
 
 Omit both cursors to get the most recent `limit` messages (initial load).
 
@@ -248,20 +248,25 @@ Omit both cursors to get the most recent `limit` messages (initial load).
 ### Pagination Patterns
 
 **Initial load** — most recent messages, displayed oldest→newest:
+
 ```http
 GET /api/chat/channels/12/messages?limit=50
 ```
 
 **Scroll-up (load history)** — messages older than `oldestId` from the previous response:
+
 ```http
 GET /api/chat/channels/12/messages?limit=50&before=7
 ```
+
 Prepend the returned `data` above the existing messages in the UI.
 
 **Reconnect catch-up** — messages sent while the client was offline:
+
 ```http
 GET /api/chat/channels/12/messages?limit=50&after=54
 ```
+
 Append the returned `data` and repeat with `after={newestId}` while `hasMore: true`.
 
 `hasMore: true` signals more messages exist in the requested direction. Use `oldestId` as the next `before` cursor and `newestId` as the next `after` cursor.
