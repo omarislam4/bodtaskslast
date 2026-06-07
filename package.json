@@ -8,6 +8,8 @@
     "dev": "pnpm --filter @workspace/bod-app dev",
     "preview": "pnpm --filter @workspace/bod-app preview",
     "app:build": "pnpm --filter @workspace/bod-app build",
+    "deploy": "pnpm --filter @workspace/bod-app deploy",
+    "cf:preview": "pnpm --filter @workspace/bod-app cf:preview",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"

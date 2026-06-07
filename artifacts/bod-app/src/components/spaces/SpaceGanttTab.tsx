@@ -91,7 +91,7 @@ function GanttView({
       <h2 className="text-sm font-semibold text-foreground mb-4">
         Gantt Chart
       </h2>
-      <div className="min-w-[600px]">
+      <div className="min-w-150">
         {tasksWithDates.map((task) => {
           const start = new Date(task.startDate || task.createdAt);
           const end = new Date(task.deadline!);

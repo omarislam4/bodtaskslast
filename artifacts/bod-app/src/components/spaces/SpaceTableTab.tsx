@@ -182,7 +182,7 @@ function TableView({
                   className="hover:bg-muted/30 cursor-pointer transition-colors group"
                 >
                   <td className="px-4 py-2.5">
-                    <p className="font-medium text-foreground group-hover:text-primary truncate max-w-[200px] transition-colors">
+                    <p className="font-medium text-foreground group-hover:text-primary truncate max-w-50 transition-colors">
                       {task.title}
                     </p>
                   </td>
