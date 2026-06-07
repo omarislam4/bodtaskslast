@@ -200,32 +200,71 @@ None
 
 ## `GET /api/chat/channels/{id}/messages`
 
-Returns messages for one visible channel, ordered by oldest first.
+Returns messages for one visible channel using cursor-based pagination. Messages within each page are always ordered **oldest → newest** (chronological), ready for direct rendering.
 
 ### Payload
 
 None
 
+### Query Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `limit` | integer | `50` | Max messages per page (1–100) |
+| `before` | string (message id) | — | Return messages **older** than this ID (scroll-up / load history) |
+| `after` | string (message id) | — | Return messages **newer** than this ID (reconnect catch-up) |
+
+Omit both cursors to get the most recent `limit` messages (initial load).
+
 ### Success Response
 
 ```json
-[
-  {
-    "id": "7",
-    "channelId": "1",
-    "spaceId": null,
-    "senderId": "12",
-    "senderName": "Jane Doe",
-    "text": "Hello team",
-    "createdAt": "2026-05-21T09:05:00.000Z",
-    "edited": false,
-    "deleted": false,
-    "mentions": [],
-    "replyTo": null,
-    "reactions": {}
+{
+  "data": [
+    {
+      "id": "7",
+      "channelId": "1",
+      "spaceId": null,
+      "senderId": "12",
+      "senderName": "Jane Doe",
+      "text": "Hello team",
+      "createdAt": "2026-05-21T09:05:00.000Z",
+      "edited": false,
+      "deleted": false,
+      "mentions": [],
+      "replyTo": null,
+      "reactions": {}
+    }
+  ],
+  "meta": {
+    "limit": 50,
+    "hasMore": false,
+    "oldestId": "7",
+    "newestId": "54"
   }
-]
+}
 ```
+
+### Pagination Patterns
+
+**Initial load** — most recent messages, displayed oldest→newest:
+```http
+GET /api/chat/channels/12/messages?limit=50
+```
+
+**Scroll-up (load history)** — messages older than `oldestId` from the previous response:
+```http
+GET /api/chat/channels/12/messages?limit=50&before=7
+```
+Prepend the returned `data` above the existing messages in the UI.
+
+**Reconnect catch-up** — messages sent while the client was offline:
+```http
+GET /api/chat/channels/12/messages?limit=50&after=54
+```
+Append the returned `data` and repeat with `after={newestId}` while `hasMore: true`.
+
+`hasMore: true` signals more messages exist in the requested direction. Use `oldestId` as the next `before` cursor and `newestId` as the next `after` cursor.
 
 ## `POST /api/chat/channels/{id}/messages`
 
@@ -345,9 +384,10 @@ Toggles the current user's reaction on a message.
 - Message delete is soft delete so clients can preserve timeline order.
 - Mention IDs are stored on the message resource; this pass does not add a separate server-side notification delivery pipeline.
 - Realtime requires `BROADCAST_CONNECTION=reverb`, a running Reverb server, and Echo configured with the same `VITE_REVERB_*` values.
-- `GET /api/chat/channels` and `GET /api/chat/channels/{id}/messages` support opt-in pagination with `page` and `perPage`. Without pagination parameters, they keep returning the existing plain array response.
+- `GET /api/chat/channels` supports opt-in offset pagination with `page` and `perPage`. Without those parameters it returns a plain array.
+- `GET /api/chat/channels/{id}/messages` always returns a `{ data, meta }` envelope with cursor-based pagination (see the endpoint section above).
 
-## Pagination Examples
+## Channel Pagination Examples
 
 Without pagination:
 
@@ -364,9 +404,3 @@ GET /api/chat/channels?spaceId=5&page=1&perPage=15
 ```
 
 Returns `data`, `meta`, and `links`.
-
-Message pagination:
-
-```http
-GET /api/chat/channels/12/messages?page=1&perPage=30
-```

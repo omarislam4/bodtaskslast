@@ -43,28 +43,19 @@ export const useCreateChannel = () => {
   });
 };
 
-export const useChannelMessages = (channelId: string) =>
-  useQuery({
-    queryKey: chatKeys.messages(channelId),
-    queryFn: () => chatService.listMessages(channelId),
-    enabled: !!channelId,
-    staleTime: 0,
-  });
-
 export const useChannelMessagesInfiniteQuery = (channelId: string) =>
   useInfiniteQuery({
     queryKey: chatKeys.messagesInfinite(channelId),
-    // page=1 returns the newest batch; higher pages are progressively older
+    // No cursor on first call → returns most recent `limit` messages (newest batch).
+    // Subsequent calls pass `before=oldestId` to load older history.
     queryFn: ({ pageParam }) =>
-      chatService.listMessagesPaginated(channelId, {
-        page: pageParam,
-        perPage: 30,
+      chatService.listMessages(channelId, {
+        limit: 50,
+        ...(pageParam ? { before: pageParam } : {}),
       }),
     getNextPageParam: (lastPage) =>
-      lastPage.meta.page < lastPage.meta.lastPage
-        ? lastPage.meta.page + 1
-        : undefined,
-    initialPageParam: 1,
+      lastPage.meta.hasMore ? lastPage.meta.oldestId : undefined,
+    initialPageParam: undefined as string | undefined,
     enabled: !!channelId,
     staleTime: 0,
   });

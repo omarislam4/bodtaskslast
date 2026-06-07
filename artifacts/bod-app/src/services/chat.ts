@@ -1,5 +1,5 @@
 import api from "./api";
-import type { ChatChannel, ChatMessage, CreateChannelPayload, SendMessagePayload, PaginatedMessagesResponse } from "@/types";
+import type { ChatChannel, ChatMessage, CreateChannelPayload, SendMessagePayload, CursorMessagesResponse } from "@/types";
 
 export const chatService = {
   listChannels: (spaceId?: string): Promise<ChatChannel[]> =>
@@ -15,11 +15,8 @@ export const chatService = {
   deleteChannel: (channelId: string): Promise<void> =>
     api.delete(`/chat/channels/${channelId}`).then(() => undefined),
 
-  listMessages: (channelId: string): Promise<ChatMessage[]> =>
-    api.get<ChatMessage[]>(`/chat/channels/${channelId}/messages`).then((r) => r.data),
-
-  listMessagesPaginated: (channelId: string, params: { page: number; perPage: number }): Promise<PaginatedMessagesResponse> =>
-    api.get<PaginatedMessagesResponse>(`/chat/channels/${channelId}/messages`, { params }).then((r) => r.data),
+  listMessages: (channelId: string, params?: { limit?: number; before?: string; after?: string }): Promise<CursorMessagesResponse> =>
+    api.get<CursorMessagesResponse>(`/chat/channels/${channelId}/messages`, { params }).then((r) => r.data),
 
   sendMessage: (channelId: string, payload: SendMessagePayload): Promise<ChatMessage> =>
     api

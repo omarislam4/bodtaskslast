@@ -1,15 +1,15 @@
 import type { QueryClient, InfiniteData } from "@tanstack/react-query";
-import type { ChatMessage, PaginatedMessagesResponse } from "@/types";
+import type { ChatMessage, CursorMessagesResponse } from "@/types";
 import { chatKeys } from "./chatKeys";
 
-type InfiniteMessages = InfiniteData<PaginatedMessagesResponse>;
+type InfiniteMessages = InfiniteData<CursorMessagesResponse>;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function updateInfiniteMessages(
   qc: QueryClient,
   channelId: string,
-  updater: (pages: PaginatedMessagesResponse[]) => PaginatedMessagesResponse[],
+  updater: (pages: CursorMessagesResponse[]) => CursorMessagesResponse[],
 ) {
   qc.setQueryData<InfiniteMessages>(chatKeys.messagesInfinite(channelId), (old) => {
     if (!old) return old;

@@ -48,8 +48,14 @@ export interface SendMessagePayload {
   replyTo?: ReplyTo | null;
 }
 
-export interface PaginatedMessagesResponse {
+export interface CursorMessagesMeta {
+  limit: number;
+  hasMore: boolean;
+  oldestId: string;
+  newestId: string;
+}
+
+export interface CursorMessagesResponse {
   data: ChatMessage[];
-  meta: { total: number; page: number; perPage: number; lastPage: number };
-  links: Record<string, string | null>;
+  meta: CursorMessagesMeta;
 }
