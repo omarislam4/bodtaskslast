@@ -19,7 +19,7 @@ function fireN8nWeeklyReport(payload: Record<string, string>): void {
 
 export default function WeeklyReport() {
   const { userDoc } = useAuth();
-  const { t, lang } = useLang();
+  const { t } = useLang();
   const submitReport = useSubmitWeeklyReport();
   const [weeklyReport, setWeeklyReport] = useState("");
 

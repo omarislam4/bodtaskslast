@@ -1,0 +1,43 @@
+name: Deploy Frontend (bodtaskslast)
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Build & Deploy React App on VPS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: 22
+          script: |
+            set -e
+
+            echo "==> Navigating to project directory"
+            cd /var/www/bodtaskslast
+
+            echo "==> Pulling latest code from main"
+            git pull origin main
+
+            echo "==> Installing dependencies"
+            pnpm install --frozen-lockfile
+
+            echo "==> Building React app"
+            pnpm --filter @workspace/bod-app build
+
+            echo "==> Setting correct permissions"
+            sudo chown -R www-data:www-data /var/www/bodtaskslast/artifacts/bod-app/dist/
+            sudo chmod -R 755 /var/www/bodtaskslast/artifacts/bod-app/dist/
+
+            echo "==> Reloading Nginx"
+            sudo systemctl reload nginx
+
+            echo "✅ Frontend deployment complete!"

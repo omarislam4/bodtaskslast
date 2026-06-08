@@ -88,7 +88,7 @@ const DEP_TYPE_CONFIG: Record<
 export default function TaskDetail() {
   const { spaceId, taskId } = useParams<{ spaceId: string; taskId: string }>();
   const { isAdmin, userDoc } = useAuth();
-  const { t, lang } = useLang();
+  const { t } = useLang();
   const { members } = useMembers();
   const { senders } = useSenders();
   const { data: spaces = [] } = useSpaces();
@@ -1349,7 +1349,7 @@ export default function TaskDetail() {
                 />
               </button>
             </div>
-            {task.recurrence && (
+            {!Array.isArray(task.recurrence) && task.recurrence && (
               <div className="mt-2 flex items-center gap-2">
                 <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-full flex items-center gap-1">
                   <Repeat className="w-3 h-3" />{" "}
@@ -1391,7 +1391,7 @@ export default function TaskDetail() {
                         {recurrenceFrequencyConfig[freq].label}
                       </button>
                     ))}
-                    {task.recurrence && (
+                    {!Array.isArray(task.recurrence) && task.recurrence && (
                       <button
                         onClick={() => updateTask.mutate({ recurrence: null })}
                         className="w-full text-xs px-3 py-2 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-all"

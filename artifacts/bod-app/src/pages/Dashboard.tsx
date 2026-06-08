@@ -926,7 +926,7 @@ export default function Dashboard() {
               {memberPerformance.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-10 text-muted-foreground text-sm">
                   <Users className="w-8 h-8 mb-2 opacity-30" />
-                  No task data for this space
+                  {t.noDataYet}
                 </div>
               )}
 
