@@ -13,8 +13,8 @@ interface AuthContextType {
   isAdmin: boolean;
   loginPending: boolean;
   registerPending: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (displayName: string, email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => void;
+  register: (displayName: string, email: string, password: string) => void;
   logout: () => void;
 }
 
@@ -24,34 +24,44 @@ const AuthContext = createContext<AuthContextType>({
   isAdmin: false,
   loginPending: false,
   registerPending: false,
-  login: async () => {},
-  register: async () => {},
+  login: () => {},
+  register: () => {},
   logout: () => {},
 });
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem("token"));
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const [token, setToken] = useState<string | null>(() =>
+    localStorage.getItem("token"),
+  );
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
 
   const { data: userDoc = null, isLoading } = useMe(!!token);
-  const loginMutation = useLogin();
-  const registerMutation = useRegister();
 
-  const login = async (email: string, password: string) => {
-    const data = await loginMutation.mutateAsync({ email, password });
+  const loginMutation = useLogin((data) => {
+    localStorage.setItem("token", data.token);
+    setToken(data.token);
+    queryClient.setQueryData(authKeys.me(), data.user);
+  });
+
+  const registerMutation = useRegister((data) => {
     localStorage.setItem("token", data.token);
     setToken(data.token);
     queryClient.setQueryData(authKeys.me(), data.user);
     navigate("/spaces");
-  };
+  });
 
-  const register = async (displayName: string, email: string, password: string) => {
-    const data = await registerMutation.mutateAsync({ displayName, email, password });
-    localStorage.setItem("token", data.token);
-    setToken(data.token);
-    queryClient.setQueryData(authKeys.me(), data.user);
-    navigate("/spaces");
+  const login = (email: string, password: string) =>
+    loginMutation.mutate({ email, password });
+
+  const register = (displayName: string, email: string, password: string) => {
+    registerMutation.mutate({
+      displayName,
+      email,
+      password,
+    });
   };
 
   const logout = () => {
@@ -65,16 +75,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loading = !!token && isLoading;
 
   return (
-    <AuthContext.Provider value={{
-      userDoc,
-      loading,
-      isAdmin,
-      loginPending: loginMutation.isPending,
-      registerPending: registerMutation.isPending,
-      login,
-      register,
-      logout,
-    }}>
+    <AuthContext.Provider
+      value={{
+        userDoc,
+        loading,
+        isAdmin,
+        loginPending: loginMutation.isPending,
+        registerPending: registerMutation.isPending,
+        login,
+        register,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

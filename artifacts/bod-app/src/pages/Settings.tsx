@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { User, Moon, Sun, Save, LogOut, Phone, Clock, Webhook, Bell } from "lucide-react";
+import { User, Moon, Sun, Save, LogOut, Phone, Clock, Webhook, Bell, KeyRound, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useUpdateProfile } from "@/hooks/useUserQueries";
@@ -37,6 +37,13 @@ export default function Settings() {
   const [phone, setPhone] = useState(userDoc?.phone || "");
   const [countryCode, setCountryCode] = useState(userDoc?.countryCode || "+20");
   const [shiftEnd, setShiftEnd] = useState(userDoc?.shiftEnd || "");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [currentPasswordError, setCurrentPasswordError] = useState("");
   const updateProfile = useUpdateProfile(userDoc?.id || "");
 
   const { data: appSettings } = useAppSettings(isAdmin);
@@ -47,6 +54,26 @@ export default function Settings() {
   const handleSaveProfile = () => {
     if (!userDoc) return;
     updateProfile.mutate({ displayName, phone, countryCode, shiftEnd });
+  };
+
+  const passwordMismatch = confirmPassword.length > 0 && newPassword !== confirmPassword;
+  const passwordTooShort = newPassword.length > 0 && newPassword.length < 6;
+
+  const handleSavePassword = () => {
+    if (!userDoc || !currentPassword || !newPassword || passwordMismatch || passwordTooShort) return;
+    setCurrentPasswordError("");
+    updateProfile.mutate({ currentPassword, password: newPassword }, {
+      onSuccess: () => {
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+      },
+      onError: (err: unknown) => {
+        const msg = (err as { response?: { data?: { errors?: { currentPassword?: string[] } } } })
+          ?.response?.data?.errors?.currentPassword?.[0];
+        if (msg) setCurrentPasswordError(msg);
+      },
+    });
   };
 
   const handleSaveWebhook = () => {
@@ -145,11 +172,78 @@ export default function Settings() {
           whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
           onClick={handleSaveProfile}
           disabled={updateProfile.isPending}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-60"
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-semibold border border-transparent rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-60"
         >
           <Save className="w-4 h-4" />
           {updateProfile.isPending ? t.saving : t.saveChanges}
         </motion.button>
+
+        {/* Change Password */}
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="bg-card border border-border rounded-xl p-5">
+          <div className="flex items-center gap-3 mb-4">
+            <KeyRound className="w-4 h-4 text-primary" />
+            <h3 className="text-sm font-semibold text-foreground">{lang === "ar" ? "تغيير كلمة المرور" : "Change Password"}</h3>
+          </div>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-1.5">{lang === "ar" ? "كلمة المرور الحالية" : "Current Password"}</label>
+              <div className="relative">
+                <input
+                  type={showCurrentPassword ? "text" : "password"}
+                  value={currentPassword}
+                  onChange={(e) => { setCurrentPassword(e.target.value); setCurrentPasswordError(""); }}
+                  placeholder={lang === "ar" ? "كلمة المرور الحالية" : "Your current password"}
+                  className={`w-full px-3 py-2.5 pr-10 text-sm bg-background border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all ${currentPasswordError ? "border-destructive" : "border-input"}`}
+                />
+                <button type="button" onClick={() => setShowCurrentPassword((v) => !v)} className="absolute inset-y-0 right-3 flex items-center text-muted-foreground hover:text-foreground">
+                  {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {currentPasswordError && <p className="text-xs text-destructive mt-1">{lang === "ar" ? "كلمة المرور الحالية غير صحيحة" : currentPasswordError}</p>}
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-1.5">{lang === "ar" ? "كلمة المرور الجديدة" : "New Password"}</label>
+              <div className="relative">
+                <input
+                  type={showNewPassword ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder={lang === "ar" ? "٦ أحرف على الأقل" : "Min. 6 characters"}
+                  className="w-full px-3 py-2.5 pr-10 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                />
+                <button type="button" onClick={() => setShowNewPassword((v) => !v)} className="absolute inset-y-0 right-3 flex items-center text-muted-foreground hover:text-foreground">
+                  {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {passwordTooShort && <p className="text-xs text-destructive mt-1">{lang === "ar" ? "كلمة المرور قصيرة جداً" : "Password must be at least 6 characters"}</p>}
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-1.5">{t.confirmPassword}</label>
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder={lang === "ar" ? "أعد كتابة كلمة المرور الجديدة" : "Re-enter new password"}
+                  className={`w-full px-3 py-2.5 pr-10 text-sm bg-background border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all ${passwordMismatch ? "border-destructive" : "border-input"}`}
+                />
+                <button type="button" onClick={() => setShowConfirmPassword((v) => !v)} className="absolute inset-y-0 right-3 flex items-center text-muted-foreground hover:text-foreground">
+                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {passwordMismatch && <p className="text-xs text-destructive mt-1">{lang === "ar" ? "كلمتا المرور غير متطابقتين" : "Passwords do not match"}</p>}
+            </div>
+            <motion.button
+              whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
+              onClick={handleSavePassword}
+              disabled={updateProfile.isPending || !currentPassword || !newPassword || !!passwordMismatch || !!passwordTooShort}
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-semibold border border-transparent rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-60"
+            >
+              <Save className="w-4 h-4" />
+              {updateProfile.isPending ? t.saving : (lang === "ar" ? "تغيير كلمة المرور" : "Change Password")}
+            </motion.button>
+          </div>
+        </motion.div>
 
         {/* Language */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="bg-card border border-border rounded-xl p-5">

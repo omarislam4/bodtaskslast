@@ -39,7 +39,9 @@ export const useAllTasksQuery = (params?: TaskQueryParams) =>
     queryFn: () => tasksService.list(params),
   });
 
-export const useTasksPageQuery = (params: TaskQueryParams & { page: number; perPage: number }) =>
+export const useTasksPageQuery = (
+  params: TaskQueryParams & { page: number; perPage: number },
+) =>
   useQuery({
     queryKey: ["tasks-page", params] as const,
     queryFn: () => tasksService.listPaginated(params),
@@ -74,7 +76,8 @@ export const useMyTasksInfiniteQuery = (params?: {
     queryKey: taskKeys.myTasksInfinite(params),
     queryFn: ({ pageParam }) =>
       tasksService.myTasksPaginated({
-        ...params,
+        search: params?.search,
+        ...(params?.scope === "all" ? {} : { scope: params?.scope }),
         page: pageParam,
         perPage: 20,
       }),

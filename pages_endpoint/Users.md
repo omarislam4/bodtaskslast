@@ -154,7 +154,8 @@ Updates a user profile.
 Allowed behavior:
 - Admin can update any user.
 - Member can update only their own profile fields such as `displayName`, `phone`, `countryCode`, `shiftEnd`, and `shiftReminderSent`.
-- Member cannot change privileged fields like `role`, `spaceIds`, `email`, or `password`.
+- Member can change their own password by sending `currentPassword` and `password`.
+- Member cannot change privileged fields like `role`, `spaceIds`, `email`, or another user's password.
 
 ### Payload
 
@@ -176,6 +177,20 @@ Admin-only fields may also be included:
   "spaceIds": ["1", "2"]
 }
 ```
+
+Self password change payload:
+
+```json
+{
+  "currentPassword": "old-password",
+  "password": "new-password"
+}
+```
+
+Notes:
+- `currentPassword` is required when a user changes their own password.
+- `password` must be at least 6 characters.
+- Admins can set a user's `password` without sending `currentPassword`.
 
 ### Success Response
 
@@ -201,6 +216,23 @@ Admin-only fields may also be included:
 ```
 
 ### Failure Response
+
+Wrong current password:
+
+Status: `422 Unprocessable Entity`
+
+```json
+{
+  "message": "The current password is incorrect.",
+  "errors": {
+    "currentPassword": [
+      "The current password is incorrect."
+    ]
+  }
+}
+```
+
+Privileged fields from a member:
 
 Status: `422 Unprocessable Entity`
 
@@ -249,7 +281,7 @@ Status: `403 Forbidden`
 1. All routes use `auth:sanctum`.
 2. [UserPolicy.php](C:/laragon/www/bod-app-api/app/Policies/UserPolicy.php) enforces admin vs self-service access.
 3. [StoreUserRequest.php](C:/laragon/www/bod-app-api/app/Http/Requests/User/StoreUserRequest.php) validates admin-created users.
-4. [UpdateUserRequest.php](C:/laragon/www/bod-app-api/app/Http/Requests/User/UpdateUserRequest.php) validates partial updates and blocks non-admin changes to privileged fields.
+4. [UpdateUserRequest.php](C:/laragon/www/bod-app-api/app/Http/Requests/User/UpdateUserRequest.php) validates partial updates, checks `currentPassword` for self password changes, and blocks non-admin changes to privileged fields.
 5. [UserController.php](C:/laragon/www/bod-app-api/app/Http/Controllers/Api/UserController.php) returns normalized user payloads through [UserResource.php](C:/laragon/www/bod-app-api/app/Http/Resources/UserResource.php).
 6. Shared collaboration user discovery should use the space-members endpoints instead of direct `/api/users` listing.
 

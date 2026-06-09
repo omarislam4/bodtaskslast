@@ -3,4 +3,6 @@ export interface UpdateProfilePayload {
   phone?: string;
   countryCode?: string;
   shiftEnd?: string;
+  password?: string;
+  currentPassword?: string;
 }

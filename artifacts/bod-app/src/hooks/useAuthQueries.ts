@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { authService } from "@/services/auth";
+import { AuthResponse, authService } from "@/services/auth";
+import { useLocation } from "wouter";
 
 export const authKeys = {
   me: () => ["auth", "me"] as const,
@@ -16,8 +17,15 @@ export const useMe = (enabled: boolean) =>
     refetchOnWindowFocus: false,
   });
 
-export const useLogin = () =>
-  useMutation({ mutationFn: authService.login });
-
+export const useLogin = (onSuccess?: (data: AuthResponse) => void) => {
+  const [, navigate] = useLocation();
+  return useMutation({
+    mutationFn: authService.login,
+    onSuccess: (data) => {
+      navigate("/spaces");
+      if (onSuccess) onSuccess(data);
+    },
+  });
+};
 export const useRegister = () =>
   useMutation({ mutationFn: authService.register });

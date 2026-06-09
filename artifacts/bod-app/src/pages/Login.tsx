@@ -6,7 +6,15 @@ import { useLang } from "@/contexts/LangContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "wouter";
 
-function getAuthError(err: unknown, t: { errInvalidCredentials: string; errTooManyAttempts: string; errNetwork: string; errGeneric: string }): string {
+function getAuthError(
+  err: unknown,
+  t: {
+    errInvalidCredentials: string;
+    errTooManyAttempts: string;
+    errNetwork: string;
+    errGeneric: string;
+  },
+): string {
   const status = (err as { response?: { status?: number } })?.response?.status;
   if (status === 401 || status === 400) return t.errInvalidCredentials;
   if (status === 429) return t.errTooManyAttempts;
@@ -23,15 +31,11 @@ export default function Login() {
   const { t } = useLang();
   const { login, loginPending } = useAuth();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = (e: React.SubmitEvent) => {
     e.preventDefault();
     if (!email || !password) return;
     setError("");
-    try {
-      await login(email, password);
-    } catch (err: unknown) {
-      setError(getAuthError(err, t));
-    }
+    login(email, password);
   };
 
   return (
