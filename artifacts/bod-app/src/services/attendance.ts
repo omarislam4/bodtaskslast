@@ -19,3 +19,4 @@ export const weeklyReportsService = {
       .post<{ message: string; weeklyReport: WeeklyReportRecord }>("/weekly-reports", payload)
       .then((r) => r.data.weeklyReport),
 };
+

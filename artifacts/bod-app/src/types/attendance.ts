@@ -19,3 +19,4 @@ export interface WeeklyReportRecord {
 export interface CreateWeeklyReportPayload {
   report: string;
 }
+

@@ -20,6 +20,12 @@ const attendance: Record<AttendanceKeys, TranslationValue> = {
   submitWeeklyReport: "قدم التقرير الأسبوعي إلى HR",
   weeklyReportPlaceholder:
     "اكتب تقريرك الأسبوعي... (ما الذي أنجزته هذا الأسبوع؟ هل هناك أي تحديات أو احتياجات دعم؟)",
+  attMonthlyReportSent: "تم إرسال التقرير الشهري!",
+  monthOf: "شهر",
+  monthlyReport: "التقرير الشهري",
+  submitMonthlyReport: "قدم التقرير الشهري",
+  monthlyReportPlaceholder:
+    "اكتب تقريرك الشهري... (ما الذي أنجزته هذا الشهر؟ أبرز الإنجازات والتحديات وأهداف الشهر القادم؟)",
 };
 
 export default attendance;

@@ -17,6 +17,12 @@ const attendance = {
   submitWeeklyReport: "Submit Weekly Report",
   weeklyReportPlaceholder:
     "Write your weekly report... (What did you accomplish this week? Any challenges or support needed?)",
+  attMonthlyReportSent: "Monthly report sent!",
+  monthOf: "Month of",
+  monthlyReport: "Monthly Report",
+  submitMonthlyReport: "Submit Monthly Report",
+  monthlyReportPlaceholder:
+    "Write your monthly report... (What did you accomplish this month? Key wins, challenges, or goals for next month?)",
 } as const;
 
 export type AttendanceKeys = keyof typeof attendance;

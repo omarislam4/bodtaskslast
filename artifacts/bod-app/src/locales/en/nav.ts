@@ -13,6 +13,7 @@ const nav = {
   mySpaces: "My Spaces",
   attendance: "Attendance",
   weeklyReport: "Weekly Report",
+  monthlyReport: "Monthly Report",
 } as const;
 
 export type NavKeys = keyof typeof nav;

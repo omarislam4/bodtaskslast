@@ -20,6 +20,7 @@ import History from "@/pages/History";
 import Settings from "@/pages/Settings";
 import Attendance from "@/pages/Attendance";
 import WeeklyReport from "@/pages/WeeklyReport";
+import MonthlyReport from "@/pages/MonthlyReport";
 import Bugs from "@/pages/Bugs";
 import Goals from "@/pages/Goals";
 import MyTasks from "@/pages/MyTasks";
@@ -93,6 +94,7 @@ function ProtectedSwitch() {
         <Route path="/settings" component={Settings} />
         <Route path="/attendance" component={Attendance} />
         <Route path="/weekly-report" component={WeeklyReport} />
+        <Route path="/monthly-report" component={MonthlyReport} />
         <Route path="/bugs" component={() => isAdmin ? <Bugs /> : <Redirect to="/" />} />
         <Route path="/goals" component={Goals} />
         <Route path="/my-tasks" component={MyTasks} />

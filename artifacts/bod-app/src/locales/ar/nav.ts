@@ -16,6 +16,7 @@ const nav: Record<NavKeys, TranslationValue> = {
   mySpaces: "مساحاتي",
   attendance: "الحضور",
   weeklyReport: "التقرير الأسبوعي",
+  monthlyReport: "التقرير الشهري",
 };
 
 export default nav;
