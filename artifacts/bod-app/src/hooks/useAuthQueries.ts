@@ -27,5 +27,13 @@ export const useLogin = (onSuccess?: (data: AuthResponse) => void) => {
     },
   });
 };
-export const useRegister = () =>
-  useMutation({ mutationFn: authService.register });
+export const useRegister = (onSuccess?: (data: AuthResponse) => void) => {
+  const [, navigate] = useLocation();
+  return useMutation({
+    mutationFn: authService.register,
+    onSuccess: (data) => {
+      navigate("/spaces");
+      if (onSuccess) onSuccess(data);
+    },
+  });
+};
