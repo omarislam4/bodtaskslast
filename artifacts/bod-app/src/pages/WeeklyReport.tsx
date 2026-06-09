@@ -3,45 +3,41 @@ import { motion } from "framer-motion";
 import { FileText, Send } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
-import { useSubmitWeeklyReport } from "@/hooks/useAttendance";
+import { toast } from "sonner";
 import DateDisplay from "@/components/ui/date-display";
 
 const N8N_WEEKLY_URL = "https://n8n.athar-riyada.com/webhook/weekly-report";
 
-function fireN8nWeeklyReport(payload: Record<string, string>): void {
-  fetch(N8N_WEEKLY_URL, {
-    method: "POST",
-    mode: "no-cors",
-    headers: { "Content-Type": "text/plain" },
-    body: JSON.stringify(payload),
-  }).catch(() => {});
-}
-
 export default function WeeklyReport() {
   const { userDoc } = useAuth();
   const { t } = useLang();
-  const submitReport = useSubmitWeeklyReport();
   const [weeklyReport, setWeeklyReport] = useState("");
+  const [isPending, setIsPending] = useState(false);
 
-  const handleSubmit = (e: React.SubmitEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!weeklyReport.trim()) return;
 
-    submitReport.mutate(
-      { report: weeklyReport },
-      {
-        onSuccess: () => {
-          fireN8nWeeklyReport({
-            userId: userDoc?.id || "",
-            userName: userDoc?.displayName || userDoc?.email || "",
-            userEmail: userDoc?.email || "",
-            timestamp: new Date().toISOString(),
-            report: weeklyReport,
-          });
-          setWeeklyReport("");
-        },
-      },
-    );
+    setIsPending(true);
+    try {
+      await fetch(N8N_WEEKLY_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: userDoc?.id || "",
+          userName: userDoc?.displayName || userDoc?.email || "",
+          userEmail: userDoc?.email || "",
+          timestamp: new Date().toISOString(),
+          report: weeklyReport,
+        }),
+      });
+      toast.success(t.attWeeklyReportSent);
+      setWeeklyReport("");
+    } catch {
+      toast.error(t.errSendReport);
+    } finally {
+      setIsPending(false);
+    }
   };
 
   return (
@@ -84,11 +80,11 @@ export default function WeeklyReport() {
             type="submit"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            disabled={submitReport.isPending || !weeklyReport.trim()}
+            disabled={isPending || !weeklyReport.trim()}
             className="w-full py-3 bg-purple-500 text-white text-sm font-semibold rounded-xl hover:bg-purple-600 disabled:opacity-60 transition-colors shadow-sm flex items-center justify-center gap-2"
           >
             <Send className="w-4 h-4" />
-            {submitReport.isPending ? t.saving : t.submitWeeklyReport}
+            {isPending ? t.saving : t.submitWeeklyReport}
           </motion.button>
         </form>
       </motion.div>
