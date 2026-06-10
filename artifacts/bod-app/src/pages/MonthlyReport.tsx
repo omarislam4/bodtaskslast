@@ -1,43 +1,42 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { FileText, Send } from "lucide-react";
+import { FileText, Link, Send } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
-import { toast } from "sonner";
 import DateDisplay from "@/components/ui/date-display";
-
-const N8N_MONTHLY_URL = "https://n8n.athar-riyada.com/webhook/monthly-report";
+import FileDropZone from "@/components/ui/file-drop-zone";
+import { useSubmitMonthlyReport } from "@/hooks/useReports";
 
 export default function MonthlyReport() {
   const { userDoc } = useAuth();
   const { t } = useLang();
-  const [monthlyReport, setMonthlyReport] = useState("");
-  const [isPending, setIsPending] = useState(false);
+  const [report, setReport] = useState("");
+  const [attachmentLink, setAttachmentLink] = useState("");
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const { mutate, isPending } = useSubmitMonthlyReport();
+
+  const handleSubmit = (e: React.SubmitEvent) => {
     e.preventDefault();
-    if (!monthlyReport.trim()) return;
-
-    setIsPending(true);
-    try {
-      await fetch(N8N_MONTHLY_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: userDoc?.id || "",
-          userName: userDoc?.displayName || userDoc?.email || "",
-          userEmail: userDoc?.email || "",
-          timestamp: new Date().toISOString(),
-          report: monthlyReport,
-        }),
-      });
-      toast.success(t.attMonthlyReportSent);
-      setMonthlyReport("");
-    } catch {
-      toast.error(t.errSendReport);
-    } finally {
-      setIsPending(false);
-    }
+    if (!report.trim()) return;
+    mutate(
+      {
+        userId: userDoc?.id || "",
+        userName: userDoc?.displayName || userDoc?.email || "",
+        userEmail: userDoc?.email || "",
+        timestamp: new Date().toISOString(),
+        report,
+        attachment_file: attachmentFile ?? undefined,
+        attachment_link: attachmentLink || undefined,
+      },
+      {
+        onSuccess: () => {
+          setReport("");
+          setAttachmentLink("");
+          setAttachmentFile(null);
+        },
+      },
+    );
   };
 
   return (
@@ -67,20 +66,39 @@ export default function MonthlyReport() {
             </p>
           </div>
         </div>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <textarea
-            value={monthlyReport}
-            onChange={(e) => setMonthlyReport(e.target.value)}
+            value={report}
+            onChange={(e) => setReport(e.target.value)}
             placeholder={t.monthlyReportPlaceholder}
             rows={8}
             className="w-full px-4 py-3 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all resize-none"
             required
           />
+
+          <div className="relative">
+            <Link className="absolute inset-s-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+            <input
+              type="url"
+              value={attachmentLink}
+              onChange={(e) => setAttachmentLink(e.target.value)}
+              placeholder={t.attachmentLinkPlaceholder}
+              className="w-full ps-9 pe-4 py-2.5 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+            />
+          </div>
+
+          <FileDropZone
+            value={attachmentFile}
+            onChange={setAttachmentFile}
+            accentColor="blue"
+          />
+
           <motion.button
             type="submit"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            disabled={isPending || !monthlyReport.trim()}
+            disabled={isPending || !report.trim()}
             className="w-full py-3 bg-blue-500 text-white text-sm font-semibold rounded-xl hover:bg-blue-600 disabled:opacity-60 transition-colors shadow-sm flex items-center justify-center gap-2"
           >
             <Send className="w-4 h-4" />

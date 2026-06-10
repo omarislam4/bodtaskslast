@@ -23,6 +23,11 @@ const attendance = {
   submitMonthlyReport: "Submit Monthly Report",
   monthlyReportPlaceholder:
     "Write your monthly report... (What did you accomplish this month? Key wins, challenges, or goals for next month?)",
+  attachmentFile: "Attachment (optional)",
+  attachmentLink: "Link (optional)",
+  attachmentLinkPlaceholder: "https://...",
+  attachmentDropHint: "drag & drop or click to browse",
+  attachmentDropActive: "Drop file here",
 } as const;
 
 export type AttendanceKeys = keyof typeof attendance;

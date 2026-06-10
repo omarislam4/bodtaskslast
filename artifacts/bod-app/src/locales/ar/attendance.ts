@@ -26,6 +26,11 @@ const attendance: Record<AttendanceKeys, TranslationValue> = {
   submitMonthlyReport: "قدم التقرير الشهري",
   monthlyReportPlaceholder:
     "اكتب تقريرك الشهري... (ما الذي أنجزته هذا الشهر؟ أبرز الإنجازات والتحديات وأهداف الشهر القادم؟)",
+  attachmentFile: "مرفق (اختياري)",
+  attachmentLink: "رابط (اختياري)",
+  attachmentLinkPlaceholder: "https://...",
+  attachmentDropHint: "اسحب وأفلت أو انقر للاستعراض",
+  attachmentDropActive: "أفلت الملف هنا",
 };
 
 export default attendance;
