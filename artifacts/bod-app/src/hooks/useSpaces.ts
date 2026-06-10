@@ -118,6 +118,27 @@ export const useAddSpaceMember = () => {
   });
 };
 
+export const useAddSpaceMembers = () => {
+  const queryClient = useQueryClient();
+  const { t } = useLang();
+  return useMutation({
+    mutationFn: ({ spaceId, userIds }: { spaceId: string; userIds: string[] }) =>
+      Promise.allSettled(userIds.map((userId) => spacesService.addMember(spaceId, userId))),
+    onSuccess: (results, { spaceId }) => {
+      const failed = results.filter((r) => r.status === "rejected").length;
+      const succeeded = results.length - failed;
+      queryClient.invalidateQueries({ queryKey: spaceKeys.members(spaceId) });
+      queryClient.invalidateQueries({ queryKey: spaceKeys.detail(spaceId) });
+      if (failed === 0) {
+        toast.success(succeeded === 1 ? t.memberAdded : `${succeeded} members added`);
+      } else {
+        toast.warning(`${succeeded} added, ${failed} failed`);
+      }
+    },
+    onError: () => toast.error(t.errAddMember),
+  });
+};
+
 export const useRemoveSpaceMember = () => {
   const queryClient = useQueryClient();
   const { t } = useLang();

@@ -110,7 +110,8 @@ const tasks = {
   noTasksWithDeadlines: "No tasks with deadlines",
   noTasksInThisSprintYet: "No tasks in this sprint yet",
   noTasksMatchFilter: (filter: string) => `No ${filter} tasks`,
-
+  searchTasks: "Search tasks...",
+  noTasksFound: "No tasks found",
 } as const;
 
 export type TasksKeys = keyof typeof tasks;

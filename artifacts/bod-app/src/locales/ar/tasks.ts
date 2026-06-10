@@ -106,6 +106,8 @@ const tasks: Record<TasksKeys, TranslationValue> = {
   noTasksWithDeadlines: "لا توجد مهام بمواعيد نهائية",
   noTasksInThisSprintYet: "لا توجد مهام في هذا السبرينت بعد",
   noTasksMatchFilter: (filter: string) => `لا توجد مهام ${filter}`,
+  searchTasks: "ابحث عن مهام...",
+  noTasksFound: "لا توجد مهام مطابقة",
 };
 
 export default tasks;

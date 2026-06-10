@@ -35,6 +35,13 @@ const spaces = {
   removeAdminRole: "Remove Admin",
   subspacesTab: "Sub-spaces",
   kanban: "Kanban",
+  selectUsers: "Select users...",
+  searchUsers: "Search users...",
+  noUsersFound: "No users found",
+  membersSelected: "members selected",
+  addMembersFromSectionAbove: "Add members from the section above.",
+  addMembers: "Add Members",
+  admin: "Admin",
 } as const;
 
 export type SpacesKeys = keyof typeof spaces;

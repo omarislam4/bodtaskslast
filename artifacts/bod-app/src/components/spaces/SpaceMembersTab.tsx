@@ -1,13 +1,17 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { UserPlus, UserMinus, Users } from "lucide-react";
-import { useSpaceMembers, useAddSpaceMember, useRemoveSpaceMember } from "@/hooks/useSpaces";
+import {
+  useSpaceMembers,
+  useAddSpaceMembers,
+  useRemoveSpaceMember,
+} from "@/hooks/useSpaces";
 import { useMembers } from "@/hooks/useMembers";
 import { useTasksBySpace } from "@/hooks/useTaskQueries";
 import { useLang } from "@/contexts/LangContext";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { UserSelect } from "@/components/shared/UserSelect";
 import { cn } from "@/lib/utils";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Props {
   spaceId: string;
@@ -18,19 +22,22 @@ export function SpaceMembersTab({ spaceId, isAdmin }: Props) {
   const { t } = useLang();
   const { data: tasks = [] } = useTasksBySpace(spaceId);
   const { members } = useMembers();
-  const { data: spaceMembers = [], isLoading: membersLoading } = useSpaceMembers(spaceId);
-  const addSpaceMember = useAddSpaceMember();
+  const { data: spaceMembers = [], isLoading: membersLoading } =
+    useSpaceMembers(spaceId);
+  const addSpaceMembers = useAddSpaceMembers();
   const removeSpaceMember = useRemoveSpaceMember();
 
-  const [selectedNewMember, setSelectedNewMember] = useState("");
+  const [selectedNewMembers, setSelectedNewMembers] = useState<string[]>([]);
 
-  const nonSpaceMembers = members.filter((m) => !spaceMembers.find((sm) => sm.id === m.id));
+  const nonSpaceMembers = members.filter(
+    (m) => !spaceMembers.find((sm) => sm.id === m.id),
+  );
 
-  const handleAddMember = () => {
-    if (!selectedNewMember) return;
-    addSpaceMember.mutate(
-      { spaceId, userId: selectedNewMember },
-      { onSuccess: () => setSelectedNewMember("") },
+  const handleAddMembers = () => {
+    if (selectedNewMembers.length === 0) return;
+    addSpaceMembers.mutate(
+      { spaceId, userIds: selectedNewMembers },
+      { onSuccess: () => setSelectedNewMembers([]) },
     );
   };
 
@@ -55,28 +62,26 @@ export function SpaceMembersTab({ spaceId, isAdmin }: Props) {
       {isAdmin && nonSpaceMembers.length > 0 && (
         <div className="bg-card border border-border rounded-xl p-4 mb-5 shadow-sm">
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-            Add Member
+            {t.addMembers}
           </h3>
           <div className="flex gap-2">
-            <Select value={selectedNewMember} onValueChange={setSelectedNewMember}>
-              <SelectTrigger className="flex-1 text-sm min-w-0">
-                <SelectValue placeholder={t.selectMember} />
-              </SelectTrigger>
-              <SelectContent>
-                {nonSpaceMembers.map((m) => (
-                  <SelectItem key={m.id} value={m.id}>
-                    {m.displayName || m.email} ({m.email})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex-1 min-w-0">
+              <UserSelect
+                value={selectedNewMembers}
+                onChange={setSelectedNewMembers}
+                placeholder={t.selectMember}
+                members={nonSpaceMembers}
+              />
+            </div>
             <button
-              onClick={handleAddMember}
-              disabled={!selectedNewMember || addSpaceMember.isPending}
+              onClick={handleAddMembers}
+              disabled={
+                selectedNewMembers.length === 0 || addSpaceMembers.isPending
+              }
               className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-semibold bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 disabled:opacity-60 transition-colors shrink-0 shadow-sm"
             >
               <UserPlus className="w-4 h-4" />
-              <span className="hidden sm:inline">Add</span>
+              <span className="hidden sm:inline">{t.add}</span>
             </button>
           </div>
         </div>
@@ -84,21 +89,29 @@ export function SpaceMembersTab({ spaceId, isAdmin }: Props) {
 
       {membersLoading ? (
         <div className="space-y-2">
-          {Array(3).fill(0).map((_, i) => (
-            <div key={i} className="h-16 bg-muted rounded-xl animate-pulse" />
-          ))}
+          {Array(3)
+            .fill(0)
+            .map((_, i) => (
+              <div key={i} className="h-16 bg-muted rounded-xl animate-pulse" />
+            ))}
         </div>
       ) : spaceMembers.length === 0 ? (
         <EmptyState
           icon={Users}
-          title="No members yet"
-          description={isAdmin ? "Add members from the section above." : "No members have been added to this space."}
+          title={t.noMembersYet}
+          description={
+            isAdmin ? t.addMembersFromSectionAbove : t.noMembersSpace
+          }
         />
       ) : (
         <div className="space-y-2">
           {spaceMembers.map((m) => {
-            const memberTasks = tasks.filter((tk) => tk.assigneeIds.includes(m.id));
-            const doneTasks = memberTasks.filter((tk) => tk.status === "done").length;
+            const memberTasks = tasks.filter((tk) =>
+              tk.assigneeIds.includes(m.id),
+            );
+            const doneTasks = memberTasks.filter(
+              (tk) => tk.status === "done",
+            ).length;
             return (
               <div
                 key={m.id}
@@ -108,23 +121,38 @@ export function SpaceMembersTab({ spaceId, isAdmin }: Props) {
                   {(m.displayName || m.email || "?")[0].toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-foreground truncate">{m.displayName || "Unnamed"}</p>
-                  <p className="text-xs text-muted-foreground truncate">{m.email}</p>
+                  <p className="text-sm font-semibold text-foreground truncate">
+                    {m.displayName || "Unnamed"}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {m.email}
+                  </p>
                 </div>
                 <div className="text-right shrink-0 hidden sm:block">
-                  <p className="text-xs text-muted-foreground">{memberTasks.length} tasks</p>
-                  <p className="text-xs text-emerald-500 font-medium">{doneTasks} done</p>
+                  <p className="text-xs text-muted-foreground">
+                    {memberTasks.length} {t.tasks}
+                  </p>
+                  <p className="text-xs text-emerald-500 font-medium">
+                    {doneTasks} {t.done}
+                  </p>
                 </div>
-                <span className={cn(
-                  "text-xs px-2 py-0.5 rounded-full font-medium shrink-0",
-                  m.role === "admin" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
-                )}>
-                  {m.role}
+                <span
+                  className={cn(
+                    "text-xs px-2 py-0.5 rounded-full font-medium shrink-0",
+                    m.role === "admin"
+                      ? "bg-primary/10 text-primary"
+                      : "bg-muted text-muted-foreground",
+                  )}
+                >
+                  {m.role === "admin" ? t.admin : t.member}
                 </span>
                 {isAdmin && m.role !== "admin" && (
                   <button
                     onClick={() => handleRemoveMember(m.id)}
-                    disabled={removeSpaceMember.isPending && removeSpaceMember.variables?.memberId === m.id}
+                    disabled={
+                      removeSpaceMember.isPending &&
+                      removeSpaceMember.variables?.memberId === m.id
+                    }
                     className="text-muted-foreground hover:text-destructive transition-colors p-1 shrink-0 disabled:opacity-60"
                     title="Remove from space"
                   >

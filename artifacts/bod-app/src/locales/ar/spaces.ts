@@ -38,6 +38,13 @@ const spaces: Record<SpacesKeys, TranslationValue> = {
   removeAdminRole: "إزالة كمسؤول",
   subspacesTab: "المساحات الفرعية",
   kanban: "كانبان",
+  selectUsers: "اختر أعضاء...",
+  searchUsers: "ابحث عن أعضاء...",
+  noUsersFound: "لا يوجد أعضاء",
+  membersSelected: "أعضاء مختارون",
+  addMembersFromSectionAbove: "أضف أعضاء من القسم أعلاه.",
+  addMembers: "أضف أعضاء",
+  admin: "مسؤول",
 };
 
 export default spaces;

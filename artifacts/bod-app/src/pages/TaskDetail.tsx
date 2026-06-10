@@ -60,6 +60,7 @@ import type {
 } from "@/types";
 import { TaskStatusBadge } from "@/components/tasks/TaskStatusBadge";
 import { TaskPriorityBadge } from "@/components/tasks/TaskPriorityBadge";
+import { TaskSelect } from "@/components/shared/TaskSelect";
 import { AvatarGroup } from "@/components/shared/AvatarGroup";
 import { ProgressBar } from "@/components/shared/ProgressBar";
 import { toast } from "sonner";
@@ -160,7 +161,7 @@ export default function TaskDetail() {
 
   // Dependency state
   const [showDepForm, setShowDepForm] = useState(false);
-  const [depTaskId, setDepTaskId] = useState("");
+  const [depTaskId, setDepTaskId] = useState<string | null>(null);
   const [depType, setDepType] = useState<DependencyType>("related");
 
   // Tag state
@@ -371,7 +372,7 @@ export default function TaskDetail() {
       { taskId: depTaskId, type: depType },
       {
         onSuccess: () => {
-          setDepTaskId("");
+          setDepTaskId(null);
           setShowDepForm(false);
         },
       },
@@ -473,7 +474,6 @@ export default function TaskDetail() {
   ).length;
   const subtaskTotal = (task.subtasks || []).length;
   const isWatching = (task.watchers || []).includes(userDoc?.id || "");
-  const otherTasks = allTasks.filter((t) => t.id !== taskId);
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
@@ -1315,18 +1315,11 @@ export default function TaskDetail() {
                     </SelectItem>
                   </SelectContent>
                 </Select>
-                <Select value={depTaskId} onValueChange={setDepTaskId}>
-                  <SelectTrigger className="w-full text-sm">
-                    <SelectValue placeholder={t.selectTask} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {otherTasks.map((ot) => (
-                      <SelectItem key={ot.id} value={ot.id}>
-                        {ot.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <TaskSelect
+                  value={depTaskId}
+                  onChange={setDepTaskId}
+                  placeholder={t.selectTask}
+                />
                 <button
                   onClick={handleAddDependency}
                   disabled={!depTaskId}
