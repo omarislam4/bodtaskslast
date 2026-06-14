@@ -131,7 +131,7 @@ export default function Settings() {
             {lang === "ar" ? "يُستخدم لإرسال تذكيرات واتساب عند انتهاء وردية العمل." : "Used for WhatsApp reminders via n8n when your shift is ending."}
           </p>
           <div className="flex gap-2">
-            <Select value={countryCode} onValueChange={setCountryCode}>
+            <Select value={countryCode} onValueChange={(v) => { setCountryCode(v); if (v === "+20") setPhone((p) => p.replace(/^0+/, "")); }}>
               <SelectTrigger className="w-40 text-sm shrink-0">
                 <SelectValue />
               </SelectTrigger>
@@ -143,7 +143,10 @@ export default function Settings() {
             </Select>
             <input
               value={phone}
-              onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").replace(/^0+/, ""))}
+              onChange={(e) => {
+                const digits = e.target.value.replace(/\D/g, "");
+                setPhone(countryCode === "+20" ? digits.replace(/^0+/, "") : digits);
+              }}
               placeholder={lang === "ar" ? "رقم الهاتف بدون صفر" : "Phone without leading 0"}
               type="tel"
               className="flex-1 px-3 py-2.5 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
