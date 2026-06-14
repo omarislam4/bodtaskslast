@@ -152,9 +152,9 @@ export default function Settings() {
               className="flex-1 px-3 py-2.5 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
             />
           </div>
-          <p className="text-xs text-muted-foreground mt-2">
+          {countryCode === "+20" && <p className="text-xs text-muted-foreground mt-2">
             {lang === "ar" ? "لا تبدأ الرقم بصفر — مثال: 1012345678" : "Do not start with 0 — e.g. 1012345678"}
-          </p>
+          </p>}
         </motion.div>
 
         {/* Shift */}
