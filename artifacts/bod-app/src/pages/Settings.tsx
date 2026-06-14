@@ -143,12 +143,15 @@ export default function Settings() {
             </Select>
             <input
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder={lang === "ar" ? "رقم الهاتف" : "Your phone number"}
+              onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").replace(/^0+/, ""))}
+              placeholder={lang === "ar" ? "رقم الهاتف بدون صفر" : "Phone without leading 0"}
               type="tel"
               className="flex-1 px-3 py-2.5 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
             />
           </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            {lang === "ar" ? "لا تبدأ الرقم بصفر — مثال: 1012345678" : "Do not start with 0 — e.g. 1012345678"}
+          </p>
         </motion.div>
 
         {/* Shift */}
