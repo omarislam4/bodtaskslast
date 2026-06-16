@@ -1,6 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Clock, CheckCircle2, Send } from "lucide-react";
+import {
+  Clock,
+  CheckCircle2,
+  Send,
+  PauseCircle,
+  PlayCircle,
+} from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
 import { useLogAttendance } from "@/hooks/useAttendance";
@@ -31,11 +37,48 @@ function fireN8nWebhook(
   }).catch(() => {});
 }
 
+interface ShiftState {
+  shiftActive: boolean;
+  isPaused: boolean;
+}
+
+function getShiftKey(userId: string) {
+  return `bod_shift_${userId}`;
+}
+
+function loadShiftState(userId: string): ShiftState {
+  try {
+    const raw = localStorage.getItem(getShiftKey(userId));
+    if (!raw) return { shiftActive: false, isPaused: false };
+    return JSON.parse(raw) as ShiftState;
+  } catch {
+    return { shiftActive: false, isPaused: false };
+  }
+}
+
+function saveShiftState(userId: string, state: ShiftState) {
+  localStorage.setItem(getShiftKey(userId), JSON.stringify(state));
+}
+
+function clearShiftState(userId: string) {
+  localStorage.removeItem(getShiftKey(userId));
+}
+
 export default function Attendance() {
   const { userDoc } = useAuth();
   const { t } = useLang();
   const logAttendance = useLogAttendance();
   const [endShiftReport, setEndShiftReport] = useState("");
+  const [shiftState, setShiftState] = useState<ShiftState>({
+    shiftActive: false,
+    isPaused: false,
+  });
+
+  useEffect(() => {
+    if (userDoc?.id) {
+      setShiftState(loadShiftState(userDoc.id));
+    }
+  }, [userDoc?.id]);
 
   const isLoading = (type: AttendanceType) =>
     logAttendance.isPending && logAttendance.variables?.type === type;
@@ -63,11 +106,59 @@ export default function Attendance() {
             message: N8N_MESSAGES[type](now),
             ...(type === "end" ? { report: endShiftReport } : {}),
           });
-          if (type === "end") setEndShiftReport("");
+
+          if (type === "start") {
+            const newState: ShiftState = { shiftActive: true, isPaused: false };
+            if (userDoc?.id) saveShiftState(userDoc.id, newState);
+            setShiftState(newState);
+          } else if (type === "end") {
+            if (userDoc?.id) clearShiftState(userDoc.id);
+            setShiftState({ shiftActive: false, isPaused: false });
+            setEndShiftReport("");
+          }
         },
       },
     );
   };
+
+  const firePauseResumeWebhook = (action: "pause" | "resume") => {
+    const url =
+      action === "pause"
+        ? "https://n8n.athar-riyada.com/webhook/pause-shift"
+        : "https://n8n.athar-riyada.com/webhook/resume-shift";
+    fetch(url, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({
+        userId: userDoc?.id || "",
+        userName: userDoc?.displayName || userDoc?.email || "",
+        userEmail: userDoc?.email || "",
+        timestamp: new Date().toISOString(),
+        type: action,
+        message: action === "pause" ? "Shift Paused" : "Shift Resumed",
+      }),
+    }).catch(() => {});
+  };
+
+  const handlePauseResume = () => {
+    if (!shiftState.isPaused) {
+      const newState: ShiftState = { shiftActive: true, isPaused: true };
+      if (userDoc?.id) saveShiftState(userDoc.id, newState);
+      setShiftState(newState);
+      firePauseResumeWebhook("pause");
+      toast.success(t.pauseShiftToast);
+    } else {
+      const newState: ShiftState = { shiftActive: true, isPaused: false };
+      if (userDoc?.id) saveShiftState(userDoc.id, newState);
+      setShiftState(newState);
+      firePauseResumeWebhook("resume");
+      toast.success(t.resumeShiftToast);
+    }
+  };
+
+  const isPaused = shiftState.isPaused;
+  const shiftActive = shiftState.shiftActive;
 
   return (
     <div className="p-4 sm:p-6 max-w-2xl mx-auto">
@@ -109,6 +200,65 @@ export default function Attendance() {
             className="w-full py-3 bg-emerald-500 text-white text-sm font-semibold rounded-xl hover:bg-emerald-600 disabled:opacity-60 transition-colors shadow-sm"
           >
             {isLoading("start") ? t.loading : t.startMainShift}
+          </motion.button>
+        </motion.div>
+
+        {/* Pause / Resume Shift */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.08 }}
+          className={`bg-card border rounded-2xl p-5 shadow-sm transition-colors ${
+            isPaused ? "border-amber-400/60" : "border-border"
+          }`}
+        >
+          <div className="flex items-center gap-3 mb-4">
+            <div
+              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+                isPaused ? "bg-amber-500/10" : "bg-purple-500/10"
+              }`}
+            >
+              {isPaused ? (
+                <PlayCircle className="w-5 h-5 text-amber-500" />
+              ) : (
+                <PauseCircle className="w-5 h-5 text-purple-500" />
+              )}
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">
+                {isPaused ? t.resumeShift : t.pauseShift}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                {isPaused ? t.resumeShiftDesc : t.pauseShiftDesc}
+              </p>
+            </div>
+            {isPaused && (
+              <span className="ms-auto text-xs font-medium px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                Paused
+              </span>
+            )}
+          </div>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={handlePauseResume}
+            className={`w-full py-3 text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors shadow-sm flex items-center justify-center gap-2 ${
+              isPaused
+                ? "bg-amber-500 hover:bg-amber-600"
+                : "bg-purple-500 hover:bg-purple-600"
+            }`}
+          >
+            {isPaused ? (
+              <>
+                <PlayCircle className="w-4 h-4" />
+                {t.resumeShift}
+              </>
+            ) : (
+              <>
+                <PauseCircle className="w-4 h-4" />
+                {t.pauseShift}
+              </>
+            )}
           </motion.button>
         </motion.div>
 

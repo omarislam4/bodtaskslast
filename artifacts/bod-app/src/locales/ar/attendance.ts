@@ -31,6 +31,13 @@ const attendance: Record<AttendanceKeys, TranslationValue> = {
   attachmentLinkPlaceholder: "https://...",
   attachmentDropHint: "اسحب وأفلت أو انقر للاستعراض",
   attachmentDropActive: "أفلت الملف هنا",
+  pauseShift: "إيقاف الوردية مؤقتاً",
+  resumeShift: "استئناف الوردية",
+  pauseShiftDesc: "خذ استراحة من ورديتك النشطة",
+  resumeShiftDesc: "تابع ورديتك النشطة",
+  pauseShiftToast: "تم إيقاف الوردية مؤقتاً",
+  resumeShiftToast: "تم استئناف الوردية",
+  errShiftNotStarted: "يرجى بدء ورديتك أولاً قبل الإيقاف المؤقت.",
 };
 
 export default attendance;

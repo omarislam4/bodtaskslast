@@ -28,6 +28,13 @@ const attendance = {
   attachmentLinkPlaceholder: "https://...",
   attachmentDropHint: "drag & drop or click to browse",
   attachmentDropActive: "Drop file here",
+  pauseShift: "Pause Shift",
+  resumeShift: "Resume Shift",
+  pauseShiftDesc: "Take a break from your active shift",
+  resumeShiftDesc: "Continue your active shift",
+  pauseShiftToast: "Shift paused",
+  resumeShiftToast: "Shift resumed",
+  errShiftNotStarted: "Please start your shift first before pausing.",
 } as const;
 
 export type AttendanceKeys = keyof typeof attendance;
