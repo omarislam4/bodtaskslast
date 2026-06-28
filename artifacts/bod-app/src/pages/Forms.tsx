@@ -201,10 +201,10 @@ export default function Forms() {
                 <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
                   placeholder={t.description} rows={2}
                   className="w-full px-3 py-2.5 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
-                <Select value={form.spaceId} onValueChange={(v) => setForm(p => ({ ...p, spaceId: v }))}>
+                <Select value={form.spaceId || "__none__"} onValueChange={(v) => setForm(p => ({ ...p, spaceId: v === "__none__" ? "" : v }))}>
                   <SelectTrigger className="w-full text-sm"><SelectValue placeholder={`${t.formLinkedSpace} (optional)`} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">{t.formLinkedSpace} (optional)</SelectItem>
+                    <SelectItem value="__none__">{t.formLinkedSpace} (optional)</SelectItem>
                     {spaces.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                   </SelectContent>
                 </Select>

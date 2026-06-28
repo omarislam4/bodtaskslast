@@ -448,10 +448,10 @@ export default function Bugs() {
                 {senders.length > 0 && (
                   <div>
                     <label className="text-xs text-muted-foreground block mb-1">{t.senderFrom}</label>
-                    <Select value={form.senderId} onValueChange={(v) => setForm((f) => ({ ...f, senderId: v }))}>
+                    <Select value={form.senderId || "__none__"} onValueChange={(v) => setForm((f) => ({ ...f, senderId: v === "__none__" ? "" : v }))}>
                       <SelectTrigger className="w-full text-sm"><SelectValue placeholder="None" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="__none__">None</SelectItem>
                         {senders.map((s) => (
                           <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                         ))}

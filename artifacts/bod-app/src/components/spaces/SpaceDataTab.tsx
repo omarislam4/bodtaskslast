@@ -129,10 +129,10 @@ export function SpaceDataTab({ spaceId, isAdmin }: Props) {
                 className="w-full px-3 py-2.5 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
               />
               {dataType === "link" && dataItems.filter((i) => i.type === "folder").length > 0 && (
-                <Select value={dataParentId || ""} onValueChange={(v) => setDataParentId(v || null)}>
+                <Select value={dataParentId ?? "__root__"} onValueChange={(v) => setDataParentId(v === "__root__" ? null : v)}>
                   <SelectTrigger className="w-full text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">{t.rootFolder}</SelectItem>
+                    <SelectItem value="__root__">{t.rootFolder}</SelectItem>
                     {dataItems.filter((i) => i.type === "folder").map((f) => (
                       <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
                     ))}
