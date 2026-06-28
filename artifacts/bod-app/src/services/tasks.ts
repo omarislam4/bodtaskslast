@@ -39,10 +39,67 @@ export const tasksService = {
   get: (id: string): Promise<Task> =>
     api.get<Task>(`/tasks/${id}`).then((r) => r.data),
 
-  create: (payload: CreateTaskPayload): Promise<Task> =>
-    api
-      .post<{ message: string; task: Task }>("/tasks", payload)
-      .then((r) => r.data.task),
+  create: (payload: CreateTaskPayload): Promise<Task> => {
+    const hasFileAttachment = payload.attachmentType === "file" && payload.attachmentFile;
+    const hasLinkAttachment = payload.attachmentType === "link" && payload.attachmentUrl?.trim();
+
+    if (hasFileAttachment) {
+      const formData = new FormData();
+      const taskFields: Record<string, unknown> = {
+        title: payload.title,
+        description: payload.description ?? "",
+        status: payload.status,
+        priority: payload.priority,
+        type: payload.type,
+        bugSeverity: payload.bugSeverity,
+        stepsToReproduce: payload.stepsToReproduce,
+        expectedBehavior: payload.expectedBehavior,
+        actualBehavior: payload.actualBehavior,
+        assigneeIds: JSON.stringify(payload.assigneeIds ?? []),
+        senderId: payload.senderId ?? "",
+        spaceId: payload.spaceId,
+        estimatedHours: payload.estimatedHours ?? 0,
+        progress: payload.progress ?? 0,
+      };
+
+      Object.entries(taskFields).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          formData.append(key, value as string);
+        }
+      });
+
+      formData.append("attachments[0][type]", "file");
+      if (payload.attachmentTitle?.trim()) {
+        formData.append("attachments[0][title]", payload.attachmentTitle.trim());
+      }
+      formData.append("attachments[0][file]", payload.attachmentFile as File);
+
+      return api
+        .post<{ message: string; task: Task }>('/tasks', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        })
+        .then((r) => r.data.task);
+    }
+
+    if (hasLinkAttachment) {
+      return api
+        .post<{ message: string; task: Task }>('/tasks', {
+          ...payload,
+          attachments: [
+            {
+              type: 'link',
+              title: payload.attachmentTitle?.trim() || undefined,
+              url: payload.attachmentUrl?.trim(),
+            },
+          ],
+        })
+        .then((r) => r.data.task);
+    }
+
+    return api
+      .post<{ message: string; task: Task }>('/tasks', payload)
+      .then((r) => r.data.task);
+  },
 
   update: (id: string, payload: UpdateTaskPayload): Promise<Task> =>
     api

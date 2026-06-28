@@ -1,4 +1,5 @@
 import { useState } from "react";
+import FileDropZone from "@/components/ui/file-drop-zone";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import {
@@ -13,6 +14,7 @@ import {
   Calendar,
   X,
   Search,
+  Paperclip,
 } from "lucide-react";
 import { useAllTasksInfiniteQuery, useCreateTask } from "@/hooks/useTaskQueries";
 import { useInView } from "react-intersection-observer";
@@ -24,6 +26,7 @@ import { useSenders } from "@/hooks/useSenders";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
 import { TaskStatusBadge } from "@/components/tasks/TaskStatusBadge";
+import { tasksService } from "@/services/tasks";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -107,6 +110,10 @@ export default function Bugs() {
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebounce(searchQuery);
   const [showCreate, setShowCreate] = useState(false);
+  const [attachmentType, setAttachmentType] = useState<"file" | "link">("file");
+  const [attachmentTitle, setAttachmentTitle] = useState("");
+  const [attachmentUrl, setAttachmentUrl] = useState("");
+  const [newAttachment, setNewAttachment] = useState<File | null>(null);
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -162,35 +169,65 @@ export default function Bugs() {
   const { data: spaceMembers = [] } = useSpaceMembers(form.spaceId || undefined);
   const createBug = useCreateTask();
 
+  const resetAttachmentForm = () => {
+    setAttachmentType("file");
+    setAttachmentTitle("");
+    setAttachmentUrl("");
+    setNewAttachment(null);
+  };
+
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title.trim() || !form.spaceId) return;
+
+    const finishCreation = () => {
+      setShowCreate(false);
+      resetAttachmentForm();
+      setForm({
+        title: "",
+        description: "",
+        stepsToReproduce: "",
+        expectedBehavior: "",
+        actualBehavior: "",
+        status: "todo",
+        priority: "high",
+        bugSeverity: "medium",
+        deadline: "",
+        assigneeIds: [],
+        senderId: "",
+        spaceId: "",
+        estimatedHours: 0,
+        progress: 0,
+      });
+    };
+
     createBug.mutate(
-      { ...form, type: "bug", deadline: form.deadline || null },
+      {
+        ...form,
+        type: "bug",
+        deadline: form.deadline || null,
+        attachmentType,
+        attachmentTitle: attachmentTitle.trim(),
+        attachmentUrl: attachmentUrl.trim(),
+        attachmentFile: newAttachment,
+      } as any,
       {
         onSuccess: () => {
           toast.success("Bug reported successfully");
-          setShowCreate(false);
-          setForm({
-            title: "",
-            description: "",
-            stepsToReproduce: "",
-            expectedBehavior: "",
-            actualBehavior: "",
-            status: "todo",
-            priority: "high",
-            bugSeverity: "medium",
-            deadline: "",
-            assigneeIds: [],
-            senderId: "",
-            spaceId: "",
-            estimatedHours: 0,
-            progress: 0,
-          });
+          finishCreation();
         },
         onError: () => toast.error("Failed to report bug"),
       },
     );
+  };
+
+  const handleAttachmentSubmit = () => {
+    if (attachmentType === "link") {
+      if (!attachmentUrl.trim()) return;
+      return;
+    }
+
+    if (!newAttachment) return;
   };
 
   const statCards = [
@@ -422,6 +459,60 @@ export default function Bugs() {
                     </Select>
                   </div>
                 )}
+
+                <div className="rounded-xl border border-border bg-background/70 p-3 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Paperclip className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium text-foreground">{t.taskAttachments}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setAttachmentType("file")}
+                      className={cn(
+                        "rounded-full px-3 py-1 text-xs font-medium transition-all",
+                        attachmentType === "file"
+                          ? "bg-red-500 text-white"
+                          : "bg-muted text-muted-foreground",
+                      )}
+                    >
+                      {t.attachmentTypeFile}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAttachmentType("link")}
+                      className={cn(
+                        "rounded-full px-3 py-1 text-xs font-medium transition-all",
+                        attachmentType === "link"
+                          ? "bg-red-500 text-white"
+                          : "bg-muted text-muted-foreground",
+                      )}
+                    >
+                      {t.attachmentTypeLink}
+                    </button>
+                  </div>
+
+                  <input
+                    value={attachmentTitle}
+                    onChange={(e) => setAttachmentTitle(e.target.value)}
+                    placeholder={t.attachmentTitlePlaceholder}
+                    className="w-full px-3 py-2 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/30"
+                  />
+
+                  {attachmentType === "link" ? (
+                    <input
+                      value={attachmentUrl}
+                      onChange={(e) => setAttachmentUrl(e.target.value)}
+                      placeholder={t.attachmentLinkPlaceholder}
+                      className="w-full px-3 py-2 text-sm bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/30"
+                    />
+                  ) : (
+                    <FileDropZone
+                      value={newAttachment}
+                      onChange={(file) => setNewAttachment(file)}
+                    />
+                  )}
+                </div>
 
                 <div className="flex gap-3 justify-end pt-2">
                   <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground">

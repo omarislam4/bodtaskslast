@@ -120,6 +120,11 @@ export interface CreateTaskPayload {
   deadline?: string | null;
   estimatedHours?: number;
   progress?: number;
+  attachments?: Array<{ type: string; title?: string; url?: string }>;
+  attachmentType?: "file" | "link";
+  attachmentTitle?: string;
+  attachmentUrl?: string;
+  attachmentFile?: File | null;
 }
 
 export interface UpdateTaskPayload {
