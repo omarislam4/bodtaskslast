@@ -120,6 +120,32 @@ export const tasksService = {
   deleteTimeEntry: (id: string, entryId: string): Promise<void> =>
     api.delete(`/tasks/${id}/time-entries/${entryId}`).then(() => undefined),
 
+  addAttachment: (
+    id: string,
+    payload: { type: string; title?: string; url?: string; file?: File | null },
+  ): Promise<{ id: string }> => {
+    if (payload.type === "link") {
+      return api
+        .post<{ message: string; attachment: { id: string } }>(`/tasks/${id}/attachments`, {
+          type: payload.type,
+          title: payload.title?.trim() || undefined,
+          url: payload.url?.trim(),
+        })
+        .then((r) => r.data.attachment);
+    }
+
+    const formData = new FormData();
+    formData.append("type", payload.type);
+    if (payload.title?.trim()) formData.append("title", payload.title.trim());
+    if (payload.file) formData.append("file", payload.file);
+
+    return api
+      .post<{ message: string; attachment: { id: string } }>(`/tasks/${id}/attachments`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      })
+      .then((r) => r.data.attachment);
+  },
+
   // Dependencies
   addDependency: (
     id: string,

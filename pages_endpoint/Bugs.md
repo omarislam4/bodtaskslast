@@ -61,6 +61,8 @@ Creates a new bug record using the shared task resource.
 
 #### Payload
 
+Attachments can be included at creation. For links, include `url`; for files, send using `multipart/form-data`.
+
 ```json
 {
   "title": "Login button does not respond",
@@ -77,7 +79,14 @@ Creates a new bug record using the shared task resource.
   "senderId": "sender-1",
   "spaceId": "5",
   "estimatedHours": 2,
-  "progress": 0
+  "progress": 0,
+  "attachments": [
+    {
+      "type": "link",
+      "title": "Bug recording",
+      "url": "https://example.com/recording"
+    }
+  ]
 }
 ```
 
@@ -164,6 +173,8 @@ Used when the bug is edited from the list or task detail flow.
 - Available `senderId` values come from the implemented sender directory in [Senders.md](C:/laragon/www/bod-app-api/docs/pages_endpoint/Senders.md).
 - The detail screen for a bug still follows the shared task detail contract in [TaskDetail.md](C:/laragon/www/bod-app-api/docs/pages_endpoint/TaskDetail.md).
 - The available assignee list is filtered by the selected space's `memberIds`, so bug creation only needs `spaceId` and `assigneeIds`; the backend does not need a separate bug-member endpoint.
+- Bugs support the same attachment types as tasks (`file`, `screenshot`, `video`, `link`). Attachments can be included on `POST /api/tasks` at creation or added later via `POST /api/tasks/{id}/attachments`. See `TaskDetail.md` for the full attachment sub-resource contract.
+- `PATCH /api/tasks/{id}` with an `attachments` field appends new attachments to a bug without replacing existing ones.
 
 ## Pagination
 

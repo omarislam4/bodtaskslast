@@ -16,6 +16,7 @@ import {
   Trash2,
   Plus,
   X,
+  Paperclip,
   Timer,
   Eye,
   EyeOff,
@@ -24,6 +25,7 @@ import {
   GitBranch,
   Star,
   CheckSquare,
+  Files,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
@@ -44,6 +46,7 @@ import {
   useDeleteSubtask,
   useAddTimeEntry,
   useDeleteTimeEntry,
+  useAddAttachment,
   useAddDependency,
   useDeleteDependency,
   useAddTag,
@@ -81,6 +84,7 @@ import {
   taskStatusConfig,
 } from "@/config/status-config";
 import DateDisplay from "@/components/ui/date-display";
+import FileDropZone from "@/components/ui/file-drop-zone";
 
 const DEP_TYPE_CONFIG: Record<
   DependencyType,
@@ -120,6 +124,7 @@ export default function TaskDetail() {
   const deleteSubtask = useDeleteSubtask(taskId ?? "");
   const addTimeEntry = useAddTimeEntry(taskId ?? "");
   const deleteTimeEntry = useDeleteTimeEntry(taskId ?? "");
+  const addAttachment = useAddAttachment(taskId ?? "");
   const addDependency = useAddDependency(taskId ?? "");
   const deleteDependency = useDeleteDependency(taskId ?? "");
   const addTag = useAddTag(taskId ?? "");
@@ -151,6 +156,13 @@ export default function TaskDetail() {
   // Checklist state
   const [showChecklistInput, setShowChecklistInput] = useState(false);
   const [newChecklistText, setNewChecklistText] = useState("");
+
+  // Attachments state
+  const [showAttachmentsInput, setShowAttachmentsInput] = useState(false);
+  const [newAttachment, setNewAttachment] = useState<File | null>(null);
+  const [attachmentType, setAttachmentType] = useState<"file" | "link">("file");
+  const [attachmentTitle, setAttachmentTitle] = useState("");
+  const [attachmentUrl, setAttachmentUrl] = useState("");
 
   // Time entry state
   const [showTimeForm, setShowTimeForm] = useState(false);
@@ -195,6 +207,57 @@ export default function TaskDetail() {
       },
       onError: () => toast.error(t.errDeleteTask),
     });
+  };
+
+  const handleAddAttachment = () => {
+    if (!taskId || !task) return;
+
+    if (attachmentType === "link") {
+      if (!attachmentUrl.trim()) return;
+      addAttachment.mutate(
+        {
+          type: "link",
+          title: attachmentTitle.trim() || undefined,
+          url: attachmentUrl.trim(),
+        },
+        {
+          onSuccess: () => {
+            setAttachmentTitle("");
+            setAttachmentUrl("");
+            setAttachmentType("file");
+            setNewAttachment(null);
+            setShowAttachmentsInput(false);
+          },
+        },
+      );
+      return;
+    }
+
+    if (!newAttachment) return;
+    addAttachment.mutate(
+      {
+        type: "file",
+        title: attachmentTitle.trim() || undefined,
+        file: newAttachment,
+      },
+      {
+        onSuccess: () => {
+          setAttachmentTitle("");
+          setAttachmentUrl("");
+          setAttachmentType("file");
+          setNewAttachment(null);
+          setShowAttachmentsInput(false);
+        },
+      },
+    );
+  };
+
+  const resetAttachmentForm = () => {
+    setAttachmentTitle("");
+    setAttachmentUrl("");
+    setAttachmentType("file");
+    setNewAttachment(null);
+    setShowAttachmentsInput(false);
   };
 
   const handleSendReminder = () => {
@@ -781,8 +844,132 @@ export default function TaskDetail() {
             )}
             {checklistTotal === 0 && !showChecklistInput && (
               <p className="text-xs text-muted-foreground text-center py-2">
-                No checklist items yet
+                {t.noChecklistItemsYet}
               </p>
+            )}
+          </div>
+
+          {/* Attachments */}
+          <div className="bg-card border border-border rounded-xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Files className="w-4 h-4 text-muted-foreground" />
+                <h3 className="text-sm font-semibold text-foreground">
+                  {t.taskAttachments}
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowAttachmentsInput(true)}
+                className="text-xs text-primary hover:text-primary/80 font-medium flex items-center gap-1"
+              >
+                <Plus className="w-3 h-3" /> {t.add}
+              </button>
+            </div>
+
+            {(task.attachments || []).length > 0 ? (
+              <div className="space-y-2 mb-4">
+                {(task.attachments || []).map((attachment) => (
+                  <div
+                    key={attachment.id}
+                    className="flex items-center justify-between gap-2 rounded-lg border border-border bg-background/70 px-3 py-2"
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Paperclip className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-foreground">
+                          {attachment.title || attachment.fileName || attachment.url || t.taskAttachments}
+                        </p>
+                        {attachment.url && (
+                          <a
+                            href={attachment.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="truncate text-xs text-primary hover:underline"
+                          >
+                            {attachment.url}
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              !showAttachmentsInput && (
+                <p className="mb-4 text-center text-xs text-muted-foreground">
+                  {t.noAttachmentsYet}
+                </p>
+              )
+            )}
+
+            {showAttachmentsInput && (
+              <div className="space-y-3 mb-4">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setAttachmentType("file")}
+                    className={cn(
+                      "rounded-full px-3 py-1 text-xs font-medium transition-all",
+                      attachmentType === "file"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    {t.attachmentTypeFile}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAttachmentType("link")}
+                    className={cn(
+                      "rounded-full px-3 py-1 text-xs font-medium transition-all",
+                      attachmentType === "link"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    {t.attachmentTypeLink}
+                  </button>
+                </div>
+
+                <input
+                  value={attachmentTitle}
+                  onChange={(e) => setAttachmentTitle(e.target.value)}
+                  placeholder={t.attachmentTitlePlaceholder}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+
+                {attachmentType === "link" ? (
+                  <input
+                    value={attachmentUrl}
+                    onChange={(e) => setAttachmentUrl(e.target.value)}
+                    placeholder={t.attachmentLinkPlaceholder}
+                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                ) : (
+                  <FileDropZone
+                    value={newAttachment}
+                    onChange={(file) => {
+                      setNewAttachment(file);
+                    }}
+                  />
+                )}
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={handleAddAttachment}
+                    disabled={attachmentType === "link" ? !attachmentUrl.trim() : !newAttachment}
+                    className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {t.add}
+                  </button>
+                  <button
+                    onClick={resetAttachmentForm}
+                    className="rounded-lg bg-muted px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/80"
+                  >
+                    {t.cancel}
+                  </button>
+                </div>
+              </div>
             )}
           </div>
 

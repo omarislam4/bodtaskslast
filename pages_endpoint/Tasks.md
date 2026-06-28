@@ -68,6 +68,7 @@ The current frontend still reads from the Firebase `tasks` collection through:
       "type": "blocked_by"
     }
   ],
+  "attachments": [],
   "recurrence": null,
   "storyPoints": 5,
   "startDate": "2026-05-20T08:00:00.000Z",
@@ -159,6 +160,8 @@ This is the shared create endpoint used by the `tasks` tab in [SpaceDetail.tsx](
 
 ### Payload
 
+Attachments can be included at creation time. For links, include `url`; for files, send using `multipart/form-data`. Max file size is 50 MB.
+
 ```json
 {
   "spaceId": "5",
@@ -175,7 +178,14 @@ This is the shared create endpoint used by the `tasks` tab in [SpaceDetail.tsx](
   "senderId": "sender-1",
   "deadline": "2026-05-27T17:00:00.000Z",
   "estimatedHours": 8,
-  "progress": 0
+  "progress": 0,
+  "attachments": [
+    {
+      "type": "link",
+      "title": "Reference doc",
+      "url": "https://example.com/doc"
+    }
+  ]
 }
 ```
 
@@ -284,6 +294,11 @@ None
 
 Partially updates the task itself. This covers inline edits from the task detail page plus sprint assignment and lightweight dashboard status changes.
 
+**Side effects:**
+- When `status` changes to `done`, XP is awarded to unique recipients from task assignees, creator, and the user who marked it done (20 XP + 1 strike if on time or no deadline; 10 XP if past deadline). Duplicate XP for the same task is blocked.
+- When the task belongs to a sprint, changing `status` automatically recalculates the sprint status.
+- The optional `attachments` field appends new attachments without replacing existing ones. Use `DELETE /api/tasks/{id}/attachments/{attachmentId}` to remove.
+
 ### Payload
 
 ```json
@@ -370,13 +385,15 @@ None
 
 ## Notes
 
-- `TaskDetail.tsx` expects the full task resource shape, including arrays for `activityLog`, `checklistItems`, `subtasks`, `timeEntries`, and `dependencies`.
+- `TaskDetail.tsx` expects the full task resource shape, including arrays for `activityLog`, `checklistItems`, `subtasks`, `timeEntries`, `dependencies`, and `attachments`.
 - A task with unfinished `blocked_by` or `related` dependencies cannot move to `in-progress`, `review`, or `done`. When the blocking task becomes `done`, waiting dependent tasks in `todo` or `blocked` move to `in-progress`.
 - The bug-specific usage of this resource is documented in [Bugs.md](C:/laragon/www/bod-app-api/docs/pages_endpoint/Bugs.md).
 - Sender options used by bug and task forms come from [Senders.md](C:/laragon/www/bod-app-api/docs/pages_endpoint/Senders.md).
 - The dashboard aggregate and reassignment flow that sit on top of this resource are documented in [Dashboard.md](C:/laragon/www/bod-app-api/docs/pages_endpoint/Dashboard.md).
 - `Spaces.tsx` and `Dashboard.tsx` both depend on task counts grouped by `spaceId`.
 - Sprint membership and the `sprintId` relation are documented in [Sprints.md](C:/laragon/www/bod-app-api/docs/pages_endpoint/Sprints.md).
+- Task attachments support `file`, `screenshot`, `video`, and `link` types. See `TaskDetail.md` for the full attachment sub-resource endpoints (`GET`, `POST`, `DELETE /api/tasks/{id}/attachments`).
+- Marking a task `done` awards XP automatically. See [Rankings.md](Rankings.md) for XP rules and rank thresholds.
 - `GET /api/tasks` supports opt-in pagination with `page` and `perPage`. Without pagination parameters, it keeps returning the existing plain array response.
 
 ### Pagination Examples

@@ -55,7 +55,12 @@ const tasks: Record<TasksKeys, TranslationValue> = {
   typeFeature: "ميزة",
   typeImprovement: "تحسين",
   checklist: "قائمة المراجعة",
+  taskAttachments: "المرفقات",
   addChecklistItem: "أضف عنصراً...",
+  attachmentTitlePlaceholder: "عنوان المرفق",
+  attachmentLinkPlaceholder: "https://example.com",
+  attachmentTypeFile: "ملف",
+  attachmentTypeLink: "رابط",
   tags: "العلامات",
   addTag: "إضافة علامة",
   subtasks: "المهام الفرعية",
@@ -108,6 +113,8 @@ const tasks: Record<TasksKeys, TranslationValue> = {
   noTasksMatchFilter: (filter: string) => `لا توجد مهام ${filter}`,
   searchTasks: "ابحث عن مهام...",
   noTasksFound: "لا توجد مهام مطابقة",
+  noAttachmentsYet: "لا توجد مرفقات بعد",
+  noChecklistItemsYet: "لا توجد عناصر في قائمة المراجعة بعد",
 };
 
 export default tasks;

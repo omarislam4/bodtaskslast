@@ -165,7 +165,7 @@ None
 
 ### `POST /api/sprints/{id}/tasks`
 
-Adds an existing task to the sprint and updates the task's `sprintId`.
+Adds an existing task to the sprint, updates the task's `sprintId`, and recalculates sprint metrics and status.
 
 #### Payload
 
@@ -193,7 +193,7 @@ Adds an existing task to the sprint and updates the task's `sprintId`.
 
 ### `DELETE /api/sprints/{id}/tasks/{taskId}`
 
-Removes the task from the sprint and clears the task's `sprintId`.
+Removes the task from the sprint, clears the task's `sprintId`, and recalculates sprint metrics and status.
 
 #### Payload
 
@@ -220,6 +220,8 @@ None
 - The page still needs the shared task list from [Tasks.md](C:/laragon/www/bod-app-api/docs/pages_endpoint/Tasks.md) so it can build the backlog and sprint task cards.
 - The sprint contract stores both `taskIds` on the sprint and `sprintId` on the task. The backend should keep those two relations in sync.
 - Backlog tasks are tasks where `sprintId` is `null` and `status` is not `done`.
+- Sprint status is recalculated automatically whenever sprint task membership changes (`POST`/`DELETE /api/sprints/{id}/tasks`) or task status changes (`PATCH /api/tasks/{id}`). Rules: `completed` when every task is `done`; `active` when at least one task is `done`, `in-progress`, or `review` but not all done; `planning` when no tasks or all tasks are still not started.
+- `PATCH /api/sprints/{id}` accepts a manual `status` value, but subsequent task status changes may recalculate it automatically.
 
 ## Pagination
 

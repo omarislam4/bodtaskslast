@@ -354,6 +354,17 @@ export const useDeleteTimeEntry = (taskId: string) => {
   });
 };
 
+export const useAddAttachment = (taskId: string) => {
+  const qc = useQueryClient();
+  const { t } = useLang();
+  return useMutation({
+    mutationFn: (payload: { type: string; title?: string; url?: string; file?: File | null }) =>
+      tasksService.addAttachment(taskId, payload),
+    onSuccess: () => invalidateTaskDetail(qc, taskId),
+    onError: () => toast.error(t.errUpdateTask),
+  });
+};
+
 // ─── Dependencies ─────────────────────────────────────────────────────────────
 
 export const useAddDependency = (taskId: string) => {

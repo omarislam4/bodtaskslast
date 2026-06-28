@@ -32,6 +32,22 @@ export interface TimeEntry {
   billable: boolean;
 }
 
+export interface TaskAttachment {
+  id: string;
+  taskId: string;
+  type: "file" | "screenshot" | "video" | "link";
+  title?: string | null;
+  url?: string | null;
+  fileName?: string | null;
+  originalName?: string | null;
+  mimeType?: string | null;
+  size?: number | null;
+  uploadedBy?: string | null;
+  uploadedByName?: string | null;
+  meta?: unknown[];
+  createdAt?: string;
+}
+
 export interface TaskDependency {
   taskId: string;
   type: DependencyType;
@@ -69,6 +85,7 @@ export interface Task {
   checklistItems: ChecklistItem[];
   subtasks: Subtask[];
   timeEntries: TimeEntry[];
+  attachments?: TaskAttachment[];
   dependencies: TaskDependency[];
   recurrence?: RecurrenceConfig | null;
   storyPoints?: number | null;

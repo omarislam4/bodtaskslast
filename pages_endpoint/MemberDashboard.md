@@ -64,6 +64,24 @@ The dashboard cards and task navigation also depend on the implemented shared ta
 - [TaskDetail.md](C:/laragon/www/bod-app-api/docs/pages_endpoint/TaskDetail.md)
 - [MyTasks.md](C:/laragon/www/bod-app-api/docs/pages_endpoint/MyTasks.md)
 
+## Ranking Endpoints
+
+The member dashboard also surfaces the user's rank, XP, and leaderboard position.
+
+### `GET /api/rankings/me`
+
+Returns the authenticated user's rank, XP, strikes, and task status counts.
+
+### `GET /api/users/{userId}/ranking`
+
+Returns one user's rank summary. Admins can inspect any user; members can inspect only themselves.
+
+### `GET /api/rankings`
+
+Returns the leaderboard and top three users. Supports filters: `rank`, `xpMin`, `xpMax`, `strikesMin`, `strikesMax`, `top`.
+
+See [Rankings.md](Rankings.md) for full payloads and response shapes.
+
 ## Current Status
 
 This page is now covered by the auth, spaces, and implemented Laravel task endpoints documented above.

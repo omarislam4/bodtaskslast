@@ -53,7 +53,12 @@ const tasks = {
   typeImprovement: "Improvement",
   // Checklist
   checklist: "Checklist",
+  taskAttachments: "Attachments",
   addChecklistItem: "Add item...",
+  attachmentTitlePlaceholder: "Attachment title",
+  attachmentLinkPlaceholder: "https://example.com",
+  attachmentTypeFile: "File",
+  attachmentTypeLink: "Link",
   // Tags
   tags: "Tags",
   addTag: "Add tag",
@@ -112,6 +117,8 @@ const tasks = {
   noTasksMatchFilter: (filter: string) => `No ${filter} tasks`,
   searchTasks: "Search tasks...",
   noTasksFound: "No tasks found",
+  noAttachmentsYet: "No attachments yet",
+  noChecklistItemsYet: "No checklist items yet",
 } as const;
 
 export type TasksKeys = keyof typeof tasks;
