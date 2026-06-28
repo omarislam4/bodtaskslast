@@ -203,6 +203,9 @@ export const tasksService = {
       .then((r) => r.data.attachment);
   },
 
+  deleteAttachment: (id: string, attachmentId: string): Promise<void> =>
+    api.delete(`/tasks/${id}/attachments/${attachmentId}`).then(() => undefined),
+
   // Dependencies
   addDependency: (
     id: string,

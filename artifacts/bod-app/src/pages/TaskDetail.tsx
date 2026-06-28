@@ -47,6 +47,7 @@ import {
   useAddTimeEntry,
   useDeleteTimeEntry,
   useAddAttachment,
+  useDeleteAttachment,
   useAddDependency,
   useDeleteDependency,
   useAddTag,
@@ -125,6 +126,7 @@ export default function TaskDetail() {
   const addTimeEntry = useAddTimeEntry(taskId ?? "");
   const deleteTimeEntry = useDeleteTimeEntry(taskId ?? "");
   const addAttachment = useAddAttachment(taskId ?? "");
+  const deleteAttachment = useDeleteAttachment(taskId ?? "");
   const addDependency = useAddDependency(taskId ?? "");
   const deleteDependency = useDeleteDependency(taskId ?? "");
   const addTag = useAddTag(taskId ?? "");
@@ -258,6 +260,13 @@ export default function TaskDetail() {
     setAttachmentType("file");
     setNewAttachment(null);
     setShowAttachmentsInput(false);
+  };
+
+  const handleDeleteAttachment = (attachmentId: string) => {
+    if (!taskId || !window.confirm(`${t.delete} ${t.taskAttachments}?`)) return;
+    deleteAttachment.mutate(attachmentId, {
+      onSuccess: () => toast.success(t.delete),
+    });
   };
 
   const handleSendReminder = () => {
@@ -891,6 +900,14 @@ export default function TaskDetail() {
                         )}
                       </div>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteAttachment(attachment.id)}
+                      className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-destructive"
+                      aria-label={t.delete}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
                 ))}
               </div>

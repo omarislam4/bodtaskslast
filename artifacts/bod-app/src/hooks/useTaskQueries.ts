@@ -365,6 +365,17 @@ export const useAddAttachment = (taskId: string) => {
   });
 };
 
+export const useDeleteAttachment = (taskId: string) => {
+  const qc = useQueryClient();
+  const { t } = useLang();
+  return useMutation({
+    mutationFn: (attachmentId: string) =>
+      tasksService.deleteAttachment(taskId, attachmentId),
+    onSuccess: () => invalidateTaskDetail(qc, taskId),
+    onError: () => toast.error(t.errUpdateTask),
+  });
+};
+
 // ─── Dependencies ─────────────────────────────────────────────────────────────
 
 export const useAddDependency = (taskId: string) => {
