@@ -2,8 +2,14 @@ export type AttendanceType = "start" | "midday" | "pause" | "resume" | "end";
 
 export interface AttendanceRecord {
   id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
   type: AttendanceType;
+  report: string;
   recordedAt: string;
+  payload?: { message?: string };
+  createdAt?: string;
 }
 
 export interface CreateAttendancePayload {

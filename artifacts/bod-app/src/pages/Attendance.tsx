@@ -9,7 +9,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
-import { useLogAttendance, useAttendanceStatus } from "@/hooks/useAttendance";
+import { useLogAttendance, useAttendanceStatus, useAttendanceRecords } from "@/hooks/useAttendance";
+import DateDisplay from "@/components/ui/date-display";
 import { toast } from "sonner";
 import type { AttendanceType } from "@/types";
 
@@ -46,7 +47,12 @@ export default function Attendance() {
   const { t } = useLang();
   const logAttendance = useLogAttendance();
   const { data: statusData } = useAttendanceStatus();
+  const { data: records = [], isLoading: recordsLoading } = useAttendanceRecords();
   const [endShiftReport, setEndShiftReport] = useState("");
+
+  const pastDailyReports = records
+    .filter((r) => r.type === "end" && r.report?.trim())
+    .sort((a, b) => new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime());
 
   const attendanceState = statusData?.attendanceState;
   const isPaused = attendanceState?.isPaused ?? false;
@@ -271,6 +277,32 @@ export default function Attendance() {
             {isLoading("end") ? t.saving : t.endShift}
           </motion.button>
         </motion.div>
+      </div>
+
+      <div className="mt-6">
+        <h2 className="text-sm font-semibold text-foreground mb-3">{t.pastReports}</h2>
+        {recordsLoading ? (
+          <div className="space-y-2">
+            {Array(3).fill(0).map((_, i) => (
+              <div key={i} className="h-16 bg-muted rounded-xl animate-pulse" />
+            ))}
+          </div>
+        ) : pastDailyReports.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-6">{t.noReportsYet}</p>
+        ) : (
+          <div className="space-y-2">
+            {pastDailyReports.map((r) => (
+              <div key={r.id} className="bg-card border border-border rounded-xl p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    <DateDisplay date={r.recordedAt} />
+                  </span>
+                </div>
+                <p className="text-sm text-foreground whitespace-pre-wrap">{r.report}</p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

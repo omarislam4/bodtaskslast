@@ -2,14 +2,21 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { attendanceService } from "@/services/attendance";
 import { useLang } from "@/contexts/LangContext";
 import { toast } from "sonner";
-import type { AttendanceSummaryQueryParams, CreateAttendancePayload } from "@/types";
+import type { AttendanceQueryParams, AttendanceSummaryQueryParams, CreateAttendancePayload } from "@/types";
 
 export const attendanceKeys = {
   all: () => ["attendance"] as const,
   status: (date?: string) => ["attendance", "status", date ?? "today"] as const,
   current: (date?: string) => ["attendance", "current", date ?? "today"] as const,
   summary: (params?: AttendanceSummaryQueryParams) => ["attendance", "summary", params] as const,
+  records: (params?: AttendanceQueryParams) => ["attendance", "records", params] as const,
 };
+
+export const useAttendanceRecords = (params?: AttendanceQueryParams) =>
+  useQuery({
+    queryKey: attendanceKeys.records(params),
+    queryFn: () => attendanceService.list(params),
+  });
 
 export const useAttendanceStatus = (date?: string) =>
   useQuery({
