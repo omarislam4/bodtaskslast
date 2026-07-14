@@ -35,6 +35,8 @@ const attendance = {
   pauseShiftToast: "Shift paused",
   resumeShiftToast: "Shift resumed",
   errShiftNotStarted: "Please start your shift first before pausing.",
+  pastReports: "Past Reports",
+  noReportsYet: "No reports submitted yet",
 } as const;
 
 export type AttendanceKeys = keyof typeof attendance;

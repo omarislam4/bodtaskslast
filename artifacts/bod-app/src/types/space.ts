@@ -23,6 +23,21 @@ export interface SpaceMember {
   createdAt: string;
 }
 
+export interface SpaceAttachment {
+  id: string;
+  spaceId: string;
+  type: "file" | "screenshot" | "video" | "link";
+  title?: string | null;
+  url?: string | null;
+  fileName?: string | null;
+  originalName?: string | null;
+  mimeType?: string | null;
+  size?: number | null;
+  uploadedBy?: string | null;
+  uploadedByName?: string | null;
+  createdAt?: string;
+}
+
 export interface SpaceDataItem {
   id: string;
   type: "folder" | "link";

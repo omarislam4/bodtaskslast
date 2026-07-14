@@ -17,6 +17,8 @@ import views from "./views";
 import attendance from "./attendance";
 import errors from "./errors";
 import success from "./success";
+import rankings from "./rankings";
+import teamActivity from "./teamActivity";
 import { TranslationKeys, TranslationValue } from "..";
 
 const ar: Record<TranslationKeys, TranslationValue> = {
@@ -39,6 +41,8 @@ const ar: Record<TranslationKeys, TranslationValue> = {
   ...attendance,
   ...errors,
   ...success,
+  ...rankings,
+  ...teamActivity,
 } as const;
 
 export default ar;

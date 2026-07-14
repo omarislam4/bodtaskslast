@@ -9,6 +9,7 @@ const success: Record<SuccessKeys, TranslationValue> = {
   memberRemoved: "تمت إزالة العضو",
   dataItemAdded: "تمت الإضافة",
   dataItemDeleted: "تم الحذف",
+  attachmentAdded: "تمت إضافة المرفق",
   automationCreated: "تم إنشاء الأتمتة!",
   automationDeleted: "تم حذف الأتمتة!",
 };

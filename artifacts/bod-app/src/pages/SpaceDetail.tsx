@@ -16,6 +16,7 @@ import {
   MessageCircle,
   ChevronRight,
   ChevronLeft,
+  Files,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
@@ -33,6 +34,7 @@ import { SpaceBugsTab } from "@/components/spaces/SpaceBugsTab";
 import { SpaceTimelineTab } from "@/components/spaces/SpaceTimelineTab";
 import { SpaceMembersTab } from "@/components/spaces/SpaceMembersTab";
 import { SpaceDataTab } from "@/components/spaces/SpaceDataTab";
+import { SpaceAttachmentsTab } from "@/components/spaces/SpaceAttachmentsTab";
 import { SpaceSubspacesTab } from "@/components/spaces/SpaceSubspacesTab";
 import { SpaceChatTab } from "@/components/spaces/SpaceChatTab";
 import { SpaceCalendarTab } from "@/components/spaces/SpaceCalendarTab";
@@ -51,6 +53,7 @@ type Tab =
   | "timeline"
   | "members"
   | "data"
+  | "attachments"
   | "subspaces"
   | "calendar"
   | "workload"
@@ -142,6 +145,7 @@ export default function SpaceDetail() {
     { id: "sprints", label: t.sprints, icon: ChevronRight },
     { id: "members", label: t.membersTab, icon: Users },
     { id: "data", label: t.data, icon: FolderOpen },
+    { id: "attachments", label: t.taskAttachments, icon: Files },
     { id: "subspaces", label: t.subspacesTab, icon: Layers },
     { id: "chat", label: t.chat, icon: MessageCircle },
   ];
@@ -345,6 +349,9 @@ export default function SpaceDetail() {
           )}
           {activeTab === "data" && (
             <SpaceDataTab key="data" spaceId={spaceId!} isAdmin={isAdmin} />
+          )}
+          {activeTab === "attachments" && (
+            <SpaceAttachmentsTab key="attachments" spaceId={spaceId!} isAdmin={isAdmin} />
           )}
           {activeTab === "subspaces" && (
             <SpaceSubspacesTab

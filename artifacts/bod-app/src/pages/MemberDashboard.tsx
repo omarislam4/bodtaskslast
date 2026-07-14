@@ -1,8 +1,9 @@
 import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
-import { CheckCircle2, Clock, AlertCircle, Calendar, ArrowRight, ArrowLeft } from "lucide-react";
+import { CheckCircle2, Clock, AlertCircle, Calendar, ArrowRight, ArrowLeft, Trophy, Flame } from "lucide-react";
 import { useMyTasksQuery } from "@/hooks/useTaskQueries";
+import { useMyRanking } from "@/hooks/useRankings";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
 import { TaskStatusBadge } from "@/components/tasks/TaskStatusBadge";
@@ -20,6 +21,7 @@ const cardVariants = {
 
 export default function MemberDashboard() {
   const { data: myTasks = [] } = useMyTasksQuery({ scope: "all" });
+  const { data: myRanking } = useMyRanking();
   const { userDoc } = useAuth();
   const { t, isRTL } = useLang();
   const [, navigate] = useLocation();
@@ -61,6 +63,59 @@ export default function MemberDashboard() {
         </h1>
         <p className="text-sm text-muted-foreground mt-1">{t.hereAreYourAssignedTasks}</p>
       </div>
+
+      {/* My Rank */}
+      {myRanking && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-card border border-border rounded-xl p-4 sm:p-5 shadow-sm mb-6 sm:mb-8 cursor-pointer hover:border-primary/40 transition-colors"
+          onClick={() => navigate("/rankings")}
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-11 h-11 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
+              <Trophy className="w-5 h-5 text-amber-500" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-foreground">
+                  {t.myRank}: {myRanking.rank.name}
+                </p>
+                <span className="text-xs text-primary hover:underline flex items-center gap-1 shrink-0">
+                  {t.viewLeaderboard} {isRTL ? <ArrowLeft className="w-3 h-3" /> : <ArrowRight className="w-3 h-3" />}
+                </span>
+              </div>
+              <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
+                <span>{myRanking.xp} {t.xp}</span>
+                <span className="flex items-center gap-1">
+                  <Flame className="w-3 h-3" /> {myRanking.strikes} {t.strikes}
+                </span>
+                <span>#{myRanking.position}</span>
+              </div>
+              {myRanking.rank.next && (
+                <div className="mt-2">
+                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-amber-500 rounded-full transition-all"
+                      style={{
+                        width: `${Math.min(
+                          100,
+                          ((myRanking.xp - myRanking.rank.minXp) /
+                            (myRanking.rank.next.minXp - myRanking.rank.minXp)) *
+                            100,
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    {myRanking.rank.next.remainingXp} {t.xpToNextRank} — {myRanking.rank.next.name}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">

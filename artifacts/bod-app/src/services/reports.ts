@@ -1,3 +1,10 @@
+import api from "./api";
+import type {
+  WeeklyReportRecord,
+  MonthlyReportRecord,
+  ReportQueryParams,
+} from "@/types";
+
 const N8N_WEEKLY_URL = "https://n8n.athar-riyada.com/webhook/weekly-report";
 const N8N_MONTHLY_URL = "https://n8n.athar-riyada.com/webhook/monthly-report";
 
@@ -28,4 +35,24 @@ async function postReport(url: string, payload: ReportPayload): Promise<void> {
 export const reportsService = {
   weekly: (payload: ReportPayload) => postReport(N8N_WEEKLY_URL, payload),
   monthly: (payload: ReportPayload) => postReport(N8N_MONTHLY_URL, payload),
+};
+
+export const weeklyReportsApi = {
+  submit: (report: string): Promise<WeeklyReportRecord> =>
+    api
+      .post<{ message: string; weeklyReport: WeeklyReportRecord }>("/weekly-reports", { report })
+      .then((r) => r.data.weeklyReport),
+
+  list: (params?: ReportQueryParams): Promise<WeeklyReportRecord[]> =>
+    api.get<WeeklyReportRecord[]>("/weekly-reports", { params }).then((r) => r.data),
+};
+
+export const monthlyReportsApi = {
+  submit: (report: string): Promise<MonthlyReportRecord> =>
+    api
+      .post<{ message: string; monthlyReport: MonthlyReportRecord }>("/monthly-reports", { report })
+      .then((r) => r.data.monthlyReport),
+
+  list: (params?: ReportQueryParams): Promise<MonthlyReportRecord[]> =>
+    api.get<MonthlyReportRecord[]>("/monthly-reports", { params }).then((r) => r.data),
 };

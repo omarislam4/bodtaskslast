@@ -1,0 +1,30 @@
+const teamActivity = {
+  teamActivity: "Team Activity",
+  teamActivityDesc: "Browse attendance and reports across the team",
+  teamAttendance: "Attendance",
+  teamReports: "Reports",
+  selectMember: "Select member",
+  allMembersOption: "All members",
+  period: "Period",
+  periodDay: "Day",
+  periodWeek: "Week",
+  periodMonth: "Month",
+  periodCustom: "Custom range",
+  from: "From",
+  to: "To",
+  reportTypeWeekly: "Weekly",
+  reportTypeMonthly: "Monthly",
+  workedHours: "Worked hours",
+  pausedTime: "Paused",
+  startedAt: "Start",
+  middayAt: "Midday",
+  pausedAt: "Paused",
+  resumedAt: "Resumed",
+  endedAt: "End",
+  noAttendanceRecords: "No attendance records for this period",
+  pickMemberToViewReports: "Pick a member to view their reports",
+  notRecorded: "—",
+} as const;
+
+export type TeamActivityKeys = keyof typeof teamActivity;
+export default teamActivity;

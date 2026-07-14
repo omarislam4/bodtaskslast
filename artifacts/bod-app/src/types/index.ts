@@ -8,3 +8,5 @@ export * from "./task";
 export * from "./goal";
 export * from "./sprint";
 export * from "./chat";
+export * from "./ranking";
+export * from "./report";

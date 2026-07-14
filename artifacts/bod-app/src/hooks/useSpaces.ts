@@ -7,7 +7,7 @@ import type {
   CreateSpaceDataItemPayload,
 } from "@/types";
 
-export type { Space, SpaceMember, SpaceDataItem } from "@/types";
+export type { Space, SpaceMember, SpaceDataItem, SpaceAttachment } from "@/types";
 
 export const spaceKeys = {
   all: () => ["spaces"] as const,
@@ -15,6 +15,7 @@ export const spaceKeys = {
   members: (id: string) => ["space", id, "members"] as const,
   subSpaces: (id: string) => ["space", id, "subspaces"] as const,
   dataItems: (id: string) => ["space", id, "data-items"] as const,
+  attachments: (id: string) => ["space", id, "attachments"] as const,
 };
 
 // ─── List ─────────────────────────────────────────────────────────────────────
@@ -57,6 +58,13 @@ export const useSpaceDataItems = (spaceId: string | undefined) =>
   useQuery({
     queryKey: spaceKeys.dataItems(spaceId ?? ""),
     queryFn: () => spacesService.listDataItems(spaceId!),
+    enabled: !!spaceId,
+  });
+
+export const useSpaceAttachments = (spaceId: string | undefined) =>
+  useQuery({
+    queryKey: spaceKeys.attachments(spaceId ?? ""),
+    queryFn: () => spacesService.listAttachments(spaceId!),
     enabled: !!spaceId,
   });
 
@@ -177,6 +185,39 @@ export const useDeleteSpaceDataItem = () => {
     onSuccess: (_, { spaceId }) => {
       queryClient.invalidateQueries({ queryKey: spaceKeys.dataItems(spaceId) });
       toast.success(t.dataItemDeleted);
+    },
+    onError: () => toast.error(t.errGeneric),
+  });
+};
+
+export const useAddSpaceAttachment = () => {
+  const queryClient = useQueryClient();
+  const { t } = useLang();
+  return useMutation({
+    mutationFn: ({
+      spaceId,
+      payload,
+    }: {
+      spaceId: string;
+      payload: { type: string; title?: string; url?: string; file?: File | null };
+    }) => spacesService.addAttachment(spaceId, payload),
+    onSuccess: (_, { spaceId }) => {
+      queryClient.invalidateQueries({ queryKey: spaceKeys.attachments(spaceId) });
+      toast.success(t.attachmentAdded);
+    },
+    onError: () => toast.error(t.errGeneric),
+  });
+};
+
+export const useDeleteSpaceAttachment = () => {
+  const queryClient = useQueryClient();
+  const { t } = useLang();
+  return useMutation({
+    mutationFn: ({ spaceId, attachmentId }: { spaceId: string; attachmentId: string }) =>
+      spacesService.deleteAttachment(spaceId, attachmentId),
+    onSuccess: (_, { spaceId }) => {
+      queryClient.invalidateQueries({ queryKey: spaceKeys.attachments(spaceId) });
+      toast.success(t.delete);
     },
     onError: () => toast.error(t.errGeneric),
   });

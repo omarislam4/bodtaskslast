@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   Clock,
@@ -9,19 +9,23 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
-import { useLogAttendance } from "@/hooks/useAttendance";
+import { useLogAttendance, useAttendanceStatus } from "@/hooks/useAttendance";
 import { toast } from "sonner";
 import type { AttendanceType } from "@/types";
 
 const N8N_URLS: Record<AttendanceType, string> = {
   start: "https://n8n.athar-riyada.com/webhook/start-shift",
   midday: "https://n8n.athar-riyada.com/webhook/mid-day-attendence",
+  pause: "https://n8n.athar-riyada.com/webhook/pause-shift",
+  resume: "https://n8n.athar-riyada.com/webhook/resume-shift",
   end: "https://n8n.athar-riyada.com/webhook/end-shift",
 };
 
 const N8N_MESSAGES: Record<AttendanceType, (now: string) => string> = {
   start: (now) => `Start Main Shift — ${now}`,
   midday: (now) => `Mid Day Attendance — ${now}`,
+  pause: () => "Shift Paused",
+  resume: () => "Shift Resumed",
   end: (now) => `End Shift — ${now}`,
 };
 
@@ -37,48 +41,15 @@ function fireN8nWebhook(
   }).catch(() => {});
 }
 
-interface ShiftState {
-  shiftActive: boolean;
-  isPaused: boolean;
-}
-
-function getShiftKey(userId: string) {
-  return `bod_shift_${userId}`;
-}
-
-function loadShiftState(userId: string): ShiftState {
-  try {
-    const raw = localStorage.getItem(getShiftKey(userId));
-    if (!raw) return { shiftActive: false, isPaused: false };
-    return JSON.parse(raw) as ShiftState;
-  } catch {
-    return { shiftActive: false, isPaused: false };
-  }
-}
-
-function saveShiftState(userId: string, state: ShiftState) {
-  localStorage.setItem(getShiftKey(userId), JSON.stringify(state));
-}
-
-function clearShiftState(userId: string) {
-  localStorage.removeItem(getShiftKey(userId));
-}
-
 export default function Attendance() {
   const { userDoc } = useAuth();
   const { t } = useLang();
   const logAttendance = useLogAttendance();
+  const { data: statusData } = useAttendanceStatus();
   const [endShiftReport, setEndShiftReport] = useState("");
-  const [shiftState, setShiftState] = useState<ShiftState>({
-    shiftActive: false,
-    isPaused: false,
-  });
 
-  useEffect(() => {
-    if (userDoc?.id) {
-      setShiftState(loadShiftState(userDoc.id));
-    }
-  }, [userDoc?.id]);
+  const attendanceState = statusData?.attendanceState;
+  const isPaused = attendanceState?.isPaused ?? false;
 
   const isLoading = (type: AttendanceType) =>
     logAttendance.isPending && logAttendance.variables?.type === type;
@@ -86,6 +57,10 @@ export default function Attendance() {
   const handleAttendance = (type: AttendanceType) => {
     if (type === "end" && !endShiftReport.trim()) {
       toast.error(t.errNoReport);
+      return;
+    }
+    if (type === "pause" && !attendanceState?.canPause) {
+      toast.error(t.errShiftNotStarted);
       return;
     }
 
@@ -107,58 +82,13 @@ export default function Attendance() {
             ...(type === "end" ? { report: endShiftReport } : {}),
           });
 
-          if (type === "start") {
-            const newState: ShiftState = { shiftActive: true, isPaused: false };
-            if (userDoc?.id) saveShiftState(userDoc.id, newState);
-            setShiftState(newState);
-          } else if (type === "end") {
-            if (userDoc?.id) clearShiftState(userDoc.id);
-            setShiftState({ shiftActive: false, isPaused: false });
+          if (type === "end") {
             setEndShiftReport("");
           }
         },
       },
     );
   };
-
-  const firePauseResumeWebhook = (action: "pause" | "resume") => {
-    const url =
-      action === "pause"
-        ? "https://n8n.athar-riyada.com/webhook/pause-shift"
-        : "https://n8n.athar-riyada.com/webhook/resume-shift";
-    fetch(url, {
-      method: "POST",
-      mode: "no-cors",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({
-        userId: userDoc?.id || "",
-        userName: userDoc?.displayName || userDoc?.email || "",
-        userEmail: userDoc?.email || "",
-        timestamp: new Date().toISOString(),
-        type: action,
-        message: action === "pause" ? "Shift Paused" : "Shift Resumed",
-      }),
-    }).catch(() => {});
-  };
-
-  const handlePauseResume = () => {
-    if (!shiftState.isPaused) {
-      const newState: ShiftState = { shiftActive: true, isPaused: true };
-      if (userDoc?.id) saveShiftState(userDoc.id, newState);
-      setShiftState(newState);
-      firePauseResumeWebhook("pause");
-      toast.success(t.pauseShiftToast);
-    } else {
-      const newState: ShiftState = { shiftActive: true, isPaused: false };
-      if (userDoc?.id) saveShiftState(userDoc.id, newState);
-      setShiftState(newState);
-      firePauseResumeWebhook("resume");
-      toast.success(t.resumeShiftToast);
-    }
-  };
-
-  const isPaused = shiftState.isPaused;
-  const shiftActive = shiftState.shiftActive;
 
   return (
     <div className="p-4 sm:p-6 max-w-2xl mx-auto">
@@ -196,7 +126,7 @@ export default function Attendance() {
             whileHover={isLoading("start") ? {} : { scale: 1.02 }}
             whileTap={isLoading("start") ? {} : { scale: 0.98 }}
             onClick={() => handleAttendance("start")}
-            disabled={logAttendance.isPending}
+            disabled={logAttendance.isPending || !attendanceState || !attendanceState.canStartShift}
             className="w-full py-3 bg-emerald-500 text-white text-sm font-semibold rounded-xl hover:bg-emerald-600 disabled:opacity-60 transition-colors shadow-sm"
           >
             {isLoading("start") ? t.loading : t.startMainShift}
@@ -241,7 +171,12 @@ export default function Attendance() {
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={handlePauseResume}
+            onClick={() => handleAttendance(isPaused ? "resume" : "pause")}
+            disabled={
+              logAttendance.isPending ||
+              !attendanceState ||
+              (isPaused ? !attendanceState.canResume : !attendanceState.canPause)
+            }
             className={`w-full py-3 text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors shadow-sm flex items-center justify-center gap-2 ${
               isPaused
                 ? "bg-amber-500 hover:bg-amber-600"
@@ -251,12 +186,12 @@ export default function Attendance() {
             {isPaused ? (
               <>
                 <PlayCircle className="w-4 h-4" />
-                {t.resumeShift}
+                {isLoading("resume") ? t.loading : t.resumeShift}
               </>
             ) : (
               <>
                 <PauseCircle className="w-4 h-4" />
-                {t.pauseShift}
+                {isLoading("pause") ? t.loading : t.pauseShift}
               </>
             )}
           </motion.button>
@@ -286,7 +221,7 @@ export default function Attendance() {
             whileHover={isLoading("midday") ? {} : { scale: 1.02 }}
             whileTap={isLoading("midday") ? {} : { scale: 0.98 }}
             onClick={() => handleAttendance("midday")}
-            disabled={logAttendance.isPending}
+            disabled={logAttendance.isPending || !attendanceState || !attendanceState.canMidday}
             className="w-full py-3 bg-blue-500 text-white text-sm font-semibold rounded-xl hover:bg-blue-600 disabled:opacity-60 transition-colors shadow-sm"
           >
             {isLoading("midday") ? t.loading : t.midDayAttendance}
@@ -324,7 +259,12 @@ export default function Attendance() {
             whileHover={isLoading("end") ? {} : { scale: 1.02 }}
             whileTap={isLoading("end") ? {} : { scale: 0.98 }}
             onClick={() => handleAttendance("end")}
-            disabled={logAttendance.isPending || !endShiftReport.trim()}
+            disabled={
+              logAttendance.isPending ||
+              !endShiftReport.trim() ||
+              !attendanceState ||
+              !attendanceState.canEndShift
+            }
             className="w-full py-3 bg-orange-500 text-white text-sm font-semibold rounded-xl hover:bg-orange-600 disabled:opacity-60 transition-colors shadow-sm flex items-center justify-center gap-2"
           >
             <Send className="w-4 h-4" />

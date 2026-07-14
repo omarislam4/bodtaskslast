@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
 import DateDisplay from "@/components/ui/date-display";
 import FileDropZone from "@/components/ui/file-drop-zone";
-import { useSubmitWeeklyReport } from "@/hooks/useReports";
+import { useSubmitWeeklyReport, useWeeklyReports } from "@/hooks/useReports";
 
 export default function WeeklyReport() {
   const { userDoc } = useAuth();
@@ -15,6 +15,7 @@ export default function WeeklyReport() {
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
 
   const { mutate, isPending } = useSubmitWeeklyReport();
+  const { data: pastReports = [], isLoading: pastReportsLoading } = useWeeklyReports();
 
   const handleSubmit = (e: React.SubmitEvent) => {
     e.preventDefault();
@@ -106,6 +107,35 @@ export default function WeeklyReport() {
           </motion.button>
         </form>
       </motion.div>
+
+      <div className="mt-6">
+        <h2 className="text-sm font-semibold text-foreground mb-3">{t.pastReports}</h2>
+        {pastReportsLoading ? (
+          <div className="space-y-2">
+            {Array(3).fill(0).map((_, i) => (
+              <div key={i} className="h-16 bg-muted rounded-xl animate-pulse" />
+            ))}
+          </div>
+        ) : pastReports.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-6">{t.noReportsYet}</p>
+        ) : (
+          <div className="space-y-2">
+            {pastReports.map((r) => (
+              <div key={r.id} className="bg-card border border-border rounded-xl p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {t.weekOf} <DateDisplay date={new Date(r.payload.weekOf)} />
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    <DateDisplay date={new Date(r.submittedAt)} />
+                  </span>
+                </div>
+                <p className="text-sm text-foreground whitespace-pre-wrap">{r.report}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

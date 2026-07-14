@@ -38,6 +38,8 @@ const attendance: Record<AttendanceKeys, TranslationValue> = {
   pauseShiftToast: "تم إيقاف الوردية مؤقتاً",
   resumeShiftToast: "تم استئناف الوردية",
   errShiftNotStarted: "يرجى بدء ورديتك أولاً قبل الإيقاف المؤقت.",
+  pastReports: "التقارير السابقة",
+  noReportsYet: "لم يتم تقديم أي تقارير بعد",
 };
 
 export default attendance;

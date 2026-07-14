@@ -30,6 +30,8 @@ import Portfolio from "@/pages/Portfolio";
 import Chat from "@/pages/Chat";
 import Forms from "@/pages/Forms";
 import Automations from "@/pages/Automations";
+import Rankings from "@/pages/Rankings";
+import TeamActivity from "@/pages/TeamActivity";
 import PublicForm from "@/pages/PublicForm";
 import NotFound from "@/pages/not-found";
 import { useActivityWatcher } from "@/hooks/useActivityWatcher";
@@ -104,6 +106,8 @@ function ProtectedSwitch() {
         <Route path="/chat" component={Chat} />
         <Route path="/forms" component={() => isAdmin ? <Forms /> : <Redirect to="/" />} />
         <Route path="/automations" component={() => isAdmin ? <Automations /> : <Redirect to="/" />} />
+        <Route path="/rankings" component={Rankings} />
+        <Route path="/team-activity" component={() => isAdmin ? <TeamActivity /> : <Redirect to="/" />} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>

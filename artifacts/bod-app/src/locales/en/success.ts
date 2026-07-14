@@ -6,6 +6,7 @@ const success = {
   memberRemoved: "Member removed",
   dataItemAdded: "Item added",
   dataItemDeleted: "Deleted",
+  attachmentAdded: "Attachment added",
   automationCreated: "Automation created!",
   automationDeleted: "Automation deleted!",
 } as const;
