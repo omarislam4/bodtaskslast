@@ -15,6 +15,7 @@ const teamActivity: Record<TeamActivityKeys, TranslationValue> = {
   periodCustom: "نطاق مخصص",
   from: "من",
   to: "إلى",
+  reportTypeDaily: "يومي",
   reportTypeWeekly: "أسبوعي",
   reportTypeMonthly: "شهري",
   workedHours: "ساعات العمل",

@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Users, Clock, FileText, PauseCircle, PlayCircle } from "lucide-react";
 import { useLang } from "@/contexts/LangContext";
 import { useMembers } from "@/hooks/useMembers";
-import { useAttendanceSummary } from "@/hooks/useAttendance";
+import { useAttendanceSummary, useAttendanceRecords } from "@/hooks/useAttendance";
 import { useWeeklyReports, useMonthlyReports } from "@/hooks/useReports";
 import DateDisplay from "@/components/ui/date-display";
 import { toISODate } from "@/lib/date";
@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import type { AttendanceSummaryQueryParams } from "@/types";
 
 type Period = "day" | "week" | "month" | "custom";
-type ReportType = "weekly" | "monthly";
+type ReportType = "daily" | "weekly" | "monthly";
 
 function timeOf(iso: string | null) {
   if (!iso) return "—";
@@ -43,10 +43,13 @@ export default function TeamActivity() {
   const { data: summary, isLoading: summaryLoading } = useAttendanceSummary(attendanceParams);
 
   // Reports state
-  const [reportType, setReportType] = useState<ReportType>("weekly");
+  const [reportType, setReportType] = useState<ReportType>("daily");
   const [reportUserId, setReportUserId] = useState<string>("");
   const effectiveReportUserId = reportUserId || members[0]?.id || "";
 
+  const { data: dailyRecords = [], isLoading: dailyLoading } = useAttendanceRecords(
+    effectiveReportUserId ? { userId: effectiveReportUserId } : undefined,
+  );
   const { data: weeklyReports = [], isLoading: weeklyLoading } = useWeeklyReports(
     effectiveReportUserId ? { userId: effectiveReportUserId } : undefined,
   );
@@ -54,8 +57,49 @@ export default function TeamActivity() {
     effectiveReportUserId ? { userId: effectiveReportUserId } : undefined,
   );
 
-  const reports = reportType === "weekly" ? weeklyReports : monthlyReports;
-  const reportsLoading = reportType === "weekly" ? weeklyLoading : monthlyLoading;
+  const dailyReports = useMemo(
+    () =>
+      dailyRecords
+        .filter((r) => r.type === "end" && r.report?.trim())
+        .sort((a, b) => new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime()),
+    [dailyRecords],
+  );
+
+  const reportsLoading =
+    reportType === "daily" ? dailyLoading : reportType === "weekly" ? weeklyLoading : monthlyLoading;
+
+  const displayReports = useMemo(() => {
+    if (reportType === "daily") {
+      return dailyReports.map((r) => ({
+        id: r.id,
+        meta: <DateDisplay date={r.recordedAt} />,
+        timestamp: r.recordedAt,
+        text: r.report,
+      }));
+    }
+    if (reportType === "weekly") {
+      return weeklyReports.map((r) => ({
+        id: r.id,
+        meta: (
+          <>
+            {t.weekOf} <DateDisplay date={r.payload.weekOf} />
+          </>
+        ),
+        timestamp: r.submittedAt,
+        text: r.report,
+      }));
+    }
+    return monthlyReports.map((r) => ({
+      id: r.id,
+      meta: (
+        <>
+          {t.monthOf} <DateDisplay date={r.payload.monthOf} />
+        </>
+      ),
+      timestamp: r.submittedAt,
+      text: r.report,
+    }));
+  }, [reportType, dailyReports, weeklyReports, monthlyReports, t]);
 
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6">
@@ -206,6 +250,7 @@ export default function TeamActivity() {
               onChange={(e) => setReportType(e.target.value as ReportType)}
               className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
             >
+              <option value="daily">{t.reportTypeDaily}</option>
               <option value="weekly">{t.reportTypeWeekly}</option>
               <option value="monthly">{t.reportTypeMonthly}</option>
             </select>
@@ -232,27 +277,24 @@ export default function TeamActivity() {
                 <div key={i} className="h-16 bg-muted rounded-xl animate-pulse" />
               ))}
             </div>
-          ) : reports.length === 0 ? (
+          ) : displayReports.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-10">{t.noReportsYet}</p>
           ) : (
             <div className="space-y-2">
-              {reports.map((r) => (
+              {displayReports.map((r) => (
                 <div key={r.id} className="bg-card border border-border rounded-xl p-4 shadow-sm">
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
                       <FileText className="w-3.5 h-3.5" />
-                      {reportType === "weekly" ? t.weekOf : t.monthOf}{" "}
-                      <DateDisplay
-                        date={
-                          "weekOf" in r.payload ? r.payload.weekOf : r.payload.monthOf
-                        }
-                      />
+                      {r.meta}
                     </span>
-                    <span className="text-xs text-muted-foreground">
-                      <DateDisplay date={r.submittedAt} />
-                    </span>
+                    {reportType !== "daily" && (
+                      <span className="text-xs text-muted-foreground">
+                        <DateDisplay date={r.timestamp} />
+                      </span>
+                    )}
                   </div>
-                  <p className="text-sm text-foreground whitespace-pre-wrap">{r.report}</p>
+                  <p className="text-sm text-foreground whitespace-pre-wrap">{r.text}</p>
                 </div>
               ))}
             </div>

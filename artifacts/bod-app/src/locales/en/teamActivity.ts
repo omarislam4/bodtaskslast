@@ -12,6 +12,7 @@ const teamActivity = {
   periodCustom: "Custom range",
   from: "From",
   to: "To",
+  reportTypeDaily: "Daily",
   reportTypeWeekly: "Weekly",
   reportTypeMonthly: "Monthly",
   workedHours: "Worked hours",
